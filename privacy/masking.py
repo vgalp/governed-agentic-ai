@@ -17,6 +17,14 @@ ENTITIES = [
     "IP_ADDRESS",
 ]
 
+# Medication names are not personal information; never mask them.
+# (Presidio sometimes mistakes brand names for people's names.)
+ALLOW_LIST = [
+    "Adderall", "Ritalin", "Vyvanse", "Concerta", "Focalin", "Dexedrine",
+    "Strattera", "Qelbree", "Intuniv", "Wellbutrin", "methylphenidate",
+    "atomoxetine", "guanfacine", "clonidine", "bupropion",
+]
+
 
 def mask(text: str) -> tuple[str, dict[str, str]]:
     """Replace personal details with tokens such as [PERSON_1].
@@ -24,7 +32,12 @@ def mask(text: str) -> tuple[str, dict[str, str]]:
     Returns the masked text and a private mapping of token -> original value.
     The mapping never leaves this service.
     """
-    results = analyzer.analyze(text=text, entities=ENTITIES, language="en")
+    results = analyzer.analyze(
+        text=text,
+        entities=ENTITIES,
+        language="en",
+        allow_list=ALLOW_LIST,
+    )
 
     # Remove overlapping detections, keeping the longest one at each position.
     results = sorted(results, key=lambda r: (r.start, -(r.end - r.start)))
