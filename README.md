@@ -73,7 +73,7 @@ docs/       Architecture notes, decisions, and progress
 
 - [x] Event backbone (Kafka, KRaft mode) and Schema Registry
 - [x] Chat API and first agent with a local model
-- [ ] Privacy layer (PII/PHI masking)
+- [x] Privacy layer (PII/PHI masking)
 - [ ] MCP gateway with per-agent policy and audit
 - [ ] Guardrails and evaluation suite
 - [ ] Tracing, failure recovery, and evaluation report

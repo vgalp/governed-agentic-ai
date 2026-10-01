@@ -1,4 +1,12 @@
 services:
+  opa:
+    image: openpolicyagent/opa:latest
+    container_name: opa
+    ports:
+      - "8181:8181"
+    command: ["run", "--server", "--addr", ":8181", "--watch", "/policies"]
+    volumes:
+      - ./policies:/policies
   broker:
     image: confluentinc/cp-kafka:8.2.0
     hostname: broker

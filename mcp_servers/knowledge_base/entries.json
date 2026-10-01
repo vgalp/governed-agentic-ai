@@ -1,0 +1,37 @@
+[
+  {
+    "id": "kb-001",
+    "title": "Break tasks into small steps",
+    "text": "Large tasks feel overwhelming. Break each task into steps that take 15 minutes or less, and write down only the very next step.",
+    "tags": ["planning", "tasks", "overwhelm", "start", "procrastination"],
+    "status": "SAMPLE - pending clinician review"
+  },
+  {
+    "id": "kb-002",
+    "title": "Timed focus sessions",
+    "text": "Work in short, timed sessions, for example 25 minutes of focus followed by a 5-minute break. Use a visible timer.",
+    "tags": ["focus", "work", "study", "timer", "pomodoro", "concentration"],
+    "status": "SAMPLE - pending clinician review"
+  },
+  {
+    "id": "kb-003",
+    "title": "A simple morning routine",
+    "text": "Keep the morning routine to three or four steps in the same order every day. Prepare what you need the night before.",
+    "tags": ["morning", "routine", "plan", "tomorrow", "wake"],
+    "status": "SAMPLE - pending clinician review"
+  },
+  {
+    "id": "kb-004",
+    "title": "Visual reminders",
+    "text": "Put reminders where you will see them at the right moment: a note on the door, an alarm with a clear label, a whiteboard by the desk.",
+    "tags": ["reminders", "forgetting", "memory", "alarm", "plan"],
+    "status": "SAMPLE - pending clinician review"
+  },
+  {
+    "id": "kb-005",
+    "title": "Plan tomorrow tonight",
+    "text": "Spend five minutes in the evening choosing the top three tasks for tomorrow. Write them down and put the list where you will see it first.",
+    "tags": ["plan", "tomorrow", "evening", "priorities", "tasks"],
+    "status": "SAMPLE - pending clinician review"
+  }
+]
