@@ -1,0 +1,12 @@
+[project]
+name = "governed-agentic-ai"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "confluent-kafka>=2.15.1",
+    "fastapi>=0.142.2",
+    "requests>=2.34.2",
+    "uvicorn>=0.54.0",
+]

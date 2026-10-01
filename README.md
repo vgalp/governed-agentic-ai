@@ -33,10 +33,46 @@ docker compose up -d
 - Schema Registry: `http://localhost:8081`
 - Kafka UI: `http://localhost:8080`
 
+Create the chat topics:
+
+```bash
+docker exec -it broker kafka-topics --bootstrap-server broker:29092 --create --topic chat.requests
+docker exec -it broker kafka-topics --bootstrap-server broker:29092 --create --topic chat.responses
+```
+
+### Run the chat demo
+
+Additional requirements: [uv](https://docs.astral.sh/uv/) and [Ollama](https://ollama.com).
+
+```bash
+ollama pull mistral
+uv sync
+uv run uvicorn api.main:app --reload      # terminal 1
+uv run python agents/planner.py           # terminal 2
+```
+
+Send a message:
+
+```bash
+curl -X POST localhost:8000/chat -H "Content-Type: application/json" \
+  -d '{"user_id": "test-user-1", "message": "Help me plan a focused morning."}'
+curl localhost:8000/chat/<request_id>
+```
+
+Or use the interactive API docs at `http://localhost:8000/docs`.
+
+## Project structure
+
+```
+api/        Chat API (FastAPI)
+agents/     AI agents that consume and publish Kafka events
+docs/       Architecture notes, decisions, and progress
+```
+
 ## Roadmap
 
 - [x] Event backbone (Kafka, KRaft mode) and Schema Registry
-- [ ] Chat API and first agent with a local model
+- [x] Chat API and first agent with a local model
 - [ ] Privacy layer (PII/PHI masking)
 - [ ] MCP gateway with per-agent policy and audit
 - [ ] Guardrails and evaluation suite
