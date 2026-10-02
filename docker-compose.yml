@@ -1,6 +1,6 @@
 services:
   opa:
-    image: openpolicyagent/opa:latest
+    image: openpolicyagent/opa:1.21.1
     container_name: opa
     ports:
       - "8181:8181"
@@ -45,7 +45,7 @@ services:
       SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
 
   kafka-ui:
-    image: ghcr.io/kafbat/kafka-ui:latest
+    image: ghcr.io/kafbat/kafka-ui@sha256:7cda86a33344160309fdb65146332e4da65db81a945614f2fe32e210803f6fd1
     container_name: kafka-ui
     depends_on:
       - broker
