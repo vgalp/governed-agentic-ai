@@ -2,12 +2,16 @@ import json
 import threading
 import uuid
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from confluent_kafka import Consumer, Producer
 from fastapi import FastAPI
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 BOOTSTRAP = "localhost:9092"
+UI_FILE = Path(__file__).resolve().parent.parent / "ui" / "index.html"
+
 producer = Producer({"bootstrap.servers": BOOTSTRAP, "enable.idempotence": True})
 responses: dict[str, dict] = {}  # in-memory for now; replaced later
 
@@ -15,8 +19,11 @@ responses: dict[str, dict] = {}  # in-memory for now; replaced later
 def consume_responses():
     consumer = Consumer({
         "bootstrap.servers": BOOTSTRAP,
-        "group.id": "api-responses",
+        # A new group on every start, reading from the beginning without committing,
+        # so the in-memory store is rebuilt after a restart.
+        "group.id": f"api-responses-{uuid.uuid4()}",
         "auto.offset.reset": "earliest",
+        "enable.auto.commit": False,
     })
     consumer.subscribe(["chat.responses"])
     while True:
@@ -40,6 +47,17 @@ app = FastAPI(title="Governed Agentic AI - Chat API", lifespan=lifespan)
 class ChatRequest(BaseModel):
     user_id: str
     message: str
+
+
+@app.get("/", include_in_schema=False)
+def chat_ui():
+    """Simple chat window for local testing."""
+    return FileResponse(UI_FILE)
+
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
 
 
 @app.post("/chat")

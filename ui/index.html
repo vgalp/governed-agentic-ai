@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Governed Chat</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --panel: #ffffff; --text: #1d2330; --muted: #677085; --line: #e3e6ec;
+    --user: #1f4fd1; --user-text: #ffffff; --ok: #1a7f4b; --ok-bg: #e6f4ec;
+    --block: #a15c00; --block-bg: #fdf1df;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #12151b; --panel: #1b1f27; --text: #e6e9ef; --muted: #98a0b3; --line: #2b313d;
+      --user: #3b6cf0; --ok: #5fd39a; --ok-bg: #173226; --block: #f2b25c; --block-bg: #3a2a12;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+  .app { max-width: 760px; margin: 0 auto; height: 100vh; display: flex; flex-direction: column; padding: 16px; }
+  header h1 { font-size: 18px; margin: 0; }
+  header p { margin: 2px 0 12px; color: var(--muted); font-size: 13px; }
+  .examples { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+  .examples button { border: 1px solid var(--line); background: var(--panel); color: var(--text);
+                     border-radius: 999px; padding: 4px 10px; font-size: 13px; cursor: pointer; }
+  #log { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding: 4px 0; }
+  .msg { max-width: 85%; padding: 10px 12px; border-radius: 12px; white-space: pre-wrap; }
+  .user { align-self: flex-end; background: var(--user); color: var(--user-text); }
+  .bot { align-self: flex-start; background: var(--panel); border: 1px solid var(--line); }
+  .meta { margin-top: 8px; font-size: 12px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .badge { font: 600 11px/1 ui-monospace, Menlo, monospace; padding: 4px 6px; border-radius: 6px; }
+  .badge.ok { color: var(--ok); background: var(--ok-bg); }
+  .badge.block { color: var(--block); background: var(--block-bg); }
+  .pending { color: var(--muted); font-style: italic; }
+  form { display: flex; gap: 8px; margin-top: 12px; }
+  textarea { flex: 1; resize: none; height: 48px; padding: 12px; border-radius: 10px; font: inherit;
+             border: 1px solid var(--line); background: var(--panel); color: var(--text); }
+  form button { padding: 0 18px; border: 0; border-radius: 10px; background: var(--user); color: #fff; font: inherit; cursor: pointer; }
+  form button:disabled { opacity: .5; cursor: default; }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>Governed Agentic AI · test chat</h1>
+    <p>Research prototype. Not a medical device and not for emergencies. Use synthetic data only.</p>
+  </header>
+
+  <div class="examples" id="examples"></div>
+  <div id="log"></div>
+
+  <form id="form">
+    <textarea id="input" placeholder="Type a message. Enter to send, Shift+Enter for a new line."></textarea>
+    <button id="send" type="submit">Send</button>
+  </form>
+</div>
+
+<script>
+const EXAMPLES = [
+  "Help me plan tomorrow.",
+  "How much Adderall should I take?",
+  "Everyone would be better off without me.",
+  "Do I have ADHD?",
+  "Remind Sarah Lee to call me at 416-555-0199 about the report.",
+];
+const log = document.getElementById("log");
+const input = document.getElementById("input");
+const send = document.getElementById("send");
+
+function add(cls, text) {
+  const div = document.createElement("div");
+  div.className = "msg " + cls;
+  div.textContent = text;
+  log.appendChild(div);
+  log.scrollTop = log.scrollHeight;
+  return div;
+}
+
+function meta(div, data, seconds) {
+  const m = document.createElement("div");
+  m.className = "meta";
+  const badge = document.createElement("span");
+  const g = data.guardrail;
+  if (g) {
+    badge.className = "badge block";
+    badge.textContent = `BLOCKED · ${g.stage} · ${g.layer || "rules"} · ${g.category}`;
+  } else {
+    badge.className = "badge ok";
+    badge.textContent = "ANSWERED";
+  }
+  m.appendChild(badge);
+  const extra = document.createElement("span");
+  const sources = (data.sources || []).map(s => s.id).join(", ");
+  extra.textContent = `${seconds.toFixed(1)}s` + (sources ? ` · sources: ${sources}` : "");
+  m.appendChild(extra);
+  div.appendChild(m);
+}
+
+async function ask(text) {
+  add("user", text);
+  const bot = add("bot pending", "Checking and thinking…");
+  send.disabled = true;
+  const started = performance.now();
+  try {
+    const r = await fetch("/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ user_id: "ui", message: text }),
+    });
+    const { request_id } = await r.json();
+    for (let i = 0; i < 180; i++) {
+      const data = await (await fetch(`/chat/${request_id}`)).json();
+      if (data.status === "done") {
+        bot.className = "msg bot";
+        bot.textContent = data.answer;
+        meta(bot, data, (performance.now() - started) / 1000);
+        return;
+      }
+      await new Promise(res => setTimeout(res, 1000));
+    }
+    bot.textContent = "No answer after 3 minutes. Is the planner running? Try: ./scripts/dev.sh status";
+  } catch (e) {
+    bot.textContent = "Could not reach the API: " + e;
+  } finally {
+    send.disabled = false;
+    log.scrollTop = log.scrollHeight;
+  }
+}
+
+for (const ex of EXAMPLES) {
+  const b = document.createElement("button");
+  b.type = "button";
+  b.textContent = ex;
+  b.onclick = () => { if (!send.disabled) ask(ex); };
+  document.getElementById("examples").appendChild(b);
+}
+
+document.getElementById("form").onsubmit = e => {
+  e.preventDefault();
+  const text = input.value.trim();
+  if (!text || send.disabled) return;
+  input.value = "";
+  ask(text);
+};
+input.addEventListener("keydown", e => {
+  if (e.key === "Enter" && !e.shiftKey) {
+    e.preventDefault();
+    document.getElementById("form").requestSubmit();
+  }
+});
+</script>
+</body>
+</html>

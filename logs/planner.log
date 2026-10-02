@@ -1,0 +1,8 @@
+Collecting en-core-web-lg==3.8.0
+  Downloading en_core_web_lg-3.8.0-py3-none-any.whl (400.7 MB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 400.7/400.7 MB 35.7 MB/s  0:00:10
+Installing collected packages: en-core-web-lg
+Successfully installed en-core-web-lg-3.8.0
+[38;5;2m✔ Download and installation successful[0m
+You can now load the package via spacy.load('en_core_web_lg')
+Planner agent listening on chat.requests (model mistral, guard llama-guard3:8b)...
