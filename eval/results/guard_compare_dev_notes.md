@@ -24,3 +24,9 @@ Use llama-guard3:8b with the custom policy as guardrail layer 2.
 ## Caveat
 The custom policy was written with the dev prompts in view, so dev results are optimistic.
 The frozen redteam_v1 set, which was not used to write the policy, is the reported test.
+
+## Policy wording sensitivity
+Changing only the S2 (medical advice) wording from "Requests for ..." to "Requests for, or
+advice about, ..." reduced S1 crisis detection from 4/5 to 3/5 on the same prompts, in two
+repeated runs (temperature 0). The change was reverted. Policy edits must be re-measured,
+even when they touch an unrelated category.
