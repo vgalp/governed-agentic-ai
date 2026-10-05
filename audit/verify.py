@@ -13,7 +13,7 @@ import sys
 import time
 import uuid
 
-from audit.chain import AUDIT_TOPICS, key_from_env, verify_chain
+from audit.chain import AUDIT_TOPICS, key_from_env, unkeyed_chains, verify_chain
 
 
 def read_from_kafka(idle_seconds: float = 5.0) -> list[dict]:
@@ -58,6 +58,9 @@ def main() -> int:
     chains = {r["audit"]["chain_id"] for r in chained}
 
     print(f"Events read: {len(records)} ({len(chained)} chained in {len(chains)} chain(s), {legacy} written before chaining)")
+    unkeyed = unkeyed_chains(chained)
+    if unkeyed:
+        print(f"Note: {len(unkeyed)} chain(s) were written without AUDIT_HMAC_KEY: changes are detected, deliberate forgery is not.")
     if problems:
         print(f"TAMPERING OR LOSS DETECTED: {len(problems)} problem(s)")
         for p in problems:

@@ -8,6 +8,10 @@ If AUDIT_HMAC_KEY is set, hashes are HMAC-SHA256 with that key, so someone who
 can edit the log but does not hold the key cannot recompute a valid chain.
 Without a key, plain SHA-256 still detects accidental or careless changes.
 
+Each event records which algorithm signed it ("hmac-sha256" or "sha256"), so
+chains written before a key was configured can still be checked, and are
+reported as unkeyed rather than as tampered.
+
 Known limit: deleting the most recent events (truncation) leaves a valid chain.
 Publishing the latest hash somewhere separate (a checkpoint) closes that gap;
 see docs/decisions/002-tamper-evident-audit.md.
@@ -64,6 +68,7 @@ class AuditChain:
                     "seq": self.seq,
                     "topic": topic,               # moving an event to another topic is detected too
                     "prev_hash": self.prev_hash,
+                    "alg": "hmac-sha256" if self.key else "sha256",
                 },
             }
             record["audit"]["hash"] = compute_hash(record, self.key)
@@ -76,7 +81,10 @@ class AuditChain:
 
 
 def verify_chain(records: list[dict], key: bytes | None) -> list[str]:
-    """Check chained audit records. Returns a list of problems; empty means intact."""
+    """Check chained audit records. Returns a list of problems; empty means intact.
+
+    Unkeyed chains are checked with plain SHA-256; see `unkeyed_chains` to list them.
+    """
     problems = []
     chains: dict[str, list[dict]] = {}
     for r in records:
@@ -92,10 +100,18 @@ def verify_chain(records: list[dict], key: bytes | None) -> list[str]:
             if a["prev_hash"] != expected_prev:
                 problems.append(f"{chain_id} seq {a['seq']}: does not link to the previous event")
             unhashed = {**r, "audit": {k: v for k, v in a.items() if k != "hash"}}
-            if compute_hash(unhashed, key) != a["hash"]:
+            keyed = a.get("alg") == "hmac-sha256"
+            if keyed and key is None:
+                problems.append(f"{chain_id} seq {a['seq']}: signed with a key, but AUDIT_HMAC_KEY is not set here")
+            elif compute_hash(unhashed, key if keyed else None) != a["hash"]:
                 problems.append(f"{chain_id} seq {a['seq']}: content does not match its hash (changed after writing)")
             expected_seq, expected_prev = a["seq"] + 1, a["hash"]
     return problems
+
+
+def unkeyed_chains(records: list[dict]) -> list[str]:
+    """Chains written without a key: changes are detected, deliberate forgery is not."""
+    return sorted({r["audit"]["chain_id"] for r in records if r["audit"].get("alg") != "hmac-sha256"})
 
 
 _default_chain: AuditChain | None = None

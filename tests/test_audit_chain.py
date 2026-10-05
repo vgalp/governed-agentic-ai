@@ -2,7 +2,7 @@
 
 import json
 
-from audit.chain import AuditChain, verify_chain
+from audit.chain import AuditChain, unkeyed_chains, verify_chain
 
 KEY = b"test-key"
 
@@ -54,10 +54,20 @@ def test_event_moved_to_another_topic_is_detected():
     assert verify_chain(records, KEY)
 
 
-def test_rewritten_chain_without_the_key_is_detected():
-    # An attacker changes an event and recomputes every hash, but without the key.
+def test_chain_rewritten_without_the_key_is_flagged_as_unkeyed():
+    # An attacker rewrites the log and recomputes every hash, but has no key,
+    # so the result can only be a plain SHA-256 chain, and it is reported as such.
     forged = make_chain(key=None)
-    assert verify_chain(forged, KEY)
+    assert unkeyed_chains(forged) == [forged[0]["audit"]["chain_id"]]
+    assert unkeyed_chains(make_chain()) == []
+
+
+def test_keyed_chain_with_wrong_key_is_detected():
+    assert verify_chain(make_chain(), b"wrong-key")
+
+
+def test_keyed_chain_cannot_be_verified_without_a_key():
+    assert any("AUDIT_HMAC_KEY is not set" in p for p in verify_chain(make_chain(), None))
 
 
 def test_chains_from_two_processes_are_checked_separately():

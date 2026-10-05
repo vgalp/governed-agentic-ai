@@ -5,12 +5,15 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from confluent_kafka import Consumer, Producer
-from fastapi import FastAPI
-from fastapi.responses import FileResponse
+from fastapi import FastAPI, Request
+from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel
 
+from api.events import buffer, consume_events, event_stream
+from audit.chain import key_from_env, unkeyed_chains, verify_chain
+
 BOOTSTRAP = "localhost:9092"
-UI_FILE = Path(__file__).resolve().parent.parent / "ui" / "index.html"
+UI_DIR = Path(__file__).resolve().parent.parent / "ui"
 
 producer = Producer({"bootstrap.servers": BOOTSTRAP, "enable.idempotence": True})
 responses: dict[str, dict] = {}  # in-memory for now; replaced later
@@ -37,6 +40,7 @@ def consume_responses():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     threading.Thread(target=consume_responses, daemon=True).start()
+    threading.Thread(target=consume_events, args=(BOOTSTRAP,), daemon=True).start()
     yield
     producer.flush()
 
@@ -52,7 +56,34 @@ class ChatRequest(BaseModel):
 @app.get("/", include_in_schema=False)
 def chat_ui():
     """Simple chat window for local testing."""
-    return FileResponse(UI_FILE)
+    return FileResponse(UI_DIR / "index.html")
+
+
+@app.get("/dashboard", include_in_schema=False)
+def dashboard():
+    """Live view of the pipeline: every request moving through the controls."""
+    return FileResponse(UI_DIR / "dashboard.html")
+
+
+@app.get("/events", include_in_schema=False)
+async def events(request: Request):
+    last_id = int(request.headers.get("last-event-id", 0) or 0)
+    return StreamingResponse(event_stream(last_id), media_type="text/event-stream",
+                             headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+
+
+@app.get("/audit/verify")
+def audit_verify():
+    """Check the tamper-evident audit chain over every audit event seen since startup."""
+    records = list(buffer.audit_records)
+    problems = verify_chain(records, key_from_env())
+    return {
+        "events": len(records),
+        "chains": len({r["audit"]["chain_id"] for r in records}),
+        "intact": not problems,
+        "unkeyed_chains": len(unkeyed_chains(records)),
+        "problems": problems[:20],
+    }
 
 
 @app.get("/health")

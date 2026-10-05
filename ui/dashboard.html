@@ -1,0 +1,371 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Live Pipeline</title>
+<style>
+  :root {
+    --bg: #f5f6f8; --panel: #ffffff; --text: #1b2130; --muted: #6a7386; --line: #e2e5eb;
+    --accent: #1f4fd1;
+    --pass: #17804b; --pass-bg: #e5f4ec;
+    --block: #b42318; --block-bg: #fdecea;
+    --warn: #a15c00; --warn-bg: #fdf1df;
+    --skip: #9aa1b0; --skip-bg: #f0f1f4;
+    --active: #1f4fd1; --active-bg: #e8eefc;
+    --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #11141a; --panel: #1a1e26; --text: #e6e9ef; --muted: #98a0b3; --line: #2a303b;
+      --accent: #6d93ff;
+      --pass: #5fd39a; --pass-bg: #163225;
+      --block: #ff8a80; --block-bg: #3a1a18;
+      --warn: #f2b25c; --warn-bg: #3a2a12;
+      --skip: #6b7385; --skip-bg: #20242d;
+      --active: #8fb0ff; --active-bg: #1c2742;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 14px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+  .wrap { max-width: 1280px; margin: 0 auto; padding: 16px; }
+  header { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; }
+  h1 { font-size: 18px; margin: 0; }
+  .sub { color: var(--muted); font-size: 13px; margin-top: 2px; }
+  .status { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px;
+          font-size: 12px; font-weight: 600; border: 1px solid var(--line); background: var(--panel); }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--skip); }
+  .live .dot { background: var(--pass); }
+  .pill.ok { color: var(--pass); background: var(--pass-bg); border-color: transparent; }
+  .pill.bad { color: var(--block); background: var(--block-bg); border-color: transparent; }
+  button { font: inherit; cursor: pointer; }
+  .btn { border: 1px solid var(--line); background: var(--panel); color: var(--text);
+         border-radius: 8px; padding: 5px 10px; font-size: 12px; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px; }
+  .panel h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 0 0 10px; }
+  .send { display: flex; gap: 8px; margin: 14px 0 8px; }
+  .send input { flex: 1; min-width: 0; padding: 9px 12px; border-radius: 8px; border: 1px solid var(--line);
+                background: var(--panel); color: var(--text); font: inherit; }
+  .send button { border: 0; background: var(--accent); color: #fff; border-radius: 8px; padding: 0 16px; }
+  .examples { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+  .examples button { border: 1px solid var(--line); background: var(--panel); color: var(--text);
+                     border-radius: 999px; padding: 3px 10px; font-size: 12px; }
+  .grid { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 14px; }
+  @media (max-width: 900px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+  .grid > div { min-width: 0; }
+  .stages { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; }
+  @media (max-width: 1100px) { .stages { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+  @media (max-width: 560px) { .stages { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  .stage { border-radius: 10px; padding: 10px; border: 1px solid transparent; min-height: 96px; position: relative; }
+  .stage .n { font: 600 11px var(--mono); opacity: .7; }
+  .stage .name { font-weight: 600; font-size: 13px; margin: 2px 0 6px; }
+  .stage .state { font: 600 11px var(--mono); text-transform: uppercase; }
+  .stage .detail { font-size: 12px; margin-top: 4px; word-break: break-word; }
+  .s-pass { background: var(--pass-bg); color: var(--pass); }
+  .s-block { background: var(--block-bg); color: var(--block); }
+  .s-warn { background: var(--warn-bg); color: var(--warn); }
+  .s-skip { background: var(--skip-bg); color: var(--skip); }
+  .s-wait { background: var(--skip-bg); color: var(--muted); border-color: var(--line); border-style: dashed; }
+  .s-active { background: var(--active-bg); color: var(--active); animation: pulse 1.2s ease-in-out infinite; }
+  @keyframes pulse { 50% { opacity: .55; } }
+  .sel-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+  .sel-head .rid { font: 12px var(--mono); color: var(--muted); }
+  .chip { font: 600 11px var(--mono); padding: 3px 7px; border-radius: 6px; }
+  .chip.pass { color: var(--pass); background: var(--pass-bg); }
+  .chip.block { color: var(--block); background: var(--block-bg); }
+  .chip.active { color: var(--active); background: var(--active-bg); }
+  .masked { margin-top: 12px; font: 12px var(--mono); background: var(--bg); border-radius: 8px; padding: 10px;
+            white-space: pre-wrap; word-break: break-word; }
+  .label { font-size: 12px; color: var(--muted); margin-top: 12px; }
+  .timeline { margin-top: 6px; font: 12px var(--mono); }
+  .timeline div { padding: 3px 0; border-bottom: 1px solid var(--line); display: flex; gap: 10px; }
+  .timeline .t { color: var(--muted); min-width: 56px; }
+  .counters { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .counter { background: var(--bg); border-radius: 8px; padding: 8px 10px; }
+  .counter .v { font-size: 20px; font-weight: 700; }
+  .counter .k { font-size: 11px; color: var(--muted); }
+  .reqs { margin-top: 14px; max-height: 360px; overflow-y: auto; }
+  .req { display: flex; justify-content: space-between; gap: 8px; align-items: center; padding: 7px 8px;
+         border-radius: 8px; cursor: pointer; }
+  .req:hover { background: var(--bg); }
+  .req.sel { background: var(--active-bg); }
+  .req .id { font: 12px var(--mono); color: var(--muted); }
+  .feed { margin-top: 14px; font: 12px var(--mono); max-height: 220px; overflow-y: auto; }
+  .feed div { padding: 2px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .feed .topic { color: var(--accent); }
+  .note { font-size: 12px; color: var(--muted); margin-top: 10px; }
+  .follow { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+  .empty { color: var(--muted); padding: 20px 0; text-align: center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Governed Agentic AI · live pipeline</h1>
+      <div class="sub">Every request, as it moves through the safety controls. Synthetic data only.</div>
+    </div>
+    <div class="status">
+      <span class="pill" id="conn"><span class="dot"></span><span id="connText">Connecting…</span></span>
+      <span class="pill" id="auditPill">Audit chain: checking…</span>
+      <button class="btn" id="verifyBtn">Verify audit chain</button>
+      <a class="btn" href="/" target="_blank" style="text-decoration:none">Open chat</a>
+    </div>
+  </header>
+
+  <form class="send" id="sendForm">
+    <input id="sendInput" placeholder="Send a test message through the pipeline…" autocomplete="off">
+    <button type="submit">Send</button>
+  </form>
+  <div class="examples" id="examples"></div>
+
+  <div class="grid">
+    <div>
+      <div class="panel">
+        <div class="sel-head">
+          <div><h2 style="margin:0">Selected request</h2><span class="rid" id="selId">none yet</span></div>
+          <div style="display:flex;gap:10px;align-items:center">
+            <span id="selChip"></span>
+            <label class="follow"><input type="checkbox" id="follow" checked> follow latest</label>
+          </div>
+        </div>
+        <div class="stages" id="stages"></div>
+        <div class="label">What the model saw (after masking)</div>
+        <div class="masked" id="masked">—</div>
+        <div class="label">Events for this request</div>
+        <div class="timeline" id="timeline"></div>
+      </div>
+
+      <div class="panel" style="margin-top:14px">
+        <h2>Live event stream</h2>
+        <div class="feed" id="feed"></div>
+        <div class="note">This view never shows personal data: user messages and answers are hidden; only masked text, decisions and counts appear.</div>
+      </div>
+    </div>
+
+    <div>
+      <div class="panel">
+        <h2>Totals</h2>
+        <div class="counters" id="counters"></div>
+      </div>
+      <div class="panel" style="margin-top:14px">
+        <h2>Recent requests</h2>
+        <div class="reqs" id="reqs"><div class="empty">Send a message to see it here.</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const EXAMPLES = [
+  "Help me plan tomorrow.",
+  "How much Adderall should I take?",
+  "Everyone would be better off without me.",
+  "Remind Sarah Lee to call me at 416-555-0199 about the report.",
+  "What is the capital of France?",
+];
+const STAGES = [
+  ["received", "Request received"],
+  ["input", "Input guardrails"],
+  ["masking", "Privacy masking"],
+  ["gateway", "Tool gateway + policy"],
+  ["model", "Language model"],
+  ["output", "Output guardrails"],
+  ["response", "Response sent"],
+];
+const requests = new Map();   // request_id -> {id, events: [], first}
+let feed = [];
+let selected = null;
+
+const $ = id => document.getElementById(id);
+const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+const short = id => (id || "").slice(0, 8);
+const clock = ts => new Date(ts * 1000).toLocaleTimeString([], {hour: "2-digit", minute: "2-digit", second: "2-digit"});
+
+function addEvent(ev) {
+  const rid = ev.data && ev.data.request_id;
+  feed.push(ev);
+  if (feed.length > 200) feed = feed.slice(-200);
+  if (!rid) return;
+  if (!requests.has(rid)) requests.set(rid, {id: rid, events: [], first: ev.received_at});
+  requests.get(rid).events.push(ev);
+  if ($("follow").checked || !selected) selected = rid;
+}
+
+function find(req, topic, pred = () => true) {
+  return req.events.find(e => e.topic === topic && pred(e.data));
+}
+
+function derive(req) {
+  const rq = find(req, "chat.requests");
+  const inG = find(req, "audit.guardrails", d => d.stage === "input");
+  const tool = find(req, "audit.tool_calls");
+  const mi = find(req, "audit.model_inputs");
+  const outG = find(req, "audit.guardrails", d => d.stage === "output");
+  const resp = find(req, "chat.responses");
+  const s = {};
+
+  s.received = rq ? ["pass", `${rq.data.message_chars} characters (not displayed)`] : ["pass", "received"];
+  if (!inG) s.input = ["wait", ""];
+  else if (inG.data.allowed) s.input = ["pass", `${inG.data.layer}: allowed`];
+  else s.input = ["block", `${inG.data.layer}: ${inG.data.category}`];
+
+  const blockedIn = inG && !inG.data.allowed;
+  if (blockedIn) {
+    for (const k of ["masking", "gateway", "model", "output"]) s[k] = ["skip", "not reached"];
+  } else {
+    s.masking = mi ? ["pass", `${mi.data.entities_masked} personal detail(s) masked`] : tool ? ["pass", "masked"] : ["wait", ""];
+    if (tool) s.gateway = tool.data.decision === "allow" ? ["pass", `${tool.data.tool}: allowed by policy`] : ["warn", `${tool.data.tool}: denied by policy`];
+    else s.gateway = mi ? ["skip", "no tool call"] : ["wait", ""];
+    s.model = outG ? ["pass", mi ? `${mi.data.model} · notes ${mi.data.notes_used.join(", ") || "none"}` : "answered"] : mi ? ["active", "generating…"] : ["wait", ""];
+    if (!outG) s.output = ["wait", ""];
+    else if (outG.data.allowed) s.output = ["pass", `${outG.data.layer}: allowed`];
+    else s.output = ["block", `${outG.data.layer}: ${outG.data.category}`];
+  }
+  if (resp) s.response = ["pass", resp.data.guardrail ? "fixed safe response" : `answer · sources ${resp.data.sources.join(", ") || "none"}`];
+  else s.response = ["wait", ""];
+
+  // Mark the first waiting stage as in progress while the request is still running.
+  if (!resp && Date.now() / 1000 - req.first < 180) {
+    const next = STAGES.find(([k]) => s[k][0] === "wait");
+    if (next) s[next[0]] = ["active", "working…"];
+  }
+  let outcome;
+  if (resp && resp.data.guardrail) { const g = resp.data.guardrail; outcome = ["block", `BLOCKED · ${g.stage} · ${g.layer || "rules"} · ${g.category}`]; }
+  else if (resp) outcome = ["pass", "ANSWERED"];
+  else outcome = ["active", "IN PROGRESS"];
+  return {s, mi, resp, outcome};
+}
+
+function renderSelected() {
+  const req = selected && requests.get(selected);
+  const stages = $("stages");
+  stages.replaceChildren();
+  if (!req) {
+    STAGES.forEach(([k, name], i) => {
+      const c = el("div", "stage s-wait");
+      c.append(el("div", "n", `0${i + 1}`), el("div", "name", name), el("div", "state", "waiting"));
+      stages.append(c);
+    });
+    return;
+  }
+  const {s, mi, outcome} = derive(req);
+  $("selId").textContent = req.id;
+  const chip = el("span", `chip ${outcome[0]}`, outcome[1]);
+  $("selChip").replaceChildren(chip);
+  const words = {pass: "passed", block: "blocked", warn: "denied", skip: "skipped", wait: "waiting", active: "running"};
+  STAGES.forEach(([k, name], i) => {
+    const [state, detail] = s[k];
+    const c = el("div", `stage s-${state}`);
+    c.append(el("div", "n", `0${i + 1}`), el("div", "name", name), el("div", "state", words[state]));
+    if (detail) c.append(el("div", "detail", detail));
+    stages.append(c);
+  });
+  $("masked").textContent = mi ? mi.data.model_input
+    : (s.input[0] === "block" ? "Nothing. The request was stopped at the input guardrails, so it never reached masking, tools or the model." : "—");
+  const tl = $("timeline");
+  tl.replaceChildren();
+  for (const e of req.events) {
+    const row = el("div");
+    row.append(el("span", "t", `+${(e.received_at - req.first).toFixed(1)}s`), el("span", "", summarize(e)));
+    tl.append(row);
+  }
+}
+
+function summarize(e) {
+  const d = e.data;
+  const seq = d.audit ? ` [audit #${d.audit.seq}]` : "";
+  switch (e.topic) {
+    case "chat.requests": return `chat.requests · message received (${d.message_chars} chars)`;
+    case "chat.responses": return `chat.responses · ${d.guardrail ? "safe response" : "answer"} sent`;
+    case "audit.guardrails": return `audit.guardrails · ${d.stage} ${d.layer} · ${d.allowed ? "allowed" : "blocked: " + d.category}${seq}`;
+    case "audit.tool_calls": return `audit.tool_calls · ${d.agent} → ${d.tool} · ${d.decision}${seq}`;
+    case "audit.model_inputs": return `audit.model_inputs · ${d.model} · ${d.entities_masked} masked${seq}`;
+    default: return e.topic;
+  }
+}
+
+function renderLists() {
+  const all = [...requests.values()];
+  let answered = 0, blockedIn = 0, blockedOut = 0, toolsOk = 0, toolsDenied = 0, masked = 0;
+  for (const r of all) {
+    const resp = find(r, "chat.responses");
+    if (resp && !resp.data.guardrail) answered++;
+    if (resp && resp.data.guardrail) (resp.data.guardrail.stage === "input" ? blockedIn++ : blockedOut++);
+    for (const e of r.events) {
+      if (e.topic === "audit.tool_calls") e.data.decision === "allow" ? toolsOk++ : toolsDenied++;
+      if (e.topic === "audit.model_inputs") masked += e.data.entities_masked || 0;
+    }
+  }
+  const counters = [["Requests", all.length], ["Answered", answered], ["Blocked at input", blockedIn],
+                    ["Blocked at output", blockedOut], ["Tool calls allowed", toolsOk], ["Tool calls denied", toolsDenied],
+                    ["Personal details masked", masked], ["Events seen", feed.length]];
+  $("counters").replaceChildren(...counters.map(([k, v]) => {
+    const c = el("div", "counter"); c.append(el("div", "v", String(v)), el("div", "k", k)); return c;
+  }));
+
+  const list = $("reqs");
+  if (!all.length) return;
+  list.replaceChildren(...all.slice(-60).reverse().map(r => {
+    const {outcome} = derive(r);
+    const row = el("div", "req" + (r.id === selected ? " sel" : ""));
+    const left = el("div");
+    left.append(el("div", "id", `${short(r.id)} · ${clock(r.first)}`));
+    row.append(left, el("span", `chip ${outcome[0]}`, outcome[1].split(" · ").slice(0, 2).join(" · ")));
+    row.onclick = () => { selected = r.id; $("follow").checked = false; render(); };
+    return row;
+  }));
+
+  $("feed").replaceChildren(...feed.slice(-60).reverse().map(e => {
+    const row = el("div");
+    row.append(el("span", "t", clock(e.received_at) + "  "), el("span", "topic", e.topic), document.createTextNode(`  ${short(e.data.request_id)}  ${summarize(e).split(" · ").slice(1).join(" · ")}`));
+    return row;
+  }));
+}
+
+let pending = false;
+function render() {
+  if (pending) return;
+  pending = true;
+  requestAnimationFrame(() => { pending = false; renderSelected(); renderLists(); });
+}
+
+async function verifyAudit() {
+  const pill = $("auditPill");
+  try {
+    const r = await (await fetch("/audit/verify")).json();
+    if (!r.events) { pill.className = "pill"; pill.textContent = "Audit chain: no chained events yet"; return; }
+    pill.className = "pill " + (r.intact ? "ok" : "bad");
+    pill.textContent = r.intact
+      ? `Audit chain intact · ${r.events} events${r.unkeyed_chains ? ` · ${r.unkeyed_chains} unkeyed` : ""}`
+      : `Tampering detected · ${r.problems.length} problem(s)`;
+    pill.title = r.problems.join("\n");
+  } catch { pill.className = "pill bad"; pill.textContent = "Audit check failed"; }
+}
+
+function connect() {
+  const es = new EventSource("/events");
+  es.onopen = () => { $("conn").classList.add("live"); $("connText").textContent = "Live"; };
+  es.onerror = () => { $("conn").classList.remove("live"); $("connText").textContent = "Reconnecting…"; };
+  es.onmessage = m => { addEvent(JSON.parse(m.data)); render(); };
+}
+
+async function send(text) {
+  $("follow").checked = true;
+  await fetch("/chat", {method: "POST", headers: {"Content-Type": "application/json"},
+                        body: JSON.stringify({user_id: "dashboard", message: text})});
+}
+
+for (const ex of EXAMPLES) {
+  const b = el("button", "", ex); b.type = "button"; b.onclick = () => send(ex); $("examples").append(b);
+}
+$("sendForm").onsubmit = e => { e.preventDefault(); const t = $("sendInput").value.trim(); if (t) { send(t); $("sendInput").value = ""; } };
+$("verifyBtn").onclick = verifyAudit;
+setInterval(render, 1000);        // keeps "running" states and progress fresh
+setInterval(verifyAudit, 15000);
+render(); verifyAudit(); connect();
+</script>
+</body>
+</html>
