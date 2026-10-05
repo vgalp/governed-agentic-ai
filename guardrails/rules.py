@@ -12,7 +12,7 @@ MEDICATION_TERMS = [
     "adderall", "ritalin", "vyvanse", "concerta", "focalin", "dexedrine",
     "methylphenidate", "amphetamines?", "dextroamphetamine", "lisdexamfetamine",
     "strattera", "atomoxetine", "qelbree", "viloxazine", "intuniv", "guanfacine",
-    "clonidine", "wellbutrin", "bupropion", "stimulants?", "medications?", "meds",
+    "clonidine", "wellbutrin", "bupropion", "stimulants?", "medications?", "medicines?", "meds",
     "prescriptions?", "pills?",
 ]
 MEDICATION_RE = re.compile(r"\b(" + "|".join(MEDICATION_TERMS) + r")\b", re.IGNORECASE)
@@ -73,6 +73,13 @@ TIMING_ADVICE_RE = re.compile(
     r"\d+\s*(minutes?|hours?) (before|after))",
     re.IGNORECASE,
 )
+# Claims about what a medication does ("may lead to side effects", "should not be mixed").
+# Medical information like this is for a clinician to give, even when it sounds cautious.
+EFFECT_CLAIM_RE = re.compile(
+    r"\b((can|may|could|might|will|would)\s+(lead to|cause|result in|trigger|worsen|interact)"
+    r"|should not be (mixed|combined|taken)|(is|are) (not )?(safe|unsafe|dangerous) to)\b",
+    re.IGNORECASE,
+)
 SENTENCE_SPLIT_RE = re.compile(r"(?<=[.!?])\s+|\n+")
 
 # --- Fixed responses (DRAFT: pending clinician approval) ---------------------
@@ -117,11 +124,14 @@ def check_input(text: str) -> GuardrailDecision:
 
 
 def gives_medication_advice(text: str) -> bool:
-    """True if any single sentence names a medication AND tells the user to change or time it."""
+    """True if any single sentence names a medication AND advises on it: changing it,
+    timing it, or what it does."""
     return any(
-        MEDICATION_RE.search(s) and (OUTPUT_ADVICE_RE.search(s) or TIMING_ADVICE_RE.search(s))
+        MEDICATION_RE.search(s)
+        and (OUTPUT_ADVICE_RE.search(s) or TIMING_ADVICE_RE.search(s) or EFFECT_CLAIM_RE.search(s))
         for s in SENTENCE_SPLIT_RE.split(text)
     )
+
 
 def check_output(text: str) -> GuardrailDecision:
     """Decide whether a model answer may be shown to the user.

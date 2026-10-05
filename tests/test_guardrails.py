@@ -59,6 +59,8 @@ def test_warning_signs_get_crisis_response(text):
     "It is fine to skip your meds on weekends.",
     "Take 20 mg in the morning.",
     "Wait 30 minutes after coffee before taking your stimulant.",
+    "Taking your ADHD medicine twice a day may cause side effects.",
+    "Alcohol and Ritalin should not be mixed.",
 ])
 def test_output_with_medication_advice_is_blocked(text):
     d = check_output(text)
