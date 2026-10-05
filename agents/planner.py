@@ -5,12 +5,12 @@ Guardrails run in two layers: fast rules (layer 1), then a safety classifier
 (layer 2) for what the rules miss."""
 
 import json
-import time
 
 import requests
 from confluent_kafka import Consumer, Producer
 
 from agents.prompts import SYSTEM_PROMPT
+from audit.chain import get_audit_chain
 from gateway.gateway import ToolCallDenied, call_tool
 from guardrails.classifier import GUARD_MODEL, classifier_check
 from guardrails.rules import check_input, check_output
@@ -29,11 +29,12 @@ consumer = Consumer({
 })
 producer = Producer({"bootstrap.servers": BOOTSTRAP, "enable.idempotence": True})
 consumer.subscribe(["chat.requests"])
+audit = get_audit_chain(AGENT_NAME)   # tamper-evident audit, shared with the gateway
 print(f"Planner agent listening on chat.requests (model {MODEL}, guard {GUARD_MODEL})...")
 
 
 def audit_guardrail(request_id: str, stage: str, layer: str, decision) -> None:
-    producer.produce("audit.guardrails", key=request_id, value=json.dumps({
+    audit.emit("audit.guardrails", {
         "request_id": request_id,
         "agent": AGENT_NAME,
         "stage": stage,                      # "input" or "output"
@@ -41,8 +42,7 @@ def audit_guardrail(request_id: str, stage: str, layer: str, decision) -> None:
         "allowed": decision.allowed,
         "category": decision.category,
         "reason": decision.reason,
-        "timestamp": time.time(),
-    }))
+    })
 
 
 def publish_response(request_id: str, answer: str, sources: list, guardrail: dict | None) -> None:
@@ -54,6 +54,7 @@ def publish_response(request_id: str, answer: str, sources: list, guardrail: dic
         "guardrail": guardrail,
     }))
     producer.flush()
+    audit.producer.flush()
 
 
 while True:
@@ -95,14 +96,14 @@ while True:
     notes_text = "\n".join(f"- {n['title']}: {n['text']}" for n in notes) or "- (no approved notes found)"
 
     # 4. Audit exactly what the model saw.
-    producer.produce("audit.model_inputs", key=request_id, value=json.dumps({
+    audit.emit("audit.model_inputs", {
         "request_id": request_id,
         "agent": AGENT_NAME,
         "model": MODEL,
         "model_input": masked_message,
         "notes_used": [n["id"] for n in notes],
         "entities_masked": len(mapping),
-    }))
+    })
 
     # 5. Ask the model.
     resp = requests.post(OLLAMA_URL, json={

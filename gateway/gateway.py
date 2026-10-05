@@ -2,19 +2,17 @@
 
 import asyncio
 import json
-import time
 
 import requests
-from confluent_kafka import Producer
 from mcp import ClientSession
 from mcp.client.streamable_http import streamablehttp_client
+
+from audit.chain import get_audit_chain
 
 OPA_URL = "http://localhost:8181/v1/data/mcp/authz/allow"
 TOOL_SERVERS = {
     "search_knowledge": "http://127.0.0.1:8100/mcp",
 }
-
-_producer = Producer({"bootstrap.servers": "localhost:9092", "enable.idempotence": True})
 
 
 class ToolCallDenied(Exception):
@@ -22,9 +20,9 @@ class ToolCallDenied(Exception):
 
 
 def _audit(event: dict) -> None:
-    event["timestamp"] = time.time()
-    _producer.produce("audit.tool_calls", key=event["request_id"], value=json.dumps(event))
-    _producer.flush()
+    # Same chain as the calling agent's process, so tool calls and guardrail
+    # decisions share one tamper-evident sequence.
+    get_audit_chain("gateway").emit("audit.tool_calls", event, flush=True)
 
 
 def _is_allowed(agent: str, tool: str) -> bool:
