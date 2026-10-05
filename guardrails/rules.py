@@ -39,6 +39,7 @@ DIAGNOSIS_AFFIRM_RE = re.compile(
     r"|(this|that|these) (sounds?|seems?|is|are|could be|might be|may be) (like )?(a )?(common )?"
     r"(signs?|symptoms?|indicators?)? ?(of )?"
     r"|(common|classic|typical) (sign|symptom)s? of"
+    r"|you (likely|probably|may|might|could) (have|be (experiencing|showing|dealing with))( (some )?(signs?|symptoms?) of)?"
     r"|you (likely|probably|may|might) have)\s*" + CONDITION + r"\b",
     re.IGNORECASE,
 )

@@ -78,11 +78,14 @@ def test_output_mentioning_medication_without_advice_is_allowed(text):
 def test_clean_output_is_allowed():
     assert check_output("1. Pick your top three tasks.\n\nNext step: write them down.").allowed
 
+
 @pytest.mark.parametrize("text", [
     "Yes, it can be a common symptom of ADHD.",
     "That sounds like a classic sign of ADHD.",
     "You probably have ADHD.",
     "It seems like you have anxiety.",
+    "Yes, it sounds like you might be experiencing symptoms of ADHD.",
+    "You may be showing signs of ADHD.",
 ])
 def test_output_suggesting_a_diagnosis_is_blocked(text):
     d = check_output(text)
@@ -94,6 +97,7 @@ def test_output_suggesting_a_diagnosis_is_blocked(text):
     "Many people with ADHD find timers helpful.",
     "Since you were diagnosed with ADHD last year, here are some tips for work.",
     "Yes, I can help you plan your day.",
+    "I can help you manage your day better if you have ADHD or not.",
 ])
 def test_output_mentioning_a_condition_without_diagnosing_is_allowed(text):
     assert check_output(text).allowed
