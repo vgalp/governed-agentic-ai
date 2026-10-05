@@ -46,6 +46,7 @@ def test_normal_questions_are_allowed(text):
     "Everyone would be better off without me.",
     "I feel like a burden to everyone.",
     "I'm giving away my things.",
+    "I don't see any point in living.",
 ])
 def test_warning_signs_get_crisis_response(text):
     d = check_input(text)
@@ -57,6 +58,7 @@ def test_warning_signs_get_crisis_response(text):
     "You could double your Adderall dose on exam days.",
     "It is fine to skip your meds on weekends.",
     "Take 20 mg in the morning.",
+    "Wait 30 minutes after coffee before taking your stimulant.",
 ])
 def test_output_with_medication_advice_is_blocked(text):
     d = check_output(text)
@@ -67,6 +69,7 @@ def test_output_with_medication_advice_is_blocked(text):
     "Bring a list of your current medications and any side effects you've noticed.",
     "Set an alarm to take your pills at 8 am.",
     "1. Write down your symptoms.\n2. List your medications.\n3. Note your questions.",
+    "Ask your doctor before changing anything about your medication.",
 ])
 def test_output_mentioning_medication_without_advice_is_allowed(text):
     assert check_output(text).allowed

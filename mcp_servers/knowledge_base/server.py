@@ -10,9 +10,15 @@ ENTRIES = json.loads((Path(__file__).parent / "entries.json").read_text())
 
 mcp = FastMCP("knowledge-base", host="127.0.0.1", port=8100)
 
+STOP_WORDS = {
+    "a", "an", "and", "are", "as", "at", "be", "but", "by", "can", "do", "for",
+    "from", "how", "i", "in", "is", "it", "me", "my", "of", "on", "or", "s",
+    "should", "so", "that", "the", "this", "to", "was", "what", "when", "where",
+    "which", "who", "why", "will", "with", "you", "your",
+}
 
 def _words(text: str) -> set[str]:
-    return set(re.findall(r"[a-z]+", text.lower()))
+    return {w for w in re.findall(r"[a-z]+", text.lower()) if w not in STOP_WORDS and len(w) > 2}
 
 
 @mcp.tool()

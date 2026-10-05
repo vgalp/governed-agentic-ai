@@ -44,7 +44,7 @@ WARNING_SIGN_RE = re.compile(
     r"\b(better off without me|(a )?burden to (everyone|everybody|others|my family|people)|"
     r"giv(e|ing) away (my|all my) (things|stuff|belongings|possessions)|"
     r"say(ing)? goodbye to (everyone|everybody|people|my family)|"
-    r"(not|never) (to )?wake up (again|tomorrow)|don't want to wake up|no point (in )?(going on|living))\b",
+    r"(not|never) (to )?wake up (again|tomorrow)|don't want to wake up|(no|any|the) point (in )?(going on|living))\b",
     re.IGNORECASE,
 )
 
@@ -53,6 +53,11 @@ WARNING_SIGN_RE = re.compile(
 OUTPUT_ADVICE_RE = re.compile(
     r"\b(double|increase|decrease|reduce|raise|lower|stop taking|skip|switch to|"
     r"mix|combine|extra|more of)\b",
+    re.IGNORECASE,
+)
+TIMING_ADVICE_RE = re.compile(
+    r"\b((before|after) (taking|you take)|wait\b.{0,40}\b(before|after)|"
+    r"\d+\s*(minutes?|hours?) (before|after))",
     re.IGNORECASE,
 )
 SENTENCE_SPLIT_RE = re.compile(r"(?<=[.!?])\s+|\n+")
@@ -99,10 +104,11 @@ def check_input(text: str) -> GuardrailDecision:
 
 
 def gives_medication_advice(text: str) -> bool:
-    """True if any single sentence names a medication AND tells the user to change it."""
-    return any(MEDICATION_RE.search(s) and OUTPUT_ADVICE_RE.search(s)
-               for s in SENTENCE_SPLIT_RE.split(text))
-
+    """True if any single sentence names a medication AND tells the user to change or time it."""
+    return any(
+        MEDICATION_RE.search(s) and (OUTPUT_ADVICE_RE.search(s) or TIMING_ADVICE_RE.search(s))
+        for s in SENTENCE_SPLIT_RE.split(text)
+    )
 
 def check_output(text: str) -> GuardrailDecision:
     """Decide whether a model answer may be shown to the user.
