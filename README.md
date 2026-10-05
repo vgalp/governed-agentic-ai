@@ -1,5 +1,5 @@
 # Governed Agentic AI Framework
-
+[![tests](https://github.com/vgalp/governed-agentic-ai/actions/workflows/tests.yml/badge.svg)](https://github.com/vgalp/governed-agentic-ai/actions/workflows/tests.yml)
 An open-source reference architecture for deploying multi-agent AI systems safely in healthcare, government, and other regulated environments.
 
 > **Status:** Early development. This is a research prototype, not production software.
