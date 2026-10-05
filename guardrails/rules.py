@@ -30,6 +30,18 @@ DIAGNOSIS_RE = re.compile(
     r"\b(do i have|could i have|diagnose|diagnosis|am i adhd|is it adhd|test me for)\b",
     re.IGNORECASE,
 )
+# In a model ANSWER: wording that affirms or suggests the user has a condition
+# ("yes, that's a common symptom of ADHD", "it sounds like ADHD", "you probably have ADHD").
+CONDITION = r"(adhd|add|attention[- ]deficit|autism|autistic|anxiety|depression|bipolar|ocd|dyslexia)"
+DIAGNOSIS_AFFIRM_RE = re.compile(
+    r"\b(yes,?\s+(it|this|that)?\s*(can be|could be|is|sounds like|might be|may be)?"
+    r"|it (sounds|seems) like( you have)?"
+    r"|(this|that|these) (sounds?|seems?|is|are|could be|might be|may be) (like )?(a )?(common )?"
+    r"(signs?|symptoms?|indicators?)? ?(of )?"
+    r"|(common|classic|typical) (sign|symptom)s? of"
+    r"|you (likely|probably|may|might) have)\s*" + CONDITION + r"\b",
+    re.IGNORECASE,
+)
 
 CRISIS_RE = re.compile(
     r"\b(suicid\w*|kill myself|end my life|end it all|want to die|"
@@ -123,4 +135,6 @@ def check_output(text: str) -> GuardrailDecision:
         return GuardrailDecision(False, "medication", "model answer gives medication advice", MEDICATION_RESPONSE)
     if CRISIS_RE.search(text):
         return GuardrailDecision(False, "crisis", "model answer contains crisis language", CRISIS_RESPONSE)
+    if DIAGNOSIS_AFFIRM_RE.search(text):
+        return GuardrailDecision(False, "diagnosis", "model answer suggests a diagnosis", DIAGNOSIS_RESPONSE)
     return GuardrailDecision(True)
