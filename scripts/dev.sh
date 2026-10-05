@@ -12,6 +12,7 @@
 
 set -euo pipefail
 cd "$(dirname "$0")/.."
+[ -f .env ] && set -a && . ./.env && set +a   # load local secrets such as AUDIT_HMAC_KEY
 
 LOG_DIR="logs"
 PY=".venv/bin/python"
