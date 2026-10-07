@@ -8,3 +8,4 @@ __pycache__/
 *.safetensors
 logs/
 audit.jsonl
+profiles/clinic-assistant/data/clinic.dbprofiles/clinic-assistant/data/clinic.db
