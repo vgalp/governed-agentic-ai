@@ -1,0 +1,26 @@
+# Fixed replies when a guardrail blocks. Written for clinic STAFF, not patients.
+# DRAFTS pending review by the clinic's medical director.
+
+crisis: >-
+  This may be a patient safety emergency. Follow the clinic's urgent-risk
+  protocol now: tell the on-call clinician immediately and do not leave the
+  person alone. If anyone is in immediate danger, call 911. The 988 Suicide &
+  Crisis Lifeline (call or text 988 in the U.S.) can also help.
+
+medication: >-
+  I can't make medication decisions, including doses, timing or changes.
+  The patient's prescribing clinician must decide. I can show what the
+  patient's record lists, or help you prepare a message to the clinician.
+
+diagnosis: >-
+  I can't diagnose or interpret symptoms or results. Please ask the patient's
+  clinician. I can show what the record says about past visits.
+
+medical_advice: >-
+  That needs a clinical decision, which only the patient's clinician can make.
+  I can help you find what the record says or prepare a note for the clinician.
+
+unavailable: >-
+  Sorry, I can't answer right now because a safety check is unavailable.
+  Please try again shortly. For an urgent patient safety issue, follow the
+  urgent-risk protocol and tell the on-call clinician; call 911 in an emergency.

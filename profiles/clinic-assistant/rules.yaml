@@ -1,0 +1,45 @@
+# Layer 1 guardrails for the clinic staff assistant (same format as adhd-assistant).
+# Staff may READ what records say, including medication names and strengths
+# ("Acetaminophen 325 MG"). What is blocked is a DECISION: dosing, changing,
+# diagnosing, or treating.
+
+patterns:
+  # Someone may be at risk. Staff relay this ("the patient said she wants to die").
+  crisis:
+    terms: ['suicid\w*', 'kill (himself|herself|themselves|myself)', 'end (his|her|their|my) life',
+            'wants? to die', 'hurt(ing)? (himself|herself|themselves|myself)', 'self[- ]?harm\w*',
+            'overdosed?', took too many]
+
+  medication:
+    terms: ['medications?', 'medicines?', meds, 'prescriptions?', 'pills?', 'tablets?', 'doses?',
+            dosage, 'mg', insulin, 'antibiotics?', 'opioids?']
+
+  # Words that turn a medication question into a request for a decision.
+  dose_decision:
+    regex: '\b(how (much|many)|should (i|we|she|he|they)|can (i|we) (give|increase|decrease|double|stop|switch)|is it (ok|okay|safe) to|safe to (take|give|combine)|increase|decrease|double|adjust|taper|switch (to|from)|stop (taking|giving)|combine|interact)\b'
+
+  diagnosis_request:
+    regex: '\b(diagnos\w*|what (does|could|might) (he|she|they|the patient) have|does (he|she|they|the patient) have|is (it|this) (an? )?(infection|cancer|covid|diabetes|serious)|interpret (the|these|this) (results?|labs?))\b'
+
+  # In a model ANSWER: advice to change or give a medication.
+  output_advice:
+    regex: '\b(you (should|could|can) (give|increase|decrease|double|stop|switch|adjust)|increase the dose|decrease the dose|double the dose|stop (taking|giving)|switch (him|her|them|the patient) to|recommend (giving|starting|stopping))\b'
+
+  # In a model ANSWER: wording that suggests a diagnosis.
+  diagnosis_affirm:
+    regex:
+      - '\b((he|she|they|the patient) (likely|probably|may|might|could) (have|has)'
+      - '|((sounds|looks|seems) like (he|she|they|the patient) (has|have)|(sounds|looks|seems) like'
+      - '|consistent with|suggestive of|signs? of) [^.]{0,40}?'
+      - '(infection|disease|disorder|syndrome|itis|osis|emia|cancer|tumou?r|diabetes|pneumonia|flu|covid|fracture|depression|anxiety)'
+      - '|(likely|probable) diagnosis)'
+
+input:
+  - {category: crisis, reason: patient safety risk in input, any: [crisis]}
+  - {category: medication, reason: medication decision requested, all: [medication], any: [dose_decision]}
+  - {category: diagnosis, reason: diagnosis requested, any: [diagnosis_request]}
+
+output:
+  - {category: medication, reason: model answer gives medication advice, scope: sentence,
+     all: [medication], any: [output_advice]}
+  - {category: diagnosis, reason: model answer suggests a diagnosis, any: [diagnosis_affirm]}
