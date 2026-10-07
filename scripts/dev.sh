@@ -6,7 +6,7 @@
 #   ./scripts/dev.sh down      stop the Python services and the Docker containers
 #   ./scripts/dev.sh restart   stop, then start
 #   ./scripts/dev.sh status    show what is running, and warn about duplicate processes
-#   ./scripts/dev.sh logs [knowledge-base|api|planner]   follow logs
+#   ./scripts/dev.sh logs [knowledge-base|records|api|planner]   follow logs
 #
 #   PROFILE=<name> ./scripts/dev.sh start   run another profile (default: adhd-assistant)
 #
@@ -26,6 +26,7 @@ export PROFILE="${PROFILE:-adhd-assistant}"   # which profile every service load
 # name | process pattern | module and arguments | port to wait for ("" = none)
 SERVICES=(
   "knowledge-base|-m mcp_servers\.knowledge_base|mcp_servers.knowledge_base.server|8100"
+  "records|-m mcp_servers\.records|mcp_servers.records.server|8101"
   "api|-m uvicorn api\.main|uvicorn api.main:app --port 8000|8000"
   "planner|-m agents\.planner|agents.planner|"
 )
@@ -57,7 +58,7 @@ check_prereqs() {
     ollama list | awk '{print $1}' | grep -q -E "^${m}(:latest)?$" || fail "Model $m missing. Run: ollama pull $m"
   done
   ok "Ollama ($MODELS)"
-  uv sync -q --inexact
+  uv sync -q --inexact        # keep the spaCy model Presidio downloads (not in uv.lock)
   ok "Python environment"
   "$PY" -m profiles.loader >/dev/null || { "$PY" -m profiles.loader; fail "Profile check failed"; }
   ok "Profile $PROFILE"

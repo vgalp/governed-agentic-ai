@@ -67,6 +67,10 @@ def decide_route(profile: Profile, entities: list[str], labels: list[str]) -> Ro
     if not r["external_allowed"] or not external_available:
         local.reasons = reasons + ["policy chose external, overridden: profile or model does not allow it"]
         return local
+    blocked = sorted(set(labels) & set(r["never_external_labels"]))
+    if blocked:
+        local.reasons = reasons + [f"policy chose external, overridden: uses {', '.join(blocked)} data"]
+        return local
     return RouteDecision("external", ext_key, profile.models[ext_key], send_masked=True, reasons=reasons)
 
 

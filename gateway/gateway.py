@@ -18,6 +18,7 @@ from profiles.loader import Profile, load_profile
 # Tools this deployment can reach. A profile can only grant tools listed here.
 TOOL_SERVERS = {
     "search_knowledge": "http://127.0.0.1:8100/mcp",
+    "search_records": "http://127.0.0.1:8101/mcp",
 }
 
 
@@ -47,15 +48,19 @@ async def _call(server_url: str, tool: str, args: dict) -> dict:
 
 
 def call_tool(agent: str, tool: str, args: dict, request_id: str,
-              profile: Profile | None = None) -> dict:
+              profile: Profile | None = None, audit_args: dict | None = None) -> dict:
+    """Call a tool if policy allows it. audit_args is what the audit records instead of
+    args, for tools that receive real identifiers: the audit only ever holds masked text."""
     profile = profile or load_profile()
+    if audit_args is None and tool in profile.identifier_tools:
+        raise ValueError(f"{tool} receives identifiers: pass masked audit_args")
     allowed = tool in TOOL_SERVERS and _is_allowed(profile, agent, tool)
     _audit({
         "request_id": request_id,
         "profile": profile.name,
         "agent": agent,
         "tool": tool,
-        "args": args,  # args contain masked text only
+        "args": audit_args if audit_args is not None else args,   # masked text only
         "decision": "allow" if allowed else "deny",
     })
     if not allowed:

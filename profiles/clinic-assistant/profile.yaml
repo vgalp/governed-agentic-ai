@@ -35,6 +35,15 @@ routing:
 
 tool_data_labels:
   search_knowledge: approved_content       # clinic policies
+  search_records: patient_record           # patient records: never leave the machine
+
+# search_records looks patients up by name, so it gets the real question. It runs
+# locally, and the gateway audits the masked question. Only tools whose data label
+# is in never_external_labels may be listed here (the loader checks).
+tools_receiving_identifiers: [search_records]
+
+records_db: data/clinic.db                 # built locally: see data/README.md
+cite_sources: true                         # the model sees source IDs so it can cite them
 
 prompt: prompt.md
 responses: responses.yaml
@@ -56,4 +65,4 @@ knowledge_base: data/knowledge_base.json
 
 agents:
   planner:
-    tools: [search_knowledge]
+    tools: [search_knowledge, search_records]

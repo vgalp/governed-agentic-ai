@@ -99,19 +99,32 @@ while True:
     # 2. Mask personal details before anything goes to tools or the model.
     masked_message, mapping = mask(req["message"], PROFILE)
 
-    # 3. Retrieve approved content through the gateway (policy-checked and audited).
-    try:
-        kb = call_tool(AGENT_NAME, "search_knowledge", {"query": masked_message, "limit": 3},
-                       request_id, PROFILE)
-        notes = kb.get("results", [])
-    except ToolCallDenied as e:
-        print("Denied:", e)
-        notes = []
-    notes_text = "\n".join(f"- {n['title']}: {n['text']}" for n in notes) or "- (no approved notes found)"
+    # 3. Call the profile's tools through the gateway (policy-checked and audited).
+    #    Tools get masked text, except tools the profile marks as receiving identifiers
+    #    (a local records lookup needs the real name); the audit still records masked text.
+    notes, tools_used = [], []
+    for tool in PROFILE.agents.get(AGENT_NAME, ()):
+        receives_ids = tool in PROFILE.identifier_tools
+        try:
+            result = call_tool(AGENT_NAME, tool, {"query": req["message"] if receives_ids else masked_message},
+                               request_id, PROFILE,
+                               audit_args={"query": masked_message} if receives_ids else None)
+        except ToolCallDenied as e:
+            print("Denied:", e)
+            continue
+        found = result.get("results", [])
+        if found:
+            tools_used.append(tool)          # only tools that returned data count for routing
+            notes += found
+    if PROFILE.cite_sources:
+        notes_text = "\n".join(f"- [{n['id']}] {n['title']}: {n['text']}" for n in notes)
+    else:
+        notes_text = "\n".join(f"- {n['title']}: {n['text']}" for n in notes)
+    notes_text = notes_text or "- (no approved notes found)"
 
     # 4. Decide which model answers (OPA policy, audited). External models only
     #    ever get masked text; the local model gets what the profile says.
-    decision = route(PROFILE, mapping, ["search_knowledge"], request_id, AGENT_NAME)
+    decision = route(PROFILE, mapping, tools_used, request_id, AGENT_NAME)
 
     # 5. Ask the model. If an external model fails, fall back to the local one.
     def ask(d: RouteDecision) -> str:

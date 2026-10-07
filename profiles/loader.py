@@ -74,6 +74,9 @@ class Profile:
     privacy_entities: tuple[str, ...]
     privacy_allow_list: tuple[str, ...]
     knowledge_base: Path
+    records_db: Path | None                     # SQLite records database, if the profile has one
+    identifier_tools: tuple[str, ...]           # tools that may receive real names (local only)
+    cite_sources: bool                          # show source IDs to the model so it can cite them
     agents: dict[str, tuple[str, ...]]          # agent -> tools it may call
 
     def response(self, category: str) -> str:
@@ -289,6 +292,23 @@ def load_profile_from(path: Path) -> Profile:
     if unlabeled:
         raise ProfileError(f"{where}: tool_data_labels has no label for {', '.join(unlabeled)}")
 
+    # Tools that receive real identifiers (e.g. a patient name to look up) must be granted,
+    # and the data they return must be labelled as never leaving the machine.
+    identifier_tools = tuple(p.get("tools_receiving_identifiers") or [])
+    for t in identifier_tools:
+        if t not in granted:
+            raise ProfileError(f"{where}: tools_receiving_identifiers: '{t}' is not granted to any agent")
+        if tool_data_labels.get(t) not in routing["never_external_labels"]:
+            raise ProfileError(f"{where}: '{t}' receives identifiers, so its data label "
+                               f"'{tool_data_labels.get(t)}' must be in routing.never_external_labels")
+
+    records_db = None
+    if p.get("records_db"):
+        records_db = (path / p["records_db"]).resolve()
+        if path.resolve() not in records_db.parents:
+            raise ProfileError(f"{where}: records_db points outside the profile folder")
+        # Not required to exist: it is built locally (see the profile's data/README.md).
+
     privacy = p.get("privacy") or {}
     return Profile(
         name=name,
@@ -307,6 +327,9 @@ def load_profile_from(path: Path) -> Profile:
         privacy_entities=tuple(privacy.get("entities", [])),
         privacy_allow_list=tuple(privacy.get("allow_list", [])),
         knowledge_base=_file(path, _require(p, "knowledge_base", where), where),
+        records_db=records_db,
+        identifier_tools=identifier_tools,
+        cite_sources=bool(p.get("cite_sources", False)),
         agents=agents,
     )
 

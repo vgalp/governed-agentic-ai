@@ -144,3 +144,13 @@ def test_external_provider_sends_key_only_in_header(monkeypatch):
     assert sent["url"] == "https://x/v1/chat/completions"
     assert sent["headers"] == {"Authorization": "Bearer secret-123"}
     assert "secret-123" not in str(sent["json"])
+
+
+def test_never_external_data_overrides_the_policy(monkeypatch, external_profile):
+    """Even if the policy said external, data labelled never-external keeps the request local."""
+    import dataclasses
+    p = dataclasses.replace(external_profile, routing={**external_profile.routing,
+                                                       "never_external_labels": ("approved_content",)})
+    policy_says(monkeypatch, {"target": "external", "reasons": ["ok"]})
+    d = router.decide_route(p, [], ["approved_content"])
+    assert d.target == "local" and "uses approved_content data" in d.reasons[-1]
