@@ -60,6 +60,14 @@ def audit_guardrail(request_id: str, stage: str, layer: str, decision, role: str
     })
 
 
+def reply(decision, role: str | None) -> str:
+    """The fixed reply for a blocked request. The decision is the same for every role;
+    only the wording may differ (roles.yaml). An unknown or missing role gets the default."""
+    if decision.category in PROFILE.responses:
+        return PROFILE.response(decision.category, role)
+    return decision.response        # e.g. the classifier was unavailable
+
+
 def publish_response(request_id: str, answer: str, sources: list, guardrail: dict | None,
                      route_info: dict | None = None, access: dict | None = None) -> None:
     producer.produce("chat.responses", key=request_id, value=json.dumps({
@@ -97,7 +105,7 @@ while True:
         in_layer = "classifier"
     audit_guardrail(request_id, "input", in_layer, in_check, role)
     if not in_check.allowed:
-        publish_response(request_id, in_check.response, [],
+        publish_response(request_id, reply(in_check, role), [],
                          {"stage": "input", "layer": in_layer, "category": in_check.category})
         consumer.commit(message=msg)
         print(f"Blocked at input by {in_layer} ({in_check.category}): {request_id}")
@@ -206,7 +214,7 @@ while True:
         out_layer = "classifier"
     audit_guardrail(request_id, "output", out_layer, out_check, role)
     if not out_check.allowed:
-        publish_response(request_id, out_check.response, [],
+        publish_response(request_id, reply(out_check, role), [],
                          {"stage": "output", "layer": out_layer, "category": out_check.category},
                          route_info, access)
         consumer.commit(message=msg)

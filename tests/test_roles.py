@@ -146,3 +146,25 @@ def test_roles_need_a_role_required_reply(copy_of_clinic):
     _edit(copy_of_clinic / "responses.yaml", lambda d: d.pop("role_required"))
     with pytest.raises(ProfileError, match="role_required"):
         load_profile_from(copy_of_clinic)
+
+
+
+# --- replies worded for the role ------------------------------------------------
+
+def test_clinician_gets_clinician_wording_for_the_same_block():
+    clinician = CLINIC.response("medical_advice", "clinician")
+    default = CLINIC.response("medical_advice", "nurse")
+    assert clinician != default and "your clinical judgment" in clinician
+    assert default == CLINIC.responses["medical_advice"]
+
+
+def test_unknown_or_missing_role_gets_the_default_reply():
+    assert CLINIC.response("medication", "visitor") == CLINIC.responses["medication"]
+    assert CLINIC.response("medication") == CLINIC.responses["medication"]
+
+
+def test_role_reply_must_be_a_known_category(copy_of_clinic):
+    _edit(copy_of_clinic / "roles.yaml",
+          lambda d: d["roles"]["nurse"].setdefault("responses", {}).update(anything="Hi"))
+    with pytest.raises(ProfileError, match="not a category in responses.yaml"):
+        load_profile_from(copy_of_clinic)

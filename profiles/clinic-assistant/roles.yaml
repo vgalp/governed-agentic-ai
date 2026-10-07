@@ -18,6 +18,20 @@ roles:
     title: Clinician
     tools: [search_knowledge, search_records]
     data_classes: [patient_details, appointments, visit_dates, visit_clinical, medications, claims]
+    # The same requests are blocked for every role; only the wording changes.
+    # This assistant never recommends treatment, even to clinicians.
+    responses:
+      medication: >-
+        I don't make medication decisions such as doses, timing or changes, for any
+        role: that stays your clinical judgment. I can show the patient's current
+        medication list from the record to support your decision.
+      diagnosis: >-
+        I don't diagnose or interpret symptoms or results, for any role: that stays
+        your clinical judgment. I can show what the record says about past visits.
+      medical_advice: >-
+        I don't make treatment or prescribing recommendations, for any role: that
+        stays your clinical judgment. I can show what the patient's record lists,
+        such as current medications and past visits, to support your decision.
   nurse:
     title: Nurse
     tools: [search_knowledge, search_records]

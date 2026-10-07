@@ -48,4 +48,4 @@ test_profile_without_roles_uses_agent_grant if {
 
 test_agent_grant_still_required if {
 	not authz.allow with input as call("adhd", null, "search_records") with data.profiles as no_roles
-}t
+}

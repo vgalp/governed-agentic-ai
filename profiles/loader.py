@@ -61,6 +61,7 @@ class Role:
     title: str
     tools: tuple[str, ...]          # tools this role may use
     data_classes: tuple[str, ...]   # kinds of record data this role may see
+    responses: dict[str, str]       # fixed replies worded for this role (optional overrides)
 
 
 @dataclass(frozen=True)
@@ -90,7 +91,11 @@ class Profile:
     role_filtered_tools: tuple[str, ...]        # tools whose results are filtered by role
     examples: tuple[str, ...]                   # example questions for the chat page
 
-    def response(self, category: str) -> str:
+    def response(self, category: str, role: str | None = None) -> str:
+        """The fixed reply for a category, worded for the role if the role has its own."""
+        r = self.roles.get(role) if role else None
+        if r and category in r.responses:
+            return r.responses[category]
         return self.responses[category]
 
     @property
@@ -251,8 +256,8 @@ def _routing(raw, models: dict[str, dict], where: str) -> dict:
     return r
 
 
-def _roles(raw: dict, granted: set[str], where: str):
-    """roles.yaml: data classes, roles (title, tools, data classes), filtered tools."""
+def _roles(raw: dict, granted: set[str], where: str, response_keys: set[str]):
+    """roles.yaml: data classes, roles (title, tools, data classes, replies), filtered tools."""
     classes = raw.get("data_classes") or {}
     if not isinstance(classes, dict) or not classes:
         raise ProfileError(f"{where}: 'data_classes' must list at least one class")
@@ -269,7 +274,13 @@ def _roles(raw: dict, granted: set[str], where: str):
         for c in seen:
             if c not in classes:
                 raise ProfileError(f"{w}: unknown data class '{c}'")
-        roles[key] = Role((r or {}).get("title", key), tools, seen)
+        replies = {k: str(v).strip() for k, v in ((r or {}).get("responses") or {}).items()}
+        for k, v in replies.items():
+            if k not in response_keys:
+                raise ProfileError(f"{w}: reply for '{k}', which is not a category in responses.yaml")
+            if not v:
+                raise ProfileError(f"{w}: reply for '{k}' is empty")
+        roles[key] = Role((r or {}).get("title", key), tools, seen, replies)
     if not roles:
         raise ProfileError(f"{where}: 'roles' must define at least one role")
     filtered = tuple(raw.get("filtered_tools") or [])
@@ -355,7 +366,8 @@ def load_profile_from(path: Path) -> Profile:
     roles, data_classes, role_filtered_tools = {}, {}, ()
     if p.get("roles"):
         roles, data_classes, role_filtered_tools = _roles(
-            _yaml(_file(path, p["roles"], where)), granted, f"{path.name}/{p['roles']}")
+            _yaml(_file(path, p["roles"], where)), granted, f"{path.name}/{p['roles']}",
+            set(responses))
         if "role_required" not in responses:
             raise ProfileError(f"{path.name}/responses.yaml: no response for role_required "
                                "(needed because the profile has roles)")
