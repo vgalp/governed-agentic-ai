@@ -564,6 +564,7 @@ dependencies = [
     { name = "mcp" },
     { name = "presidio-analyzer" },
     { name = "presidio-anonymizer" },
+    { name = "pyyaml" },
     { name = "requests" },
     { name = "uvicorn" },
 ]
@@ -581,6 +582,7 @@ requires-dist = [
     { name = "mcp", specifier = "<2" },
     { name = "presidio-analyzer", specifier = ">=2.2.364" },
     { name = "presidio-anonymizer", specifier = ">=2.2.364" },
+    { name = "pyyaml", specifier = ">=6.0.3" },
     { name = "requests", specifier = ">=2.34.2" },
     { name = "uvicorn", specifier = ">=0.54.0" },
 ]
