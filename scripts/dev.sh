@@ -57,7 +57,7 @@ check_prereqs() {
     ollama list | awk '{print $1}' | grep -q -E "^${m}(:latest)?$" || fail "Model $m missing. Run: ollama pull $m"
   done
   ok "Ollama ($MODELS)"
-  uv sync -q
+  uv sync -q --inexact
   ok "Python environment"
   "$PY" -m profiles.loader >/dev/null || { "$PY" -m profiles.loader; fail "Profile check failed"; }
   ok "Profile $PROFILE"
