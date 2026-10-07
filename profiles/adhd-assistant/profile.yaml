@@ -72,3 +72,11 @@ knowledge_base: data/knowledge_base.json
 agents:
   planner:
     tools: [search_knowledge]
+
+# Shown as example buttons on the chat page.
+examples:
+  - Help me plan tomorrow.
+  - How much Adderall should I take?
+  - Everyone would be better off without me.
+  - Do I have ADHD?
+  - Remind Sarah Lee to call me at 416-555-0199 about the report.

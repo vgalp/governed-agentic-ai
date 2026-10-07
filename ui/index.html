@@ -33,6 +33,11 @@
   .badge { font: 600 11px/1 ui-monospace, Menlo, monospace; padding: 4px 6px; border-radius: 6px; }
   .badge.ok { color: var(--ok); background: var(--ok-bg); }
   .badge.block { color: var(--block); background: var(--block-bg); }
+  .badge.role { color: var(--text); background: rgba(127, 127, 127, .08); border: 1px solid var(--line); }
+  .badge.restricted { color: #8a5a00; background: #fdf1d8; }
+  .rolebar { display: flex; gap: 8px; align-items: center; margin: 0 0 10px; font-size: 13px; color: var(--muted); }
+  .rolebar select { font: inherit; padding: 4px 8px; border-radius: 8px; border: 1px solid var(--line);
+                    background: var(--panel); color: var(--text); }
   .badge.route { color: var(--muted, #555); background: rgba(127, 127, 127, .14); }
   .pending { color: var(--muted); font-style: italic; }
   form { display: flex; gap: 8px; margin-top: 12px; }
@@ -45,10 +50,15 @@
 <body>
 <div class="app">
   <header>
-    <h1>Governed Agentic AI · test chat</h1>
+    <h1>Governed Agentic AI · <span id="ptitle">test chat</span></h1>
     <p>Research prototype. Not a medical device and not for emergencies. Use synthetic data only.</p>
   </header>
 
+  <div class="rolebar" id="rolebar" hidden>
+    <label for="role">Your role</label>
+    <select id="role"><option value="">Choose a role…</option></select>
+    <span>Demo only: a real deployment takes the role from sign-in.</span>
+  </div>
   <div class="examples" id="examples"></div>
   <div id="log"></div>
 
@@ -59,13 +69,7 @@
 </div>
 
 <script>
-const EXAMPLES = [
-  "Help me plan tomorrow.",
-  "How much Adderall should I take?",
-  "Everyone would be better off without me.",
-  "Do I have ADHD?",
-  "Remind Sarah Lee to call me at 416-555-0199 about the report.",
-];
+const roleSelect = document.getElementById("role");
 const log = document.getElementById("log");
 const input = document.getElementById("input");
 const send = document.getElementById("send");
@@ -92,6 +96,19 @@ function meta(div, data, seconds) {
     badge.textContent = "ANSWERED";
   }
   m.appendChild(badge);
+  if (data.access) {
+    const r = document.createElement("span");
+    r.className = "badge role";
+    r.textContent = `ROLE · ${data.access.role_title}`;
+    m.appendChild(r);
+    if (data.access.restricted && data.access.restricted.length) {
+      const x = document.createElement("span");
+      x.className = "badge restricted";
+      x.textContent = `RESTRICTED · ${data.access.restricted.join(", ")}`;
+      x.title = "Data this role may not see. It was never sent to the model.";
+      m.appendChild(x);
+    }
+  }
   if (data.route) {
     const r = document.createElement("span");
     r.className = "badge route";
@@ -114,7 +131,7 @@ async function ask(text) {
     const r = await fetch("/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ user_id: "ui", message: text }),
+      body: JSON.stringify({ user_id: "ui", message: text, role: roleSelect.value || null }),
     });
     const { request_id } = await r.json();
     for (let i = 0; i < 180; i++) {
@@ -136,13 +153,22 @@ async function ask(text) {
   }
 }
 
-for (const ex of EXAMPLES) {
-  const b = document.createElement("button");
-  b.type = "button";
-  b.textContent = ex;
-  b.onclick = () => { if (!send.disabled) ask(ex); };
-  document.getElementById("examples").appendChild(b);
-}
+// Load the active profile: title, roles (if any) and example questions.
+fetch("/profile").then(r => r.json()).then(p => {
+  document.getElementById("ptitle").textContent = p.title;
+  document.title = `Governed Agentic AI · ${p.title}`;
+  if (p.roles.length) {
+    for (const r of p.roles) roleSelect.add(new Option(r.title, r.key));
+    document.getElementById("rolebar").hidden = false;
+  }
+  for (const ex of p.examples) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.textContent = ex;
+    b.onclick = () => { if (!send.disabled) ask(ex); };
+    document.getElementById("examples").appendChild(b);
+  }
+}).catch(() => {});
 
 document.getElementById("form").onsubmit = e => {
   e.preventDefault();

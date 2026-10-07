@@ -11,11 +11,13 @@ from pydantic import BaseModel
 
 from api.events import buffer, consume_events, event_stream
 from audit.chain import key_from_env, unkeyed_chains, verify_chain
+from profiles.loader import load_profile
 
 BOOTSTRAP = "localhost:9092"
 UI_DIR = Path(__file__).resolve().parent.parent / "ui"
 
 producer = Producer({"bootstrap.servers": BOOTSTRAP, "enable.idempotence": True})
+PROFILE = load_profile()        # same PROFILE as the agents (set by scripts/dev.sh)
 responses: dict[str, dict] = {}  # in-memory for now; replaced later
 
 
@@ -51,6 +53,7 @@ app = FastAPI(title="Governed Agentic AI - Chat API", lifespan=lifespan)
 class ChatRequest(BaseModel):
     user_id: str
     message: str
+    role: str | None = None     # demo only: a real deployment takes the role from sign-in
 
 
 @app.get("/", include_in_schema=False)
@@ -86,6 +89,17 @@ def audit_verify():
     }
 
 
+@app.get("/profile")
+def profile_info():
+    """What the chat page needs: the active profile, its roles and example questions."""
+    return {
+        "name": PROFILE.name,
+        "title": PROFILE.title,
+        "roles": [{"key": k, "title": r.title} for k, r in PROFILE.roles.items()],
+        "examples": list(PROFILE.examples),
+    }
+
+
 @app.get("/health")
 def health():
     return {"status": "ok"}
@@ -94,7 +108,7 @@ def health():
 @app.post("/chat")
 def send_chat(req: ChatRequest):
     request_id = str(uuid.uuid4())
-    event = {"request_id": request_id, "user_id": req.user_id, "message": req.message}
+    event = {"request_id": request_id, "user_id": req.user_id, "message": req.message, "role": req.role}
     producer.produce("chat.requests", key=request_id, value=json.dumps(event))
     producer.flush()
     return {"request_id": request_id}

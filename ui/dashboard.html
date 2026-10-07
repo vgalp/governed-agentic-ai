@@ -46,6 +46,8 @@
   .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px; }
   .panel h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 0 0 10px; }
   .send { display: flex; gap: 8px; margin: 14px 0 8px; }
+  .send select { padding: 0 8px; border-radius: 8px; border: 1px solid var(--line);
+                 background: var(--panel); color: var(--text); font: inherit; }
   .send input { flex: 1; min-width: 0; padding: 9px 12px; border-radius: 8px; border: 1px solid var(--line);
                 background: var(--panel); color: var(--text); font: inherit; }
   .send button { border: 0; background: var(--accent); color: #fff; border-radius: 8px; padding: 0 16px; }
@@ -104,7 +106,7 @@
 <div class="wrap">
   <header>
     <div>
-      <h1>Governed Agentic AI · live pipeline</h1>
+      <h1>Governed Agentic AI · live pipeline · <span id="ptitle"></span></h1>
       <div class="sub">Every request, as it moves through the safety controls. Synthetic data only.</div>
     </div>
     <div class="status">
@@ -116,6 +118,7 @@
   </header>
 
   <form class="send" id="sendForm">
+    <select id="role" hidden title="Role for test messages (demo only)"><option value="">No role</option></select>
     <input id="sendInput" placeholder="Send a test message through the pipeline…" autocomplete="off">
     <button type="submit">Send</button>
   </form>
@@ -159,13 +162,6 @@
 </div>
 
 <script>
-const EXAMPLES = [
-  "Help me plan tomorrow.",
-  "How much Adderall should I take?",
-  "Everyone would be better off without me.",
-  "Remind Sarah Lee to call me at 416-555-0199 about the report.",
-  "What is the capital of France?",
-];
 const STAGES = [
   ["received", "Request received"],
   ["input", "Input guardrails"],
@@ -202,6 +198,7 @@ function find(req, topic, pred = () => true) {
 function derive(req) {
   const rq = find(req, "chat.requests");
   const inG = find(req, "audit.guardrails", d => d.stage === "input");
+  const acc = find(req, "audit.guardrails", d => d.stage === "access");   // missing or unknown role
   const tool = find(req, "audit.tool_calls");
   const mi = find(req, "audit.model_inputs");
   const rt = [...req.events].reverse().find(e => e.topic === "audit.routing");   // last decision (after any fallback)
@@ -209,12 +206,13 @@ function derive(req) {
   const resp = find(req, "chat.responses");
   const s = {};
 
-  s.received = rq ? ["pass", `${rq.data.message_chars} characters (not displayed)`] : ["pass", "received"];
+  s.received = rq ? ["pass", `${rq.data.message_chars} characters (not displayed)${rq.data.role ? " · role " + rq.data.role : ""}`] : ["pass", "received"];
   if (!inG) s.input = ["wait", ""];
   else if (inG.data.allowed) s.input = ["pass", `${inG.data.layer}: allowed`];
   else s.input = ["block", `${inG.data.layer}: ${inG.data.category}`];
+  if (acc) s.input = ["block", "role: missing or unknown"];
 
-  const blockedIn = inG && !inG.data.allowed;
+  const blockedIn = (inG && !inG.data.allowed) || !!acc;
   if (blockedIn) {
     for (const k of ["masking", "gateway", "routing", "model", "output"]) s[k] = ["skip", "not reached"];
   } else {
@@ -286,7 +284,7 @@ function summarize(e) {
     case "chat.requests": return `chat.requests · message received (${d.message_chars} chars)`;
     case "chat.responses": return `chat.responses · ${d.guardrail ? "safe response" : "answer"} sent`;
     case "audit.guardrails": return `audit.guardrails · ${d.stage} ${d.layer} · ${d.allowed ? "allowed" : "blocked: " + d.category}${seq}`;
-    case "audit.tool_calls": return `audit.tool_calls · ${d.agent} → ${d.tool} · ${d.decision}${seq}`;
+    case "audit.tool_calls": return `audit.tool_calls · ${d.role ? d.role + " · " : ""}${d.agent} → ${d.tool} · ${d.decision}${d.returned !== undefined ? " · " + d.returned + " returned" : ""}${seq}`;
     case "audit.model_inputs": return `audit.model_inputs · ${d.model} · ${d.entities_masked} masked${seq}`;
     case "audit.routing": return `audit.routing · ${d.target} → ${d.model}${d.fallback ? " (fallback)" : ""} · ${d.sent_masked ? "masked" : "original"}${seq}`;
     default: return e.topic;
@@ -361,12 +359,21 @@ function connect() {
 async function send(text) {
   $("follow").checked = true;
   await fetch("/chat", {method: "POST", headers: {"Content-Type": "application/json"},
-                        body: JSON.stringify({user_id: "dashboard", message: text})});
+                        body: JSON.stringify({user_id: "dashboard", message: text, role: $("role").value || null})});
 }
 
-for (const ex of EXAMPLES) {
-  const b = el("button", "", ex); b.type = "button"; b.onclick = () => send(ex); $("examples").append(b);
-}
+// Examples and roles come from the active profile.
+fetch("/profile").then(r => r.json()).then(p => {
+  $("ptitle").textContent = p.title;
+  if (p.roles.length) {
+    for (const r of p.roles) $("role").add(new Option(r.title, r.key));
+    $("role").value = p.roles[0].key;
+    $("role").hidden = false;
+  }
+  for (const ex of p.examples) {
+    const b = el("button", "", ex); b.type = "button"; b.onclick = () => send(ex); $("examples").append(b);
+  }
+}).catch(() => {});
 $("sendForm").onsubmit = e => { e.preventDefault(); const t = $("sendInput").value.trim(); if (t) { send(t); $("sendInput").value = ""; } };
 $("verifyBtn").onclick = verifyAudit;
 setInterval(render, 1000);        // keeps "running" states and progress fresh

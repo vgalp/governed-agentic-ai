@@ -24,3 +24,9 @@ unavailable: >-
   Sorry, I can't answer right now because a safety check is unavailable.
   Please try again shortly. For an urgent patient safety issue, follow the
   urgent-risk protocol and tell the on-call clinician; call 911 in an emergency.
+
+# Sent when a request has no role, or a role this profile does not define.
+role_required: >-
+  Please choose your role first. What you can see depends on it, so I can't
+  answer until I know whether you're a clinician, nurse, front desk or
+  compliance officer.

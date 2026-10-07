@@ -1,0 +1,35 @@
+# Who may see what. OPA enforces this (policies/roles.rego, policies/mcp_authz.rego):
+# the records server builds records from allowed data classes only, and the gateway
+# drops anything else, so the model never sees data the role may not see.
+#
+# The role is chosen in the chat page for this demo. A real deployment takes it
+# from the organization's sign-in system, never from the user.
+
+data_classes:
+  patient_details: Name, birth date, sex and city
+  appointments: Upcoming appointments
+  visit_dates: Dates and types of past visits, without clinical details
+  visit_clinical: What a past visit was for, including the recorded reason
+  medications: Current medications and the recorded reason
+  claims: Claim amounts, insurance payments and balances
+
+roles:
+  clinician:
+    title: Clinician
+    tools: [search_knowledge, search_records]
+    data_classes: [patient_details, appointments, visit_dates, visit_clinical, medications, claims]
+  nurse:
+    title: Nurse
+    tools: [search_knowledge, search_records]
+    data_classes: [patient_details, appointments, visit_dates, visit_clinical, medications]
+  front_desk:
+    title: Front desk and billing
+    tools: [search_knowledge, search_records]
+    data_classes: [patient_details, appointments, visit_dates, claims]
+  compliance:
+    title: Compliance officer
+    tools: [search_knowledge]          # no patient records; the audit tool comes in phase 6
+    data_classes: []
+
+# Tools whose results are filtered by role.
+filtered_tools: [search_records]

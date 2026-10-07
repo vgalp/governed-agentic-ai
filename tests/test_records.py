@@ -16,6 +16,7 @@ build_db = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(build_db)
 
 server = pytest.importorskip("mcp_servers.records.server")
+ALL = list(load_profile("clinic-assistant").data_classes)      # everything: the clinician's view
 
 
 @pytest.fixture
@@ -29,22 +30,22 @@ def names(db):
 
 def test_full_name_finds_the_patient_with_cited_records(db):
     name = names(db)[0]
-    results = server.search(db, f"What medications is {name} taking?")["results"]
+    results = server.search(db, f"What medications is {name} taking?", ALL)["results"]
     assert results and results[0]["id"].startswith("pt-")
     assert all(name in r["text"] for r in results)                 # only that patient's records
     assert all(r["id"].split("-")[0] in {"pt", "apt", "med", "enc", "clm"} for r in results)
 
 
 def test_no_name_means_no_records(db):
-    assert server.search(db, "What is our cancellation policy?")["results"] == []
+    assert server.search(db, "What is our cancellation policy?", ALL)["results"] == []
 
 
 def test_unknown_name_means_no_records(db):
-    assert server.search(db, "When is Nobody Atall's appointment?")["results"] == []
+    assert server.search(db, "When is Nobody Atall's appointment?", ALL)["results"] == []
 
 
 def test_missing_database_is_not_an_error(tmp_path):
-    r = server.search(tmp_path / "missing.db", "anything")
+    r = server.search(tmp_path / "missing.db", "anything", ALL)
     assert r["results"] == [] and "no records database" in r["note"]
 
 

@@ -57,6 +57,13 @@ class ClassifierConfig:
 
 
 @dataclass(frozen=True)
+class Role:
+    title: str
+    tools: tuple[str, ...]          # tools this role may use
+    data_classes: tuple[str, ...]   # kinds of record data this role may see
+
+
+@dataclass(frozen=True)
 class Profile:
     name: str
     title: str
@@ -78,6 +85,10 @@ class Profile:
     identifier_tools: tuple[str, ...]           # tools that may receive real names (local only)
     cite_sources: bool                          # show source IDs to the model so it can cite them
     agents: dict[str, tuple[str, ...]]          # agent -> tools it may call
+    roles: dict[str, Role]                      # empty: the profile has no roles
+    data_classes: dict[str, str]                # data class -> description
+    role_filtered_tools: tuple[str, ...]        # tools whose results are filtered by role
+    examples: tuple[str, ...]                   # example questions for the chat page
 
     def response(self, category: str) -> str:
         return self.responses[category]
@@ -92,9 +103,9 @@ class Profile:
         return self.models[key] if key else None
 
     def policy_data(self) -> dict:
-        """What OPA needs for this profile: tool access and routing settings."""
+        """What OPA needs for this profile: tool access, routing and roles."""
         r = self.routing
-        return {
+        data = {
             "agents": {a: {"tools": list(t)} for a, t in self.agents.items()},
             "routing": {
                 "external_allowed": r["external_allowed"],
@@ -103,6 +114,10 @@ class Profile:
                 "never_external_labels": list(r["never_external_labels"]),
             },
         }
+        if self.roles:
+            data["roles"] = {k: {"tools": list(v.tools), "data_classes": list(v.data_classes)}
+                             for k, v in self.roles.items()}
+        return data
 
 
 # --- helpers ------------------------------------------------------------------
@@ -236,6 +251,34 @@ def _routing(raw, models: dict[str, dict], where: str) -> dict:
     return r
 
 
+def _roles(raw: dict, granted: set[str], where: str):
+    """roles.yaml: data classes, roles (title, tools, data classes), filtered tools."""
+    classes = raw.get("data_classes") or {}
+    if not isinstance(classes, dict) or not classes:
+        raise ProfileError(f"{where}: 'data_classes' must list at least one class")
+    roles = {}
+    for key, r in (raw.get("roles") or {}).items():
+        w = f"{where}: role '{key}'"
+        if not NAME_RE.match(key.replace("_", "-")):
+            raise ProfileError(f"{w}: use lowercase letters, digits, '-' or '_'")
+        tools = tuple((r or {}).get("tools") or [])
+        seen = tuple((r or {}).get("data_classes") or [])
+        for t in tools:
+            if t not in granted:
+                raise ProfileError(f"{w}: tool '{t}' is not granted to any agent")
+        for c in seen:
+            if c not in classes:
+                raise ProfileError(f"{w}: unknown data class '{c}'")
+        roles[key] = Role((r or {}).get("title", key), tools, seen)
+    if not roles:
+        raise ProfileError(f"{where}: 'roles' must define at least one role")
+    filtered = tuple(raw.get("filtered_tools") or [])
+    for t in filtered:
+        if t not in granted:
+            raise ProfileError(f"{where}: filtered_tools: '{t}' is not granted to any agent")
+    return roles, dict(classes), filtered
+
+
 # --- loading ------------------------------------------------------------------
 
 def load_profile_from(path: Path) -> Profile:
@@ -309,6 +352,14 @@ def load_profile_from(path: Path) -> Profile:
             raise ProfileError(f"{where}: records_db points outside the profile folder")
         # Not required to exist: it is built locally (see the profile's data/README.md).
 
+    roles, data_classes, role_filtered_tools = {}, {}, ()
+    if p.get("roles"):
+        roles, data_classes, role_filtered_tools = _roles(
+            _yaml(_file(path, p["roles"], where)), granted, f"{path.name}/{p['roles']}")
+        if "role_required" not in responses:
+            raise ProfileError(f"{path.name}/responses.yaml: no response for role_required "
+                               "(needed because the profile has roles)")
+
     privacy = p.get("privacy") or {}
     return Profile(
         name=name,
@@ -331,6 +382,10 @@ def load_profile_from(path: Path) -> Profile:
         identifier_tools=identifier_tools,
         cite_sources=bool(p.get("cite_sources", False)),
         agents=agents,
+        roles=roles,
+        data_classes=data_classes,
+        role_filtered_tools=role_filtered_tools,
+        examples=tuple(p.get("examples") or []),
     )
 
 

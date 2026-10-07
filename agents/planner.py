@@ -5,8 +5,12 @@ Guardrails run in two layers: fast rules (layer 1), then a safety classifier
 (layer 2) for what the rules miss.
 
 Everything specific to the use case (model, prompt, rules, replies, classifier
-policy, privacy settings, knowledge base, tool permissions) comes from the
-active profile: PROFILE=<name>, default adhd-assistant. See profiles/."""
+policy, privacy settings, knowledge base, tool permissions, roles) comes from the
+active profile: PROFILE=<name>, default adhd-assistant. See profiles/.
+
+In a profile with roles, the requesting role decides which tools may be used and
+which record data is fetched (OPA). The role is checked after the input guardrails,
+so a crisis message is answered with the crisis reply even without a role."""
 
 import json
 
@@ -42,11 +46,12 @@ print(f"Planner agent listening on chat.requests (profile {PROFILE.name}, "
       f"guard {PROFILE.classifier.model})...")
 
 
-def audit_guardrail(request_id: str, stage: str, layer: str, decision) -> None:
+def audit_guardrail(request_id: str, stage: str, layer: str, decision, role: str | None = None) -> None:
     audit.emit("audit.guardrails", {
         "request_id": request_id,
         "profile": PROFILE.name,
         "agent": AGENT_NAME,
+        "role": role,
         "stage": stage,                      # "input" or "output"
         "layer": layer,                      # "rules" or "classifier"
         "allowed": decision.allowed,
@@ -56,7 +61,7 @@ def audit_guardrail(request_id: str, stage: str, layer: str, decision) -> None:
 
 
 def publish_response(request_id: str, answer: str, sources: list, guardrail: dict | None,
-                     route_info: dict | None = None) -> None:
+                     route_info: dict | None = None, access: dict | None = None) -> None:
     producer.produce("chat.responses", key=request_id, value=json.dumps({
         "request_id": request_id,
         "profile": PROFILE.name,
@@ -65,6 +70,7 @@ def publish_response(request_id: str, answer: str, sources: list, guardrail: dic
         "sources": sources,
         "guardrail": guardrail,
         "route": route_info,               # which model answered: shown as a badge in the UI
+        "access": access,                  # role and the data classes it may not see
     }))
     producer.flush()
     audit.producer.flush()
@@ -80,6 +86,7 @@ while True:
 
     req = json.loads(msg.value())
     request_id = req["request_id"]
+    role = req.get("role")
 
     # 1. Input guardrails on the ORIGINAL text. Both layers run locally, so nothing
     #    leaves the system; unsafe requests never reach masking, tools, or the model.
@@ -88,13 +95,31 @@ while True:
     if in_check.allowed:
         in_check = classifier_check(req["message"], profile=PROFILE)
         in_layer = "classifier"
-    audit_guardrail(request_id, "input", in_layer, in_check)
+    audit_guardrail(request_id, "input", in_layer, in_check, role)
     if not in_check.allowed:
         publish_response(request_id, in_check.response, [],
                          {"stage": "input", "layer": in_layer, "category": in_check.category})
         consumer.commit(message=msg)
         print(f"Blocked at input by {in_layer} ({in_check.category}): {request_id}")
         continue
+
+    # 1b. Role check (profiles with roles only). Unknown or missing role: no answer.
+    access = None
+    if PROFILE.roles:
+        if role not in PROFILE.roles:
+            audit.emit("audit.guardrails", {
+                "request_id": request_id, "profile": PROFILE.name, "agent": AGENT_NAME, "role": role,
+                "stage": "access", "layer": "roles", "allowed": False, "category": "role_required",
+                "reason": "missing or unknown role",
+            })
+            publish_response(request_id, PROFILE.response("role_required"), [],
+                             {"stage": "access", "layer": "roles", "category": "role_required"})
+            consumer.commit(message=msg)
+            print(f"No valid role ({role!r}): {request_id}")
+            continue
+        seen = set(PROFILE.roles[role].data_classes)
+        access = {"role": role, "role_title": PROFILE.roles[role].title,
+                  "restricted": [c for c in PROFILE.data_classes if c not in seen]}
 
     # 2. Mask personal details before anything goes to tools or the model.
     masked_message, mapping = mask(req["message"], PROFILE)
@@ -108,7 +133,7 @@ while True:
         try:
             result = call_tool(AGENT_NAME, tool, {"query": req["message"] if receives_ids else masked_message},
                                request_id, PROFILE,
-                               audit_args={"query": masked_message} if receives_ids else None)
+                               audit_args={"query": masked_message} if receives_ids else None, role=role)
         except ToolCallDenied as e:
             print("Denied:", e)
             continue
@@ -121,10 +146,15 @@ while True:
     else:
         notes_text = "\n".join(f"- {n['title']}: {n['text']}" for n in notes)
     notes_text = notes_text or "- (no approved notes found)"
+    if access and access["restricted"]:
+        hidden = "; ".join(PROFILE.data_classes[c] for c in access["restricted"])
+        notes_text += (f"\n\nAccess: the person asking is {access['role_title']}. Their role may not see: "
+                       f"{hidden}. If they ask about these, say their role does not allow it and suggest "
+                       "who on staff could help. Do not guess.")
 
     # 4. Decide which model answers (OPA policy, audited). External models only
     #    ever get masked text; the local model gets what the profile says.
-    decision = route(PROFILE, mapping, tools_used, request_id, AGENT_NAME)
+    decision = route(PROFILE, mapping, tools_used, request_id, AGENT_NAME, role)
 
     # 5. Ask the model. If an external model fails, fall back to the local one.
     def ask(d: RouteDecision) -> str:
@@ -135,6 +165,7 @@ while True:
             "request_id": request_id,
             "profile": PROFILE.name,
             "agent": AGENT_NAME,
+            "role": role,
             "target": d.target,
             "model": d.model["name"],
             "model_input": masked_message,
@@ -157,7 +188,7 @@ while True:
                                  send_masked=PROFILE.routing["local_input"] == "masked",
                                  reasons=["external model failed: fell back to the local model"])
         audit.emit("audit.routing", {
-            "request_id": request_id, "profile": PROFILE.name, "agent": AGENT_NAME,
+            "request_id": request_id, "profile": PROFILE.name, "agent": AGENT_NAME, "role": role,
             "target": "local", "model_key": decision.model_key, "model": decision.model["name"],
             "provider": decision.model["provider"], "sent_masked": decision.send_masked,
             "fallback": True, "reasons": decision.reasons,
@@ -173,18 +204,18 @@ while True:
     if out_check.allowed:
         out_check = classifier_check(req["message"], restored_answer, PROFILE)
         out_layer = "classifier"
-    audit_guardrail(request_id, "output", out_layer, out_check)
+    audit_guardrail(request_id, "output", out_layer, out_check, role)
     if not out_check.allowed:
         publish_response(request_id, out_check.response, [],
                          {"stage": "output", "layer": out_layer, "category": out_check.category},
-                         route_info)
+                         route_info, access)
         consumer.commit(message=msg)
         print(f"Blocked at output by {out_layer} ({out_check.category}): {request_id}")
         continue
 
     # 7. Publish the answer with its sources, then commit.
     sources = [{"id": n["id"], "title": n["title"]} for n in notes]
-    publish_response(request_id, restored_answer, sources, None, route_info)
+    publish_response(request_id, restored_answer, sources, None, route_info, access)
     consumer.commit(message=msg)
-    print(f"Answered {request_id} by {decision.target} model {decision.model['name']} "
+    print(f"Answered {request_id} for role {role} by {decision.target} model {decision.model['name']} "
           f"(masked {len(mapping)}, notes {[n['id'] for n in notes]})")

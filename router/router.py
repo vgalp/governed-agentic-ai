@@ -75,7 +75,7 @@ def decide_route(profile: Profile, entities: list[str], labels: list[str]) -> Ro
 
 
 def route(profile: Profile, mapping: dict[str, str], tools_used: list[str],
-          request_id: str, agent: str) -> RouteDecision:
+          request_id: str, agent: str, role: str | None = None) -> RouteDecision:
     entities = entity_types(mapping)
     labels = context_labels(profile, tools_used)
     d = decide_route(profile, entities, labels)
@@ -83,6 +83,7 @@ def route(profile: Profile, mapping: dict[str, str], tools_used: list[str],
         "request_id": request_id,
         "profile": profile.name,
         "agent": agent,
+        "role": role,
         "target": d.target,
         "model_key": d.model_key,
         "model": d.model["name"],
