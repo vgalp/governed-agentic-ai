@@ -146,14 +146,36 @@ uv run python -m eval.guard_compare                                    # compare
 
 Rule: tuning uses only the development set. Frozen sets are run once per release and reported as they come out.
 
+## Profiles
+
+Everything specific to a use case lives in a profile folder; the governed pipeline is shared.
+
+```
+profiles/adhd-assistant/
+  profile.yaml            model, data policy, classifier, privacy, knowledge base, agents and tools
+  prompt.md               system prompt
+  rules.yaml              layer 1 guardrails (named patterns, input and output rules)
+  responses.yaml          fixed replies when a guardrail blocks
+  classifier_policy.md    layer 2 safety policy
+  data/                   approved knowledge base
+```
+
+```bash
+uv run python -m profiles.loader                 # validate every profile
+PROFILE=adhd-assistant ./scripts/dev.sh start    # run a profile (this one is the default)
+```
+
+A profile is checked at startup and the service refuses to start if it is incomplete. Tool permissions in `profile.yaml` are enforced by OPA, which denies anything a profile does not grant. See [ADR 003](docs/decisions/003-deployment-profiles.md).
+
 ## Project structure
 
 ```
 api/             Chat API, live event stream, audit check (FastAPI)
-agents/          Planner agent and system prompt
+agents/          Planner agent
+profiles/        Deployment profiles and their loader
 privacy/         Personal-information masking (Presidio)
 gateway/         MCP gateway: policy check, tool call, audit
-policies/        OPA policies (per-agent tool permissions)
+policies/        OPA policies (tool permissions from the active profile)
 mcp_servers/     MCP servers (knowledge base)
 guardrails/      Layer 1 rules and layer 2 safety classifier
 audit/           Hash-chained, signed audit events and the verifier
@@ -174,7 +196,8 @@ docs/            Architecture notes and decision records
 - [x] Safety classifier (layer 2)
 - [x] Tamper-evident audit trail and verifier
 - [x] Live pipeline dashboard and one-command start
-- [ ] `redteam_v2`: harder frozen set (indirect crisis, implied diagnosis, unnamed medication, adversarial prompts)
+- [x] `redteam_v2`: harder frozen set (indirect crisis, implied diagnosis, unnamed medication, adversarial prompts)
+- [x] Deployment profiles: plug-and-play use cases with no code change
 - [ ] Policy-based model routing (local vs external model, decided by OPA and audited)
 - [ ] Human approval gates for risky agent actions
 - [ ] Signed audit checkpoints (truncation detection)

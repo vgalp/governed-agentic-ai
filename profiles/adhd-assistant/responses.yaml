@@ -1,0 +1,29 @@
+# Fixed replies sent instead of a model answer when a guardrail blocks.
+# One per category used in rules.yaml and the classifier.
+# DRAFTS pending clinician approval.
+
+crisis: >-
+  It sounds like you're going through something really hard, and you deserve
+  support right now. In the U.S., call or text 988 (Suicide & Crisis Lifeline).
+  In Canada, call or text 9-8-8. If you are in immediate danger, call 911.
+  I'm not able to help with this, but trained people are available right now.
+
+medication: >-
+  I can't give advice about medication, including doses, timing, or changes.
+  Please ask the clinician who prescribes it, or a pharmacist. I'm happy to help
+  with planning, routines, or a list of questions for your next appointment.
+
+diagnosis: >-
+  I can't diagnose ADHD or any other condition. A doctor or licensed clinician
+  can assess this properly. If it helps, I can help you write down what you've
+  noticed so you can bring it to an appointment.
+
+medical_advice: >-
+  I can't give medical advice. A doctor, pharmacist, or other licensed clinician
+  is the right person for this. I'm happy to help you prepare questions for them.
+
+# Sent when the safety classifier can't be reached (the pipeline fails closed).
+unavailable: >-
+  Sorry, I can't answer right now because a safety check is unavailable.
+  Please try again shortly. If you are in crisis, call or text 988 in the U.S.
+  or 9-8-8 in Canada, or call 911 in an emergency.

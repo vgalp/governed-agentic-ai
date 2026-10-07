@@ -1,151 +1,50 @@
 """Layer 1 guardrails: deterministic rules applied before and after the model.
 
-Fixed responses are DRAFTS pending clinician approval.
+The rules themselves live in the active profile (profiles/<name>/rules.yaml);
+this module only evaluates them. Fixed replies come from the profile's
+responses.yaml (DRAFTS pending clinician approval).
 """
 
 import re
 from dataclasses import dataclass
 
-# --- Patterns ---------------------------------------------------------------
+from profiles.loader import Profile, Rule, load_profile
 
-MEDICATION_TERMS = [
-    "adderall", "ritalin", "vyvanse", "concerta", "focalin", "dexedrine",
-    "methylphenidate", "amphetamines?", "dextroamphetamine", "lisdexamfetamine",
-    "strattera", "atomoxetine", "qelbree", "viloxazine", "intuniv", "guanfacine",
-    "clonidine", "wellbutrin", "bupropion", "stimulants?", "medications?", "medicines?", "meds",
-    "prescriptions?", "pills?",
-]
-MEDICATION_RE = re.compile(r"\b(" + "|".join(MEDICATION_TERMS) + r")\b", re.IGNORECASE)
-
-# Words that turn a medication mention into a request for medical advice.
-DOSE_INTENT_RE = re.compile(
-    r"\b(how much|how many|dose|doses|dosage|dosing|increase|decrease|reduce|"
-    r"raise|lower|stop|stopping|skip|double|switch|change|side effects?|"
-    r"mix|combine|alcohol|safe to take)\b",
-    re.IGNORECASE,
-)
-DOSE_AMOUNT_RE = re.compile(r"\b\d+(\.\d+)?\s?(mg|milligrams?|mcg)\b", re.IGNORECASE)
-
-DIAGNOSIS_RE = re.compile(
-    r"\b(do i have|could i have|diagnose|diagnosis|am i adhd|is it adhd|test me for)\b",
-    re.IGNORECASE,
-)
-# In a model ANSWER: wording that affirms or suggests the user has a condition
-# ("yes, that's a common symptom of ADHD", "it sounds like ADHD", "you probably have ADHD").
-CONDITION = r"(adhd|add|attention[- ]deficit|autism|autistic|anxiety|depression|bipolar|ocd|dyslexia)"
-DIAGNOSIS_AFFIRM_RE = re.compile(
-    r"\b(yes,?\s+(it|this|that)?\s*(can be|could be|is|sounds like|might be|may be)?"
-    r"|it (sounds|seems) like( you have)?"
-    r"|(this|that|these) (sounds?|seems?|is|are|could be|might be|may be) (like )?(a )?(common )?"
-    r"(signs?|symptoms?|indicators?)? ?(of )?"
-    r"|(common|classic|typical) (sign|symptom)s? of"
-    r"|you (likely|probably|may|might|could) (have|be (experiencing|showing|dealing with))( (some )?(signs?|symptoms?) of)?"
-    r"|you (likely|probably|may|might) have)\s*" + CONDITION + r"\b",
-    re.IGNORECASE,
-)
-
-CRISIS_RE = re.compile(
-    r"\b(suicid\w*|kill myself|end my life|end it all|want to die|"
-    r"hurt(ing)? myself|self[- ]?harm\w*|no reason to live|overdose)\b",
-    re.IGNORECASE,
-)
-
-# Indirect warning signs, taken from published suicide warning-sign lists
-# (988 Suicide & Crisis Lifeline; American Foundation for Suicide Prevention):
-# feeling like a burden, giving away possessions, saying goodbye, no reason to go on.
-WARNING_SIGN_RE = re.compile(
-    r"\b(better off without me|(a )?burden to (everyone|everybody|others|my family|people)|"
-    r"giv(e|ing) away (my|all my) (things|stuff|belongings|possessions)|"
-    r"say(ing)? goodbye to (everyone|everybody|people|my family)|"
-    r"(not|never) (to )?wake up (again|tomorrow)|don't want to wake up|(no|any|the) point (in )?(going on|living))\b",
-    re.IGNORECASE,
-)
-
-# In a model ANSWER: words that turn a medication mention into advice.
-# Checked per sentence, so "list your medications" in a checklist is allowed.
-OUTPUT_ADVICE_RE = re.compile(
-    r"\b(double|increase|decrease|reduce|raise|lower|stop taking|skip|switch to|"
-    r"mix|combine|extra|more of)\b",
-    re.IGNORECASE,
-)
-TIMING_ADVICE_RE = re.compile(
-    r"\b((before|after) (taking|you take)|wait\b.{0,40}\b(before|after)|"
-    r"\d+\s*(minutes?|hours?) (before|after))",
-    re.IGNORECASE,
-)
-# Claims about what a medication does ("may lead to side effects", "should not be mixed").
-# Medical information like this is for a clinician to give, even when it sounds cautious.
-EFFECT_CLAIM_RE = re.compile(
-    r"\b((can|may|could|might|will|would)\s+(lead to|cause|result in|trigger|worsen|interact)"
-    r"|should not be (mixed|combined|taken)|(is|are) (not )?(safe|unsafe|dangerous) to)\b",
-    re.IGNORECASE,
-)
 SENTENCE_SPLIT_RE = re.compile(r"(?<=[.!?])\s+|\n+")
-
-# --- Fixed responses (DRAFT: pending clinician approval) ---------------------
-
-CRISIS_RESPONSE = (
-    "It sounds like you're going through something really hard, and you deserve "
-    "support right now. In the U.S., call or text 988 (Suicide & Crisis Lifeline). "
-    "In Canada, call or text 9-8-8. If you are in immediate danger, call 911. "
-    "I'm not able to help with this, but trained people are available right now."
-)
-MEDICATION_RESPONSE = (
-    "I can't give advice about medication, including doses, timing, or changes. "
-    "Please ask the clinician who prescribes it, or a pharmacist. I'm happy to help "
-    "with planning, routines, or a list of questions for your next appointment."
-)
-DIAGNOSIS_RESPONSE = (
-    "I can't diagnose ADHD or any other condition. A doctor or licensed clinician "
-    "can assess this properly. If it helps, I can help you write down what you've "
-    "noticed so you can bring it to an appointment."
-)
 
 
 @dataclass
 class GuardrailDecision:
     allowed: bool
-    category: str | None = None   # "crisis", "medication", "diagnosis"
+    category: str | None = None   # e.g. "crisis", "medication", "diagnosis"
     reason: str | None = None
     response: str | None = None   # fixed response to send instead
 
 
-def check_input(text: str) -> GuardrailDecision:
-    """Decide whether a user message may go to the model at all."""
-    if CRISIS_RE.search(text):
-        return GuardrailDecision(False, "crisis", "crisis language in input", CRISIS_RESPONSE)
-    if WARNING_SIGN_RE.search(text):
-        return GuardrailDecision(False, "crisis", "suicide warning sign in input", CRISIS_RESPONSE)
-    if MEDICATION_RE.search(text) and (DOSE_INTENT_RE.search(text) or DOSE_AMOUNT_RE.search(text)):
-        return GuardrailDecision(False, "medication", "medication advice requested", MEDICATION_RESPONSE)
-    if DIAGNOSIS_RE.search(text):
-        return GuardrailDecision(False, "diagnosis", "diagnosis requested", DIAGNOSIS_RESPONSE)
-    return GuardrailDecision(True)
-
-
-def gives_medication_advice(text: str) -> bool:
-    """True if any single sentence names a medication AND advises on it: changing it,
-    timing it, or what it does."""
+def rule_matches(rule: Rule, text: str) -> bool:
+    """All 'all' patterns and at least one 'any' pattern (if given) must match,
+    in the whole text or, for scope 'sentence', within a single sentence."""
+    segments = [text] if rule.scope == "text" else SENTENCE_SPLIT_RE.split(text)
     return any(
-        MEDICATION_RE.search(s)
-        and (OUTPUT_ADVICE_RE.search(s) or TIMING_ADVICE_RE.search(s) or EFFECT_CLAIM_RE.search(s))
-        for s in SENTENCE_SPLIT_RE.split(text)
+        all(p.search(s) for p in rule.all) and (not rule.any or any(p.search(s) for p in rule.any))
+        for s in segments
     )
 
 
-def check_output(text: str) -> GuardrailDecision:
-    """Decide whether a model answer may be shown to the user.
-
-    Mentioning medication is allowed (for example "bring a list of your medications
-    to the appointment"). Dose amounts and advice to change medication are not.
-    Subtler advice is left to the layer 2 classifier, which sees the question too.
-    """
-    if DOSE_AMOUNT_RE.search(text):
-        return GuardrailDecision(False, "medication", "model answer contains a dose amount", MEDICATION_RESPONSE)
-    if gives_medication_advice(text):
-        return GuardrailDecision(False, "medication", "model answer gives medication advice", MEDICATION_RESPONSE)
-    if CRISIS_RE.search(text):
-        return GuardrailDecision(False, "crisis", "model answer contains crisis language", CRISIS_RESPONSE)
-    if DIAGNOSIS_AFFIRM_RE.search(text):
-        return GuardrailDecision(False, "diagnosis", "model answer suggests a diagnosis", DIAGNOSIS_RESPONSE)
+def _check(rules: tuple[Rule, ...], text: str, profile: Profile) -> GuardrailDecision:
+    for rule in rules:
+        if rule_matches(rule, text):
+            return GuardrailDecision(False, rule.category, rule.reason, profile.response(rule.category))
     return GuardrailDecision(True)
+
+
+def check_input(text: str, profile: Profile | None = None) -> GuardrailDecision:
+    """Decide whether a user message may go to the model at all."""
+    profile = profile or load_profile()
+    return _check(profile.input_rules, text, profile)
+
+
+def check_output(text: str, profile: Profile | None = None) -> GuardrailDecision:
+    """Decide whether a model answer may be shown to the user."""
+    profile = profile or load_profile()
+    return _check(profile.output_rules, text, profile)

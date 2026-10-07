@@ -1,42 +1,29 @@
-"""Mask personal information before it reaches any AI model, and restore it afterward."""
+"""Mask personal information before it reaches any AI model, and restore it afterward.
+
+Which entities are masked, and which words are never masked, come from the
+active profile (privacy section of profiles/<name>/profile.yaml).
+"""
 
 from presidio_analyzer import AnalyzerEngine
+
+from profiles.loader import Profile, load_profile
 
 # Loading the analyzer takes a few seconds, so it is created once.
 analyzer = AnalyzerEngine()
 
-# Dates and times are left out for now: planning answers depend on them.
-# Date-shifting will be added later.
-ENTITIES = [
-    "PERSON",
-    "PHONE_NUMBER",
-    "EMAIL_ADDRESS",
-    "LOCATION",
-    "US_SSN",
-    "CREDIT_CARD",
-    "IP_ADDRESS",
-]
 
-# Medication names are not personal information; never mask them.
-# (Presidio sometimes mistakes brand names for people's names.)
-ALLOW_LIST = [
-    "Adderall", "Ritalin", "Vyvanse", "Concerta", "Focalin", "Dexedrine",
-    "Strattera", "Qelbree", "Intuniv", "Wellbutrin", "methylphenidate",
-    "atomoxetine", "guanfacine", "clonidine", "bupropion",
-]
-
-
-def mask(text: str) -> tuple[str, dict[str, str]]:
+def mask(text: str, profile: Profile | None = None) -> tuple[str, dict[str, str]]:
     """Replace personal details with tokens such as [PERSON_1].
 
     Returns the masked text and a private mapping of token -> original value.
     The mapping never leaves this service.
     """
+    profile = profile or load_profile()
     results = analyzer.analyze(
         text=text,
-        entities=ENTITIES,
+        entities=list(profile.privacy_entities),
         language="en",
-        allow_list=ALLOW_LIST,
+        allow_list=list(profile.privacy_allow_list),
     )
 
     # Remove overlapping detections, keeping the longest one at each position.

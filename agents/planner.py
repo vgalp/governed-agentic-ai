@@ -2,24 +2,34 @@
 gateway, ask the model, output guardrails, restore details, publish.
 
 Guardrails run in two layers: fast rules (layer 1), then a safety classifier
-(layer 2) for what the rules miss."""
+(layer 2) for what the rules miss.
+
+Everything specific to the use case (model, prompt, rules, replies, classifier
+policy, privacy settings, knowledge base, tool permissions) comes from the
+active profile: PROFILE=<name>, default adhd-assistant. See profiles/."""
 
 import json
 
 import requests
 from confluent_kafka import Consumer, Producer
 
-from agents.prompts import SYSTEM_PROMPT
 from audit.chain import get_audit_chain
 from gateway.gateway import ToolCallDenied, call_tool
-from guardrails.classifier import GUARD_MODEL, classifier_check
+from guardrails.classifier import classifier_check
 from guardrails.rules import check_input, check_output
 from privacy.masking import mask, unmask
+from profiles.loader import load_profile
 
 AGENT_NAME = "planner"
 BOOTSTRAP = "localhost:9092"
 OLLAMA_URL = "http://localhost:11434/v1/chat/completions"
-MODEL = "mistral"
+
+PROFILE = load_profile()          # fails here, at startup, if the profile is incomplete
+if PROFILE.model["provider"] != "ollama":
+    raise SystemExit(f"Profile {PROFILE.name}: provider {PROFILE.model['provider']!r} "
+                     "is not supported yet (model routing comes in Phase 2)")
+MODEL = PROFILE.model["name"]
+TEMPERATURE = PROFILE.model.get("temperature", 0)
 
 consumer = Consumer({
     "bootstrap.servers": BOOTSTRAP,
@@ -30,12 +40,14 @@ consumer = Consumer({
 producer = Producer({"bootstrap.servers": BOOTSTRAP, "enable.idempotence": True})
 consumer.subscribe(["chat.requests"])
 audit = get_audit_chain(AGENT_NAME)   # tamper-evident audit, shared with the gateway
-print(f"Planner agent listening on chat.requests (model {MODEL}, guard {GUARD_MODEL})...")
+print(f"Planner agent listening on chat.requests (profile {PROFILE.name}, "
+      f"model {MODEL}, guard {PROFILE.classifier.model})...")
 
 
 def audit_guardrail(request_id: str, stage: str, layer: str, decision) -> None:
     audit.emit("audit.guardrails", {
         "request_id": request_id,
+        "profile": PROFILE.name,
         "agent": AGENT_NAME,
         "stage": stage,                      # "input" or "output"
         "layer": layer,                      # "rules" or "classifier"
@@ -48,6 +60,7 @@ def audit_guardrail(request_id: str, stage: str, layer: str, decision) -> None:
 def publish_response(request_id: str, answer: str, sources: list, guardrail: dict | None) -> None:
     producer.produce("chat.responses", key=request_id, value=json.dumps({
         "request_id": request_id,
+        "profile": PROFILE.name,
         "agent": AGENT_NAME,
         "answer": answer,
         "sources": sources,
@@ -70,10 +83,10 @@ while True:
 
     # 1. Input guardrails on the ORIGINAL text. Both layers run locally, so nothing
     #    leaves the system; unsafe requests never reach masking, tools, or the model.
-    in_check = check_input(req["message"])
+    in_check = check_input(req["message"], PROFILE)
     in_layer = "rules"
     if in_check.allowed:
-        in_check = classifier_check(req["message"])
+        in_check = classifier_check(req["message"], profile=PROFILE)
         in_layer = "classifier"
     audit_guardrail(request_id, "input", in_layer, in_check)
     if not in_check.allowed:
@@ -84,11 +97,12 @@ while True:
         continue
 
     # 2. Mask personal details before anything goes to tools or the model.
-    masked_message, mapping = mask(req["message"])
+    masked_message, mapping = mask(req["message"], PROFILE)
 
     # 3. Retrieve approved content through the gateway (policy-checked and audited).
     try:
-        kb = call_tool(AGENT_NAME, "search_knowledge", {"query": masked_message, "limit": 3}, request_id)
+        kb = call_tool(AGENT_NAME, "search_knowledge", {"query": masked_message, "limit": 3},
+                       request_id, PROFILE)
         notes = kb.get("results", [])
     except ToolCallDenied as e:
         print("Denied:", e)
@@ -98,6 +112,7 @@ while True:
     # 4. Audit exactly what the model saw.
     audit.emit("audit.model_inputs", {
         "request_id": request_id,
+        "profile": PROFILE.name,
         "agent": AGENT_NAME,
         "model": MODEL,
         "model_input": masked_message,
@@ -108,9 +123,9 @@ while True:
     # 5. Ask the model.
     resp = requests.post(OLLAMA_URL, json={
         "model": MODEL,
-        "temperature": 0,                    # repeatable answers for evaluation
+        "temperature": TEMPERATURE,
         "messages": [
-            {"role": "system", "content": SYSTEM_PROMPT + "\n\nApproved notes:\n" + notes_text},
+            {"role": "system", "content": PROFILE.system_prompt + "\n\nApproved notes:\n" + notes_text},
             {"role": "user", "content": masked_message},
         ],
     }, timeout=120)
@@ -120,10 +135,10 @@ while True:
     # 6. Output guardrails on the RESTORED answer, so masked names can't hide anything.
     #    The classifier sees the question and the answer together.
     restored_answer = unmask(model_answer, mapping)
-    out_check = check_output(restored_answer)
+    out_check = check_output(restored_answer, PROFILE)
     out_layer = "rules"
     if out_check.allowed:
-        out_check = classifier_check(req["message"], restored_answer)
+        out_check = classifier_check(req["message"], restored_answer, PROFILE)
         out_layer = "classifier"
     audit_guardrail(request_id, "output", out_layer, out_check)
     if not out_check.allowed:

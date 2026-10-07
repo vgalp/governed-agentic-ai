@@ -8,6 +8,8 @@
 #   ./scripts/dev.sh status    show what is running, and warn about duplicate processes
 #   ./scripts/dev.sh logs [knowledge-base|api|planner]   follow logs
 #
+#   PROFILE=<name> ./scripts/dev.sh start   run another profile (default: adhd-assistant)
+#
 # Chat UI: http://localhost:8000   Kafka UI: http://localhost:8080
 
 set -euo pipefail
@@ -19,6 +21,7 @@ PY=".venv/bin/python"
 TOPICS="chat.requests chat.responses audit.model_inputs audit.tool_calls audit.guardrails"
 MODELS="mistral llama-guard3:8b"
 export PYTHONUNBUFFERED=1   # write logs immediately
+export PROFILE="${PROFILE:-adhd-assistant}"   # which profile every service loads (see profiles/)
 
 # name | process pattern | module and arguments | port to wait for ("" = none)
 SERVICES=(
@@ -56,6 +59,8 @@ check_prereqs() {
   ok "Ollama ($MODELS)"
   uv sync -q
   ok "Python environment"
+  "$PY" -m profiles.loader >/dev/null || { "$PY" -m profiles.loader; fail "Profile check failed"; }
+  ok "Profile $PROFILE"
 }
 
 start_infra() {
@@ -132,5 +137,5 @@ case "${1:-}" in
            say "Ready.  Chat UI: http://localhost:8000" ;;
   status)  status ;;
   logs)    if [ -n "${2:-}" ]; then tail -f "$LOG_DIR/$2.log"; else tail -f "$LOG_DIR"/*.log; fi ;;
-  *)       sed -n '2,11p' "$0" | sed 's/^# \{0,1\}//'; exit 1 ;;
+  *)       sed -n '2,13p' "$0" | sed 's/^# \{0,1\}//'; exit 1 ;;
 esac

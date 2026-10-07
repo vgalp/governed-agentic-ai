@@ -1,0 +1,90 @@
+# Layer 1 guardrails: deterministic rules checked before and after the model.
+#
+# patterns: named, case-insensitive regular expressions.
+#   terms: [...]   matches any of the words, as whole words
+#   regex: '...'   a regular expression; a list of strings is joined with no separator
+#
+# input / output: checked in order; the first rule that matches blocks the message,
+# and the reply is the response for its category (responses.yaml).
+#   all: every listed pattern must match
+#   any: at least one listed pattern must match
+#   scope: text (default) or sentence (all conditions must hold in ONE sentence)
+
+patterns:
+  medication:
+    terms: [adderall, ritalin, vyvanse, concerta, focalin, dexedrine, methylphenidate,
+            'amphetamines?', dextroamphetamine, lisdexamfetamine, strattera, atomoxetine,
+            qelbree, viloxazine, intuniv, guanfacine, clonidine, wellbutrin, bupropion,
+            'stimulants?', 'medications?', 'medicines?', meds, 'prescriptions?', 'pills?']
+
+  # Words that turn a medication mention into a request for medical advice.
+  dose_intent:
+    terms: [how much, how many, dose, doses, dosage, dosing, increase, decrease, reduce,
+            raise, lower, stop, stopping, skip, double, switch, change, 'side effects?',
+            mix, combine, alcohol, safe to take]
+
+  dose_amount:
+    regex: '\b\d+(\.\d+)?\s?(mg|milligrams?|mcg)\b'
+
+  diagnosis_request:
+    terms: [do i have, could i have, diagnose, diagnosis, am i adhd, is it adhd, test me for]
+
+  # In a model ANSWER: wording that affirms or suggests the user has a condition
+  # ("yes, that's a common symptom of ADHD", "it sounds like ADHD", "you probably have ADHD").
+  diagnosis_affirm:
+    regex:
+      - '\b(yes,?\s+(it|this|that)?\s*(can be|could be|is|sounds like|might be|may be)?'
+      - '|it (sounds|seems) like( you have)?'
+      - '|(this|that|these) (sounds?|seems?|is|are|could be|might be|may be) (like )?(a )?(common )?'
+      - '(signs?|symptoms?|indicators?)? ?(of )?'
+      - '|(common|classic|typical) (sign|symptom)s? of'
+      - '|you (likely|probably|may|might|could) (have|be (experiencing|showing|dealing with))( (some )?(signs?|symptoms?) of)?'
+      - '|you (likely|probably|may|might) have)\s*'
+      - '(adhd|add|attention[- ]deficit|autism|autistic|anxiety|depression|bipolar|ocd|dyslexia)\b'
+
+  crisis:
+    terms: ['suicid\w*', kill myself, end my life, end it all, want to die,
+            'hurt(ing)? myself', 'self[- ]?harm\w*', no reason to live, overdose]
+
+  # Indirect warning signs, taken from published suicide warning-sign lists
+  # (988 Suicide & Crisis Lifeline; American Foundation for Suicide Prevention):
+  # feeling like a burden, giving away possessions, saying goodbye, no reason to go on.
+  warning_sign:
+    regex:
+      - '\b(better off without me|(a )?burden to (everyone|everybody|others|my family|people)|'
+      - 'giv(e|ing) away (my|all my) (things|stuff|belongings|possessions)|'
+      - 'say(ing)? goodbye to (everyone|everybody|people|my family)|'
+      - '(not|never) (to )?wake up (again|tomorrow)|don''t want to wake up|(no|any|the) point (in )?(going on|living))\b'
+
+  # In a model ANSWER: words that turn a medication mention into advice.
+  output_advice:
+    terms: [double, increase, decrease, reduce, raise, lower, stop taking, skip, switch to,
+            mix, combine, extra, more of]
+
+  timing_advice:
+    regex: '\b((before|after) (taking|you take)|wait\b.{0,40}\b(before|after)|\d+\s*(minutes?|hours?) (before|after))'
+
+  # Claims about what a medication does ("may lead to side effects", "should not be mixed").
+  # Medical information like this is for a clinician to give, even when it sounds cautious.
+  effect_claim:
+    regex:
+      - '\b((can|may|could|might|will|would)\s+(lead to|cause|result in|trigger|worsen|interact)'
+      - '|should not be (mixed|combined|taken)|(is|are) (not )?(safe|unsafe|dangerous) to)\b'
+
+# Checked on the user's ORIGINAL message, before masking, tools or the model.
+input:
+  - {category: crisis, reason: crisis language in input, any: [crisis]}
+  - {category: crisis, reason: suicide warning sign in input, any: [warning_sign]}
+  - {category: medication, reason: medication advice requested,
+     all: [medication], any: [dose_intent, dose_amount]}
+  - {category: diagnosis, reason: diagnosis requested, any: [diagnosis_request]}
+
+# Checked on the RESTORED model answer. Mentioning medication is allowed (for example
+# "bring a list of your medications to the appointment"); dose amounts and advice are not.
+# Subtler advice is left to the layer 2 classifier, which sees the question too.
+output:
+  - {category: medication, reason: model answer contains a dose amount, any: [dose_amount]}
+  - {category: medication, reason: model answer gives medication advice, scope: sentence,
+     all: [medication], any: [output_advice, timing_advice, effect_claim]}
+  - {category: crisis, reason: model answer contains crisis language, any: [crisis]}
+  - {category: diagnosis, reason: model answer suggests a diagnosis, any: [diagnosis_affirm]}

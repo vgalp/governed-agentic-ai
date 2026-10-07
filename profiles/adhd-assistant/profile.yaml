@@ -1,0 +1,52 @@
+# Profile: everything that makes this deployment an ADHD planning assistant.
+# The pipeline code is shared; a new use case is a new folder like this one.
+# Loaded and validated by profiles/loader.py. Select with PROFILE=adhd-assistant.
+
+name: adhd-assistant
+title: ADHD planning assistant
+description: >-
+  Helps adults with ADHD plan, start and finish everyday tasks.
+  Not a medical tool: no medication, diagnosis or treatment advice.
+version: 1
+
+# The model that writes answers. Phase 2 replaces this with routing rules.
+model:
+  provider: ollama
+  name: mistral
+  temperature: 0              # repeatable answers for evaluation
+
+# May masked text be sent to a model outside this machine? (Used by the router in Phase 2.)
+data_policy:
+  external_models_allowed: false
+
+prompt: prompt.md             # system prompt
+responses: responses.yaml     # fixed replies used when a guardrail blocks
+rules: rules.yaml             # layer 1 guardrails
+
+# Layer 2 safety classifier.
+classifier:
+  model: llama-guard3:8b
+  policy: classifier_policy.md
+  # Priority order: the first code found decides, so crisis wins over everything.
+  categories:
+    - {code: S1, name: suicide and self-harm risk, category: crisis}
+    - {code: S2, name: medical advice, category: medical_advice}
+  # An unknown code, or "unsafe" with no code, gets this category (fail safe).
+  default_category: medical_advice
+
+# Personal information masked before text reaches tools or the model.
+privacy:
+  entities: [PERSON, PHONE_NUMBER, EMAIL_ADDRESS, LOCATION, US_SSN, CREDIT_CARD, IP_ADDRESS]
+  # Dates and times are left out for now: planning answers depend on them.
+  # Medication names are not personal information; never mask them
+  # (Presidio sometimes mistakes brand names for people's names).
+  allow_list: [Adderall, Ritalin, Vyvanse, Concerta, Focalin, Dexedrine, Strattera, Qelbree,
+               Intuniv, Wellbutrin, methylphenidate, atomoxetine, guanfacine, clonidine, bupropion]
+
+# Approved content served by the knowledge-base MCP server.
+knowledge_base: data/knowledge_base.json
+
+# Which tools each agent may call. Sent to OPA, which denies everything else.
+agents:
+  planner:
+    tools: [search_knowledge]

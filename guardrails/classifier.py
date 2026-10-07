@@ -1,5 +1,5 @@
 """Layer 2 guardrails: a safety classifier (Llama Guard 3 8B via Ollama) with
-this project's own safety policy.
+the active profile's own safety policy (profiles/<name>/classifier_policy.md).
 
 Layer 1 rules catch known words. This layer catches meaning the rules miss,
 such as indirect crisis language ("Everyone would be better off without me").
@@ -16,22 +16,10 @@ from dataclasses import dataclass, field
 
 import requests
 
-from guardrails.rules import CRISIS_RESPONSE, GuardrailDecision
+from guardrails.rules import GuardrailDecision
+from profiles.loader import Profile, load_profile
 
 OLLAMA_GENERATE_URL = "http://localhost:11434/api/generate"
-GUARD_MODEL = "llama-guard3:8b"
-
-# Our safety policy, written in Llama Guard's category format.
-POLICY = """S1: Suicide and Self-Harm Risk.
-Messages that express suicidal thoughts or intent, a wish to die or to not exist, not wanting
-to wake up, hopelessness about continuing to live, feeling that others would be better off
-without them, saying goodbye or giving away possessions, or asking about ways to harm
-themselves. Includes indirect or euphemistic wording.
-S2: Medical Advice.
-Requests for medication dosing, timing, combining, sharing, starting, stopping or switching
-medication, or for a diagnosis of a medical or mental health condition.
-Should not include: planning, routines, reminders, preparing questions for appointments, or
-figurative expressions such as "this deadline is killing me"."""
 
 # Llama Guard 3 prompt format. {role} is "User" (check the question) or
 # "Agent" (check the model's answer in the context of the question).
@@ -55,20 +43,6 @@ Provide your safety assessment for ONLY THE LAST {role} message in the above con
 
 """
 
-# Our categories -> this deployment's guardrail categories.
-CATEGORY_NAMES = {"S1": "suicide and self-harm risk", "S2": "medical advice"}
-
-# Fixed responses (DRAFT: pending clinician approval).
-MEDICAL_ADVICE_RESPONSE = (
-    "I can't give medical advice. A doctor, pharmacist, or other licensed clinician "
-    "is the right person for this. I'm happy to help you prepare questions for them."
-)
-UNAVAILABLE_RESPONSE = (
-    "Sorry, I can't answer right now because a safety check is unavailable. "
-    "Please try again shortly. If you are in crisis, call or text 988 in the U.S. "
-    "or 9-8-8 in Canada, or call 911 in an emergency."
-)
-
 
 @dataclass
 class GuardOutput:
@@ -89,20 +63,24 @@ def parse_guard_output(raw: str) -> GuardOutput:
     return GuardOutput(False, codes, raw)
 
 
-def build_prompt(user_text: str, assistant_text: str | None = None) -> str:
+def build_prompt(user_text: str, assistant_text: str | None = None,
+                 profile: Profile | None = None) -> str:
     """Build the classifier prompt for a question, or for an answer to a question."""
+    profile = profile or load_profile()
     conversation = f"User: {user_text}"
     role = "User"
     if assistant_text is not None:
         conversation += f"\n\nAgent: {assistant_text}"
         role = "Agent"
-    return TEMPLATE.format(role=role, policy=POLICY, conversation=conversation)
+    return TEMPLATE.format(role=role, policy=profile.classifier.policy, conversation=conversation)
 
 
-def classify(user_text: str, assistant_text: str | None = None, model: str = GUARD_MODEL) -> GuardOutput:
+def classify(user_text: str, assistant_text: str | None = None, model: str | None = None,
+             profile: Profile | None = None) -> GuardOutput:
+    profile = profile or load_profile()
     resp = requests.post(OLLAMA_GENERATE_URL, json={
-        "model": model,
-        "prompt": build_prompt(user_text, assistant_text),
+        "model": model or profile.classifier.model,
+        "prompt": build_prompt(user_text, assistant_text, profile),
         "raw": True,                      # we supply the full Llama Guard template
         "stream": False,
         "options": {"temperature": 0},
@@ -111,21 +89,30 @@ def classify(user_text: str, assistant_text: str | None = None, model: str = GUA
     return parse_guard_output(resp.json()["response"])
 
 
-def to_decision(result: GuardOutput) -> GuardrailDecision:
-    """Map policy categories to guardrail decisions. Crisis wins over everything."""
+def to_decision(result: GuardOutput, profile: Profile | None = None) -> GuardrailDecision:
+    """Map policy codes to guardrail decisions. The profile lists categories in
+    priority order, so the first code found wins (crisis wins over everything)."""
     if result.safe:
         return GuardrailDecision(True)
+    profile = profile or load_profile()
+    cats = profile.classifier.categories
+    names = {c.code: c.name for c in cats}
     reason = "classifier: " + (", ".join(
-        f"{c} {CATEGORY_NAMES.get(c, 'unknown')}" for c in result.codes) or "unsafe")
-    if "S1" in result.codes:
-        return GuardrailDecision(False, "crisis", reason, CRISIS_RESPONSE)
-    # S2, an unknown code, or no code: refuse with a referral (fail safe).
-    return GuardrailDecision(False, "medical_advice", reason, MEDICAL_ADVICE_RESPONSE)
+        f"{c} {names.get(c, 'unknown')}" for c in result.codes) or "unsafe")
+    for c in cats:
+        if c.code in result.codes:
+            return GuardrailDecision(False, c.category, reason, profile.response(c.category))
+    # An unknown code, or no code: refuse with the default category (fail safe).
+    category = profile.classifier.default_category
+    return GuardrailDecision(False, category, reason, profile.response(category))
 
 
-def classifier_check(user_text: str, assistant_text: str | None = None) -> GuardrailDecision:
+def classifier_check(user_text: str, assistant_text: str | None = None,
+                     profile: Profile | None = None) -> GuardrailDecision:
     """Layer 2 check. Fails closed if the classifier is unavailable."""
+    profile = profile or load_profile()
     try:
-        return to_decision(classify(user_text, assistant_text))
+        return to_decision(classify(user_text, assistant_text, profile=profile), profile)
     except (requests.RequestException, KeyError, ValueError) as e:
-        return GuardrailDecision(False, "guardrail_unavailable", f"classifier error: {e}", UNAVAILABLE_RESPONSE)
+        return GuardrailDecision(False, "guardrail_unavailable", f"classifier error: {e}",
+                                 profile.response("unavailable"))

@@ -1,12 +1,15 @@
-"""MCP server exposing a search tool over the approved knowledge base."""
+"""MCP server exposing a search tool over the active profile's approved knowledge base
+(profiles/<name>/data/knowledge_base.json)."""
 
 import json
 import re
-from pathlib import Path
 
 from mcp.server.fastmcp import FastMCP
 
-ENTRIES = json.loads((Path(__file__).parent / "entries.json").read_text())
+from profiles.loader import load_profile
+
+PROFILE = load_profile()
+ENTRIES = json.loads(PROFILE.knowledge_base.read_text(encoding="utf-8"))
 
 mcp = FastMCP("knowledge-base", host="127.0.0.1", port=8100)
 
@@ -40,4 +43,5 @@ def search_knowledge(query: str, limit: int = 3) -> dict:
 
 
 if __name__ == "__main__":
+    print(f"Knowledge base for profile {PROFILE.name}: {len(ENTRIES)} entries")
     mcp.run(transport="streamable-http")
