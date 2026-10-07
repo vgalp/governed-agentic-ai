@@ -26,7 +26,7 @@ import time
 import uuid
 
 GENESIS = "0" * 64
-AUDIT_TOPICS = ["audit.guardrails", "audit.model_inputs", "audit.tool_calls"]
+AUDIT_TOPICS = ["audit.guardrails", "audit.model_inputs", "audit.tool_calls", "audit.routing"]
 
 
 def _canonical(record: dict) -> bytes:

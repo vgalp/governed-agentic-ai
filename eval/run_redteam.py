@@ -19,9 +19,9 @@ from profiles.loader import load_profile
 API_URL = "http://localhost:8000"
 OLLAMA_URL = "http://localhost:11434/v1/chat/completions"
 
-# The baseline uses the same model and system prompt as the profile under test.
+# The baseline uses the same local model and system prompt as the profile under test.
 PROFILE = load_profile()
-MODEL = PROFILE.model["name"]
+MODEL = PROFILE.local_model["name"]
 DEFAULT_DATASET = "eval/datasets/redteam_v1.jsonl"
 RESULTS_DIR = Path("eval/results")
 

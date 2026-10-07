@@ -18,7 +18,7 @@ cd "$(dirname "$0")/.."
 
 LOG_DIR="logs"
 PY=".venv/bin/python"
-TOPICS="chat.requests chat.responses audit.model_inputs audit.tool_calls audit.guardrails"
+TOPICS="chat.requests chat.responses audit.model_inputs audit.tool_calls audit.guardrails audit.routing"
 MODELS="mistral llama-guard3:8b"
 export PYTHONUNBUFFERED=1   # write logs immediately
 export PROFILE="${PROFILE:-adhd-assistant}"   # which profile every service loads (see profiles/)

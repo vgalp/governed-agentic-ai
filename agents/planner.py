@@ -17,19 +17,15 @@ from audit.chain import get_audit_chain
 from gateway.gateway import ToolCallDenied, call_tool
 from guardrails.classifier import classifier_check
 from guardrails.rules import check_input, check_output
+from llm.providers import ModelUnavailable, chat
 from privacy.masking import mask, unmask
 from profiles.loader import load_profile
+from router.router import RouteDecision, route
 
 AGENT_NAME = "planner"
 BOOTSTRAP = "localhost:9092"
-OLLAMA_URL = "http://localhost:11434/v1/chat/completions"
 
 PROFILE = load_profile()          # fails here, at startup, if the profile is incomplete
-if PROFILE.model["provider"] != "ollama":
-    raise SystemExit(f"Profile {PROFILE.name}: provider {PROFILE.model['provider']!r} "
-                     "is not supported yet (model routing comes in Phase 2)")
-MODEL = PROFILE.model["name"]
-TEMPERATURE = PROFILE.model.get("temperature", 0)
 
 consumer = Consumer({
     "bootstrap.servers": BOOTSTRAP,
@@ -40,8 +36,10 @@ consumer = Consumer({
 producer = Producer({"bootstrap.servers": BOOTSTRAP, "enable.idempotence": True})
 consumer.subscribe(["chat.requests"])
 audit = get_audit_chain(AGENT_NAME)   # tamper-evident audit, shared with the gateway
+_ext = PROFILE.external_model["name"] if PROFILE.routing["external_allowed"] else "none"
 print(f"Planner agent listening on chat.requests (profile {PROFILE.name}, "
-      f"model {MODEL}, guard {PROFILE.classifier.model})...")
+      f"local model {PROFILE.local_model['name']}, external model {_ext}, "
+      f"guard {PROFILE.classifier.model})...")
 
 
 def audit_guardrail(request_id: str, stage: str, layer: str, decision) -> None:
@@ -57,7 +55,8 @@ def audit_guardrail(request_id: str, stage: str, layer: str, decision) -> None:
     })
 
 
-def publish_response(request_id: str, answer: str, sources: list, guardrail: dict | None) -> None:
+def publish_response(request_id: str, answer: str, sources: list, guardrail: dict | None,
+                     route_info: dict | None = None) -> None:
     producer.produce("chat.responses", key=request_id, value=json.dumps({
         "request_id": request_id,
         "profile": PROFILE.name,
@@ -65,6 +64,7 @@ def publish_response(request_id: str, answer: str, sources: list, guardrail: dic
         "answer": answer,
         "sources": sources,
         "guardrail": guardrail,
+        "route": route_info,               # which model answered: shown as a badge in the UI
     }))
     producer.flush()
     audit.producer.flush()
@@ -109,32 +109,52 @@ while True:
         notes = []
     notes_text = "\n".join(f"- {n['title']}: {n['text']}" for n in notes) or "- (no approved notes found)"
 
-    # 4. Audit exactly what the model saw.
-    audit.emit("audit.model_inputs", {
-        "request_id": request_id,
-        "profile": PROFILE.name,
-        "agent": AGENT_NAME,
-        "model": MODEL,
-        "model_input": masked_message,
-        "notes_used": [n["id"] for n in notes],
-        "entities_masked": len(mapping),
-    })
+    # 4. Decide which model answers (OPA policy, audited). External models only
+    #    ever get masked text; the local model gets what the profile says.
+    decision = route(PROFILE, mapping, ["search_knowledge"], request_id, AGENT_NAME)
 
-    # 5. Ask the model.
-    resp = requests.post(OLLAMA_URL, json={
-        "model": MODEL,
-        "temperature": TEMPERATURE,
-        "messages": [
+    # 5. Ask the model. If an external model fails, fall back to the local one.
+    def ask(d: RouteDecision) -> str:
+        user_text = masked_message if d.send_masked else req["message"]
+        # Audit what the model saw. The audit never holds raw personal data:
+        # when the local model sees the original, the masked text is recorded.
+        audit.emit("audit.model_inputs", {
+            "request_id": request_id,
+            "profile": PROFILE.name,
+            "agent": AGENT_NAME,
+            "target": d.target,
+            "model": d.model["name"],
+            "model_input": masked_message,
+            "sent_masked": d.send_masked,
+            "notes_used": [n["id"] for n in notes],
+            "entities_masked": len(mapping),
+        })
+        return chat(d.model, [
             {"role": "system", "content": PROFILE.system_prompt + "\n\nApproved notes:\n" + notes_text},
-            {"role": "user", "content": masked_message},
-        ],
-    }, timeout=120)
-    resp.raise_for_status()
-    model_answer = resp.json()["choices"][0]["message"]["content"]
+            {"role": "user", "content": user_text},
+        ])
+
+    try:
+        model_answer = ask(decision)
+    except (requests.RequestException, ModelUnavailable, KeyError) as e:
+        if decision.target != "external":
+            raise
+        print(f"External model failed ({type(e).__name__}); using the local model: {request_id}")
+        decision = RouteDecision("local", PROFILE.routing["local_model"], PROFILE.local_model,
+                                 send_masked=PROFILE.routing["local_input"] == "masked",
+                                 reasons=["external model failed: fell back to the local model"])
+        audit.emit("audit.routing", {
+            "request_id": request_id, "profile": PROFILE.name, "agent": AGENT_NAME,
+            "target": "local", "model_key": decision.model_key, "model": decision.model["name"],
+            "provider": decision.model["provider"], "sent_masked": decision.send_masked,
+            "fallback": True, "reasons": decision.reasons,
+        })
+        model_answer = ask(decision)
+    route_info = {"target": decision.target, "model": decision.model["name"]}
 
     # 6. Output guardrails on the RESTORED answer, so masked names can't hide anything.
     #    The classifier sees the question and the answer together.
-    restored_answer = unmask(model_answer, mapping)
+    restored_answer = unmask(model_answer, mapping) if decision.send_masked else model_answer
     out_check = check_output(restored_answer, PROFILE)
     out_layer = "rules"
     if out_check.allowed:
@@ -143,13 +163,15 @@ while True:
     audit_guardrail(request_id, "output", out_layer, out_check)
     if not out_check.allowed:
         publish_response(request_id, out_check.response, [],
-                         {"stage": "output", "layer": out_layer, "category": out_check.category})
+                         {"stage": "output", "layer": out_layer, "category": out_check.category},
+                         route_info)
         consumer.commit(message=msg)
         print(f"Blocked at output by {out_layer} ({out_check.category}): {request_id}")
         continue
 
     # 7. Publish the answer with its sources, then commit.
     sources = [{"id": n["id"], "title": n["title"]} for n in notes]
-    publish_response(request_id, restored_answer, sources, None)
+    publish_response(request_id, restored_answer, sources, None, route_info)
     consumer.commit(message=msg)
-    print(f"Answered {request_id} (masked {len(mapping)}, notes {[n['id'] for n in notes]})")
+    print(f"Answered {request_id} by {decision.target} model {decision.model['name']} "
+          f"(masked {len(mapping)}, notes {[n['id'] for n in notes]})")

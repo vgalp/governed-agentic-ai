@@ -28,6 +28,7 @@ def sanitize(topic: str, value: dict) -> dict:
             "request_id": value.get("request_id"),
             "guardrail": value.get("guardrail"),
             "sources": [s.get("id") for s in value.get("sources", [])],
+            "route": value.get("route"),
             "answer_chars": len(value.get("answer", "")),
         }
     return value  # audit events already hold masked text and decisions only

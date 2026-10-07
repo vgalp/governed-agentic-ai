@@ -8,15 +8,12 @@ data.profiles.<name>; the policy (policies/mcp_authz.rego) denies everything els
 import asyncio
 import json
 
-import requests
 from mcp import ClientSession
 from mcp.client.streamable_http import streamablehttp_client
 
 from audit.chain import get_audit_chain
+from gateway.opa import decide
 from profiles.loader import Profile, load_profile
-
-OPA_URL = "http://localhost:8181"
-OPA_DECISION = f"{OPA_URL}/v1/data/mcp/authz/allow"
 
 # Tools this deployment can reach. A profile can only grant tools listed here.
 TOOL_SERVERS = {
@@ -34,23 +31,9 @@ def _audit(event: dict) -> None:
     get_audit_chain("gateway").emit("audit.tool_calls", event, flush=True)
 
 
-def _ensure_policy_data(profile: Profile) -> None:
-    """Load the profile's tool permissions into OPA if they are not there yet
-    (for example after OPA restarted)."""
-    url = f"{OPA_URL}/v1/data/profiles/{profile.name}"
-    resp = requests.get(url, timeout=5)
-    resp.raise_for_status()
-    if resp.json().get("result") != profile.policy_data():
-        requests.put(url, json=profile.policy_data(), timeout=5).raise_for_status()
-
-
 def _is_allowed(profile: Profile, agent: str, tool: str) -> bool:
-    _ensure_policy_data(profile)
-    resp = requests.post(OPA_DECISION, json={
-        "input": {"profile": profile.name, "agent": agent, "tool": tool},
-    }, timeout=5)
-    resp.raise_for_status()
-    return resp.json().get("result", False) is True
+    result = decide(profile, "mcp/authz/allow", {"profile": profile.name, "agent": agent, "tool": tool})
+    return result is True
 
 
 async def _call(server_url: str, tool: str, args: dict) -> dict:

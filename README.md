@@ -48,7 +48,7 @@ Every decision is written to an audit topic as a hash-chained, HMAC-signed event
 | Tamper-evident audit | Each audit event carries a sequence number, the previous event's hash and an HMAC-SHA256 signature; a verifier detects edits, deletions and reordering | Working |
 | Live dashboard | Shows each request moving through the pipeline in real time, without exposing personal information | Working |
 | Grounding check (layer 3) | Verifies answers against approved knowledge-base content | Planned |
-| Policy-based model routing | OPA decides whether a request may go to a local or an external model; the decision is audited | Planned |
+| Policy-based model routing | OPA decides whether a request may go to a local or an external model; the decision is audited | Working |
 | Human approval gates | Risky agent actions wait for a person to approve | Planned |
 | Tracing and failure recovery | OpenTelemetry tracing, Saga-style rollback, idempotency | Planned |
 
@@ -139,6 +139,7 @@ The exit code is 0 when the trail is intact and 1 when an event has been changed
 
 ```bash
 uv run pytest                                                          # unit tests (also run in CI)
+opa test policies/ -v                                                  # policy tests (also run in CI)
 uv run python -m eval.run_redteam                                      # frozen red-team set (all services running)
 uv run python -m eval.run_redteam --dataset eval/datasets/redteam_dev.jsonl   # development set
 uv run python -m eval.guard_compare                                    # compare classifier models
@@ -165,6 +166,8 @@ uv run python -m profiles.loader                 # validate every profile
 PROFILE=adhd-assistant ./scripts/dev.sh start    # run a profile (this one is the default)
 ```
 
+Each profile also says which models it may use and when. OPA (`policies/routing.rego`) decides per request whether the local or an external model answers, from facts only (the kinds of personal information found, never the values). External models only ever receive masked text, a profile can forbid them entirely, and every decision is audited. The ADHD profile is local only. See [ADR 004](docs/decisions/004-model-routing.md).
+
 A profile is checked at startup and the service refuses to start if it is incomplete. Tool permissions in `profile.yaml` are enforced by OPA, which denies anything a profile does not grant. See [ADR 003](docs/decisions/003-deployment-profiles.md).
 
 ## Project structure
@@ -173,9 +176,11 @@ A profile is checked at startup and the service refuses to start if it is incomp
 api/             Chat API, live event stream, audit check (FastAPI)
 agents/          Planner agent
 profiles/        Deployment profiles and their loader
+router/          Model routing (OPA decision, code-side rules, audit)
+llm/             Model providers (Ollama, OpenAI-compatible, mock)
 privacy/         Personal-information masking (Presidio)
 gateway/         MCP gateway: policy check, tool call, audit
-policies/        OPA policies (tool permissions from the active profile)
+policies/        OPA policies: tool permissions, model routing, and their tests
 mcp_servers/     MCP servers (knowledge base)
 guardrails/      Layer 1 rules and layer 2 safety classifier
 audit/           Hash-chained, signed audit events and the verifier
@@ -198,7 +203,7 @@ docs/            Architecture notes and decision records
 - [x] Live pipeline dashboard and one-command start
 - [x] `redteam_v2`: harder frozen set (indirect crisis, implied diagnosis, unnamed medication, adversarial prompts)
 - [x] Deployment profiles: plug-and-play use cases with no code change
-- [ ] Policy-based model routing (local vs external model, decided by OPA and audited)
+- [x] Policy-based model routing (local vs external model, decided by OPA and audited)
 - [ ] Human approval gates for risky agent actions
 - [ ] Signed audit checkpoints (truncation detection)
 - [ ] Fine-tuned safety classifier and grounding check (layer 3)

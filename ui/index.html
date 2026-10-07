@@ -33,6 +33,7 @@
   .badge { font: 600 11px/1 ui-monospace, Menlo, monospace; padding: 4px 6px; border-radius: 6px; }
   .badge.ok { color: var(--ok); background: var(--ok-bg); }
   .badge.block { color: var(--block); background: var(--block-bg); }
+  .badge.route { color: var(--muted, #555); background: rgba(127, 127, 127, .14); }
   .pending { color: var(--muted); font-style: italic; }
   form { display: flex; gap: 8px; margin-top: 12px; }
   textarea { flex: 1; resize: none; height: 48px; padding: 12px; border-radius: 10px; font: inherit;
@@ -91,6 +92,12 @@ function meta(div, data, seconds) {
     badge.textContent = "ANSWERED";
   }
   m.appendChild(badge);
+  if (data.route) {
+    const r = document.createElement("span");
+    r.className = "badge route";
+    r.textContent = data.route.target === "external" ? `EXTERNAL MODEL · ${data.route.model}` : `LOCAL MODEL · ${data.route.model}`;
+    m.appendChild(r);
+  }
   const extra = document.createElement("span");
   const sources = (data.sources || []).map(s => s.id).join(", ");
   extra.textContent = `${seconds.toFixed(1)}s` + (sources ? ` · sources: ${sources}` : "");

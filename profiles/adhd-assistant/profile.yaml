@@ -9,15 +9,37 @@ description: >-
   Not a medical tool: no medication, diagnosis or treatment advice.
 version: 1
 
-# The model that writes answers. Phase 2 replaces this with routing rules.
-model:
-  provider: ollama
-  name: mistral
-  temperature: 0              # repeatable answers for evaluation
+# Models this profile may use. location: local (runs on this machine or network)
+# or external (a third-party service). API keys are never written here: give the
+# NAME of an environment variable in api_key_env.
+models:
+  local:
+    provider: ollama
+    name: mistral
+    location: local
+    temperature: 0            # repeatable answers for evaluation
+  # Example of an external model (not used: external_allowed is false below).
+  # external:
+  #   provider: openai_compatible
+  #   base_url: https://api.example.com/v1
+  #   name: some-model
+  #   location: external
+  #   api_key_env: EXTERNAL_MODEL_API_KEY
 
-# May masked text be sent to a model outside this machine? (Used by the router in Phase 2.)
-data_policy:
-  external_models_allowed: false
+# Which model answers each request. Decided by OPA (policies/routing.rego) and audited;
+# the router also enforces that external models only ever receive masked text.
+routing:
+  local_model: local
+  external_model: null        # key in models, or null for none
+  external_allowed: false     # this profile never sends anything off the machine
+  send_external_when: no_personal_info   # or: masked (masked text may go out)
+  never_external_entities: [US_SSN, CREDIT_CARD]   # never sent out, even masked
+  never_external_labels: []   # data labels (see tool_data_labels) that never go out
+  local_input: masked         # what the local model sees: masked or original
+
+# Label for the data each tool returns, used by routing.
+tool_data_labels:
+  search_knowledge: approved_content
 
 prompt: prompt.md             # system prompt
 responses: responses.yaml     # fixed replies used when a guardrail blocks

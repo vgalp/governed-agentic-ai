@@ -30,3 +30,19 @@ jobs:
 
       - name: Run tests
         run: uv run pytest -v
+
+  opa:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install OPA
+        uses: open-policy-agent/setup-opa@v2
+        with:
+          version: 1.21.1
+
+      - name: Check, format-check and test policies
+        run: |
+          opa check policies/
+          opa fmt --fail --list policies/
+          opa test policies/ -v

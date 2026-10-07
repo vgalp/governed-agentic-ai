@@ -20,10 +20,12 @@ def test_every_profile_loads():
 
 def test_adhd_profile_contents():
     p = load_profile("adhd-assistant")
-    assert p.model["provider"] == "ollama"
-    assert p.data_policy["external_models_allowed"] is False
+    assert p.local_model["provider"] == "ollama" and p.local_model["location"] == "local"
+    assert p.routing["external_allowed"] is False and p.external_model is None
     assert p.agents == {"planner": ("search_knowledge",)}
-    assert p.policy_data() == {"agents": {"planner": {"tools": ["search_knowledge"]}}}
+    data = p.policy_data()
+    assert data["agents"] == {"planner": {"tools": ["search_knowledge"]}}
+    assert data["routing"]["external_allowed"] is False
     assert [c.category for c in p.classifier.categories][0] == "crisis"   # crisis first
     assert "988" in p.response("crisis")
     assert "\n" not in p.system_prompt          # wrapped lines are joined
@@ -93,6 +95,48 @@ def test_name_must_match_folder(copy_of_adhd):
 def test_files_outside_the_profile_are_rejected(copy_of_adhd):
     _edit_yaml(copy_of_adhd / "profile.yaml", lambda d: d.update(prompt="../../README.md"))
     with pytest.raises(ProfileError, match="outside the profile folder"):
+        load_profile_from(copy_of_adhd)
+
+
+def test_api_key_in_profile_is_rejected(copy_of_adhd):
+    _edit_yaml(copy_of_adhd / "profile.yaml",
+               lambda d: d["models"]["local"].update(api_key="sk-secret"))
+    with pytest.raises(ProfileError, match="never put an API key"):
+        load_profile_from(copy_of_adhd)
+
+
+def test_external_allowed_needs_an_external_model(copy_of_adhd):
+    _edit_yaml(copy_of_adhd / "profile.yaml", lambda d: d["routing"].update(external_allowed=True))
+    with pytest.raises(ProfileError, match="no external_model is set"):
+        load_profile_from(copy_of_adhd)
+
+
+def test_local_model_must_be_local(copy_of_adhd):
+    def change(d):
+        d["models"]["cloud"] = {"provider": "openai_compatible", "base_url": "https://x/v1",
+                                "name": "m", "location": "external"}
+        d["routing"]["local_model"] = "cloud"
+    _edit_yaml(copy_of_adhd / "profile.yaml", change)
+    with pytest.raises(ProfileError, match="must be a model with location local"):
+        load_profile_from(copy_of_adhd)
+
+
+def test_ollama_cannot_be_external(copy_of_adhd):
+    _edit_yaml(copy_of_adhd / "profile.yaml",
+               lambda d: d["models"]["local"].update(location="external"))
+    with pytest.raises(ProfileError, match="runs locally"):
+        load_profile_from(copy_of_adhd)
+
+
+def test_every_granted_tool_needs_a_data_label(copy_of_adhd):
+    _edit_yaml(copy_of_adhd / "profile.yaml", lambda d: d.update(tool_data_labels={}))
+    with pytest.raises(ProfileError, match="no label for search_knowledge"):
+        load_profile_from(copy_of_adhd)
+
+
+def test_old_model_field_is_rejected(copy_of_adhd):
+    _edit_yaml(copy_of_adhd / "profile.yaml", lambda d: d.update(model={"provider": "ollama"}))
+    with pytest.raises(ProfileError, match="replaced by 'models'"):
         load_profile_from(copy_of_adhd)
 
 

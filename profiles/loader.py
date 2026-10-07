@@ -22,6 +22,10 @@ PROFILES_DIR = Path(__file__).resolve().parent
 DEFAULT_PROFILE = "adhd-assistant"
 NAME_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 SCOPES = {"text", "sentence"}
+PROVIDERS = {"ollama", "openai_compatible", "mock"}
+LOCATIONS = {"local", "external"}
+SEND_EXTERNAL_WHEN = {"no_personal_info", "masked"}
+LOCAL_INPUT = {"masked", "original"}
 
 
 class ProfileError(Exception):
@@ -59,8 +63,9 @@ class Profile:
     description: str
     version: int
     path: Path
-    model: dict
-    data_policy: dict
+    models: dict[str, dict]                     # key -> provider, name, location, ...
+    routing: dict
+    tool_data_labels: dict[str, str]            # tool -> label of the data it returns
     system_prompt: str
     responses: dict[str, str]
     input_rules: tuple[Rule, ...]
@@ -74,9 +79,27 @@ class Profile:
     def response(self, category: str) -> str:
         return self.responses[category]
 
+    @property
+    def local_model(self) -> dict:
+        return self.models[self.routing["local_model"]]
+
+    @property
+    def external_model(self) -> dict | None:
+        key = self.routing.get("external_model")
+        return self.models[key] if key else None
+
     def policy_data(self) -> dict:
-        """What OPA needs to decide tool access for this profile."""
-        return {"agents": {a: {"tools": list(t)} for a, t in self.agents.items()}}
+        """What OPA needs for this profile: tool access and routing settings."""
+        r = self.routing
+        return {
+            "agents": {a: {"tools": list(t)} for a, t in self.agents.items()},
+            "routing": {
+                "external_allowed": r["external_allowed"],
+                "send_external_when": r["send_external_when"],
+                "never_external_entities": list(r["never_external_entities"]),
+                "never_external_labels": list(r["never_external_labels"]),
+            },
+        }
 
 
 # --- helpers ------------------------------------------------------------------
@@ -152,6 +175,64 @@ def _rules(raw: list, stage: str, patterns: dict[str, re.Pattern]) -> tuple[Rule
     return tuple(rules)
 
 
+def _models(raw, where: str) -> dict[str, dict]:
+    if not isinstance(raw, dict) or not raw:
+        raise ProfileError(f"{where}: 'models' must name at least one model")
+    models = {}
+    for key, m in raw.items():
+        w = f"{where}: model '{key}'"
+        if not isinstance(m, dict):
+            raise ProfileError(f"{w}: must be a mapping")
+        if "api_key" in m:
+            raise ProfileError(f"{w}: never put an API key in a profile; use api_key_env "
+                               "with the name of an environment variable")
+        provider = _require(m, "provider", w)
+        if provider not in PROVIDERS:
+            raise ProfileError(f"{w}: provider must be one of {sorted(PROVIDERS)}")
+        _require(m, "name", w)
+        location = _require(m, "location", w)
+        if location not in LOCATIONS:
+            raise ProfileError(f"{w}: location must be local or external")
+        if provider == "openai_compatible":
+            _require(m, "base_url", w)
+        if provider in {"ollama", "mock"} and location != "local":
+            raise ProfileError(f"{w}: provider {provider} runs locally; location must be local")
+        models[key] = dict(m)
+    return models
+
+
+def _routing(raw, models: dict[str, dict], where: str) -> dict:
+    w = f"{where}: routing"
+    if not isinstance(raw, dict):
+        raise ProfileError(f"{w}: missing")
+    r = {
+        "local_model": _require(raw, "local_model", w),
+        "external_model": raw.get("external_model"),
+        "external_allowed": raw.get("external_allowed", False),
+        "send_external_when": raw.get("send_external_when", "no_personal_info"),
+        "never_external_entities": tuple(raw.get("never_external_entities") or []),
+        "never_external_labels": tuple(raw.get("never_external_labels") or []),
+        "local_input": raw.get("local_input", "masked"),
+    }
+    lm = models.get(r["local_model"])
+    if lm is None or lm["location"] != "local":
+        raise ProfileError(f"{w}: local_model '{r['local_model']}' must be a model with location local")
+    if r["external_model"] is not None:
+        em = models.get(r["external_model"])
+        if em is None or em["location"] != "external":
+            raise ProfileError(f"{w}: external_model '{r['external_model']}' must be a model "
+                               "with location external")
+    if not isinstance(r["external_allowed"], bool):
+        raise ProfileError(f"{w}: external_allowed must be true or false")
+    if r["external_allowed"] and r["external_model"] is None:
+        raise ProfileError(f"{w}: external_allowed is true but no external_model is set")
+    if r["send_external_when"] not in SEND_EXTERNAL_WHEN:
+        raise ProfileError(f"{w}: send_external_when must be one of {sorted(SEND_EXTERNAL_WHEN)}")
+    if r["local_input"] not in LOCAL_INPUT:
+        raise ProfileError(f"{w}: local_input must be masked or original")
+    return r
+
+
 # --- loading ------------------------------------------------------------------
 
 def load_profile_from(path: Path) -> Profile:
@@ -167,9 +248,11 @@ def load_profile_from(path: Path) -> Profile:
     if name != path.name:
         raise ProfileError(f"{where}: name '{name}' must match the folder name '{path.name}'")
 
-    model = _require(p, "model", where)
-    _require(model, "provider", f"{where}: model")
-    _require(model, "name", f"{where}: model")
+    if "model" in p or "data_policy" in p:
+        raise ProfileError(f"{where}: 'model' and 'data_policy' were replaced by 'models' and "
+                           "'routing' (see profiles/adhd-assistant/profile.yaml)")
+    models = _models(p.get("models"), where)
+    routing = _routing(p.get("routing"), models, where)
 
     responses = _yaml(_file(path, _require(p, "responses", where), where))
     rules_raw = _yaml(_file(path, _require(p, "rules", where), where))
@@ -200,6 +283,11 @@ def load_profile_from(path: Path) -> Profile:
 
     agents_raw = _require(p, "agents", where)
     agents = {a: tuple((cfg or {}).get("tools", [])) for a, cfg in agents_raw.items()}
+    tool_data_labels = dict(p.get("tool_data_labels") or {})
+    granted = {t for tools in agents.values() for t in tools}
+    unlabeled = sorted(granted - tool_data_labels.keys())
+    if unlabeled:
+        raise ProfileError(f"{where}: tool_data_labels has no label for {', '.join(unlabeled)}")
 
     privacy = p.get("privacy") or {}
     return Profile(
@@ -208,8 +296,9 @@ def load_profile_from(path: Path) -> Profile:
         description=p.get("description", ""),
         version=int(p.get("version", 1)),
         path=path,
-        model=dict(model),
-        data_policy=dict(p.get("data_policy") or {"external_models_allowed": False}),
+        models=models,
+        routing=routing,
+        tool_data_labels=tool_data_labels,
         system_prompt=read_prompt(_file(path, _require(p, "prompt", where), where)),
         responses={k: v.strip() for k, v in responses.items()},
         input_rules=input_rules,
@@ -242,8 +331,10 @@ if __name__ == "__main__":
     for n in available_profiles():
         try:
             pr = load_profile(n)
+            ext = pr.routing["external_model"] if pr.routing["external_allowed"] else "none"
             print(f"ok   {n}: {len(pr.input_rules)} input rules, {len(pr.output_rules)} output rules, "
-                  f"{len(pr.responses)} responses, agents {list(pr.agents)}")
+                  f"{len(pr.responses)} responses, agents {list(pr.agents)}, "
+                  f"local model {pr.local_model['name']}, external model {ext}")
         except ProfileError as e:
             failed = True
             print(f"FAIL {n}: {e}")
