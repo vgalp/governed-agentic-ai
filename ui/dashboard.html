@@ -100,6 +100,25 @@
   .note { font-size: 12px; color: var(--muted); margin-top: 10px; }
   .follow { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
   .empty { color: var(--muted); padding: 20px 0; text-align: center; }
+  .lanes { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; margin-top: 6px; }
+  @media (max-width: 560px) { .lanes { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+  .lane { border-radius: 10px; padding: 8px 10px; border: 1px solid transparent; }
+  .lane .name { font-weight: 600; font-size: 13px; }
+  .lane .state { font: 600 11px var(--mono); text-transform: uppercase; }
+  .trace { margin-top: 8px; }
+  .trace .row { display: grid; grid-template-columns: 56px 84px minmax(0, 1fr) 64px; gap: 10px; align-items: baseline;
+                padding: 5px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
+  .trace .t, .trace .ms { font: 12px var(--mono); color: var(--muted); }
+  .trace .ms { text-align: right; }
+  .trace .who { font: 600 11px var(--mono); padding: 2px 6px; border-radius: 6px; text-align: center; }
+  .trace .what { word-break: break-word; }
+  .trace .what b { font-weight: 600; font-family: var(--mono); font-size: 12px; margin-right: 6px; }
+  .o-pass { color: var(--pass); background: var(--pass-bg); }
+  .o-block { color: var(--block); background: var(--block-bg); }
+  .o-override, .o-error { color: var(--warn); background: var(--warn-bg); }
+  .o-info { color: var(--muted); background: var(--skip-bg); }
+  .o-running { color: var(--active); background: var(--active-bg); animation: pulse 1.2s ease-in-out infinite; }
+  .o-unused { color: var(--skip); background: var(--skip-bg); }
 </style>
 </head>
 <body>
@@ -135,9 +154,12 @@
           </div>
         </div>
         <div class="stages" id="stages"></div>
+        <div class="label">Decision trace: each agent's steps, live from the agent.trace topic</div>
+        <div class="lanes" id="lanes"></div>
+        <div class="trace" id="trace"></div>
         <div class="label">What the model saw (after masking)</div>
         <div class="masked" id="masked">—</div>
-        <div class="label">Events for this request</div>
+        <div class="label">Audit events for this request</div>
         <div class="timeline" id="timeline"></div>
       </div>
 
@@ -172,6 +194,9 @@ const STAGES = [
   ["output", "Output guardrails"],
   ["response", "Response sent"],
 ];
+const AGENTS = ["intake", "knowledge", "records", "router", "answer"];
+const OUTCOME_WORDS = {pass: "passed", block: "blocked", override: "overridden", info: "done",
+                       error: "error", running: "running…", unused: "not used"};
 const requests = new Map();   // request_id -> {id, events: [], first}
 let feed = [];
 let selected = null;
@@ -268,13 +293,51 @@ function renderSelected() {
   });
   $("masked").textContent = mi ? mi.data.model_input
     : (s.input[0] === "block" ? "Nothing. The request was stopped at the input guardrails, so it never reached masking, tools or the model." : "—");
+  renderTrace(req);
   const tl = $("timeline");
   tl.replaceChildren();
-  for (const e of req.events) {
+  for (const e of req.events.filter(e => e.topic !== "agent.trace")) {
     const row = el("div");
     row.append(el("span", "t", `+${(e.received_at - req.first).toFixed(1)}s`), el("span", "", summarize(e)));
     tl.append(row);
   }
+}
+
+// The decision trace: steps in order. A "running" step is hidden once the same step
+// has finished; while it is still running it pulses.
+function traceSteps(req) {
+  const steps = req.events.filter(e => e.topic === "agent.trace").map(e => e.data).sort((a, b) => a.seq - b.seq);
+  return steps.filter((s, i) => s.outcome !== "running" ||
+    !steps.slice(i + 1).some(o => o.agent === s.agent && o.step === s.step && o.outcome !== "running"));
+}
+
+function renderTrace(req) {
+  const steps = traceSteps(req);
+  const resp = find(req, "chat.responses");
+  $("lanes").replaceChildren(...AGENTS.map(a => {
+    const mine = steps.filter(s => s.agent === a);
+    let state = "unused";
+    if (mine.some(s => s.outcome === "block")) state = "block";
+    else if (mine.some(s => s.outcome === "running") && !resp) state = "running";
+    else if (mine.some(s => s.outcome === "error" || s.outcome === "override")) state = "override";
+    else if (mine.length) state = "pass";
+    const c = el("div", `lane o-${state}`);
+    c.append(el("div", "name", a), el("div", "state", state === "override" ? "flagged" : OUTCOME_WORDS[state]));
+    return c;
+  }));
+  const box = $("trace");
+  if (!steps.length) { box.replaceChildren(el("div", "note", "No trace for this request (sent before tracing was added).")); return; }
+  box.replaceChildren(...steps.map(s => {
+    const row = el("div", "row");
+    const what = el("div", "what");
+    what.append(el("b", "", s.step), document.createTextNode(s.summary));
+    const running = s.outcome === "running" && !resp;
+    row.append(el("span", "t", `+${(s.elapsed_ms / 1000).toFixed(1)}s`),
+               el("span", `who o-${running ? "running" : s.outcome === "running" ? "info" : s.outcome}`, s.agent),
+               what,
+               el("span", "ms", s.duration_ms != null ? `${(s.duration_ms / 1000).toFixed(1)}s` : running ? "…" : ""));
+    return row;
+  }));
 }
 
 function summarize(e) {
@@ -286,6 +349,7 @@ function summarize(e) {
     case "audit.guardrails": return `audit.guardrails · ${d.stage} ${d.layer} · ${d.allowed ? "allowed" : "blocked: " + d.category}${seq}`;
     case "audit.tool_calls": return `audit.tool_calls · ${d.role ? d.role + " · " : ""}${d.agent} → ${d.tool} · ${d.decision}${d.returned !== undefined ? " · " + d.returned + " returned" : ""}${seq}`;
     case "audit.model_inputs": return `audit.model_inputs · ${d.model} · ${d.entities_masked} masked${seq}`;
+    case "agent.trace": return `agent.trace · ${d.agent} · ${d.step} · ${OUTCOME_WORDS[d.outcome] || d.outcome}`;
     case "audit.routing": return `audit.routing · ${d.target} → ${d.model}${d.fallback ? " (fallback)" : ""} · ${d.sent_masked ? "masked" : "original"}${seq}`;
     default: return e.topic;
   }

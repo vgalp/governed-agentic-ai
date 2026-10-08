@@ -11,13 +11,17 @@ active profile: PROFILE=<name>, default adhd-assistant. See profiles/.
 
 In a profile with roles, the requesting role decides which tools may be used and
 which record data is fetched (OPA). The role is checked after the input guardrails,
-so a crisis message is answered with the crisis reply even without a role."""
+so a crisis message is answered with the crisis reply even without a role.
+
+Every step is also published to agent.trace as it happens (agents/trace.py): a readable
+decision trace for the dashboard, with no personal data."""
 
 import json
 
 import requests
 from confluent_kafka import Consumer, Producer
 
+from agents.trace import Trace, ids_text, masking_summary, tool_agent
 from audit.chain import get_audit_chain
 from gateway.gateway import ToolCallDenied, call_tool
 from guardrails.classifier import classifier_check
@@ -99,6 +103,10 @@ while True:
     req = json.loads(msg.value())
     request_id = req["request_id"]
     role = req.get("role")
+    trace = Trace(producer, PROFILE.name, request_id, role)
+    trace.step("intake", "received", "info",
+               f"Question received ({len(req['message'])} characters, not shown)"
+               + (f" from role {role}" if role else ""))
 
     # 1. Input guardrails on the ORIGINAL text. Both layers run locally, so nothing
     #    leaves the system; unsafe requests never reach masking, tools, or the model.
@@ -106,18 +114,32 @@ while True:
     in_layer = "rules"
     override = None
     if in_check.allowed:
+        trace.step("intake", "input_rules", "pass", "No input rule matched")
+        trace.start("intake", "input_classifier", f"Safety classifier ({PROFILE.classifier.model}) checking the question")
         in_check = classifier_check(req["message"], profile=PROFILE)
         in_layer = "classifier"
         # A narrow, profile-defined exemption (e.g. a pure record lookup flagged as
         # medical advice). Never for crisis. The answer is still fully checked.
         override = classifier_exemption(req["message"], in_check, PROFILE)
         if override:
+            trace.step("intake", "input_classifier", "override",
+                       f"Flagged as {in_check.category}, overridden: {override}",
+                       category=in_check.category, exemption=override)
             in_check = GuardrailDecision(True, in_check.category,
                                          f"{in_check.reason}; overridden: {override}")
+        elif in_check.allowed:
+            trace.step("intake", "input_classifier", "pass", "Classifier: safe")
+        else:
+            trace.step("intake", "input_classifier", "block",
+                       f"Blocked by the classifier: {in_check.category}", category=in_check.category)
+    else:
+        trace.step("intake", "input_rules", "block", f"Blocked by rule: {in_check.reason}",
+                   category=in_check.category)
     audit_guardrail(request_id, "input", in_layer, in_check, role, override)
     if not in_check.allowed:
         publish_response(request_id, reply(in_check, role), [],
                          {"stage": "input", "layer": in_layer, "category": in_check.category})
+        trace.step("intake", "reply", "info", f"Fixed {in_check.category} reply sent; nothing reached the model")
         consumer.commit(message=msg)
         print(f"Blocked at input by {in_layer} ({in_check.category}): {request_id}")
         continue
@@ -133,15 +155,26 @@ while True:
             })
             publish_response(request_id, PROFILE.response("role_required"), [],
                              {"stage": "access", "layer": "roles", "category": "role_required"})
+            trace.step("intake", "role_check", "block", "Missing or unknown role: no records, no answer")
             consumer.commit(message=msg)
             print(f"No valid role ({role!r}): {request_id}")
             continue
         seen = set(PROFILE.roles[role].data_classes)
         access = {"role": role, "role_title": PROFILE.roles[role].title,
                   "restricted": [c for c in PROFILE.data_classes if c not in seen]}
+        not_seen = [PROFILE.data_classes[c] for c in access["restricted"]]
+        if not not_seen:
+            can_see = "may see all record data"
+        elif len(not_seen) == len(PROFILE.data_classes):
+            can_see = "may not see any record data"
+        else:
+            can_see = f"may not see {'; '.join(not_seen)}"
+        trace.step("intake", "role_check", "pass", f"Role {access['role_title']}: {can_see}",
+                   restricted=access["restricted"])
 
     # 2. Mask personal details before anything goes to tools or the model.
     masked_message, mapping = mask(req["message"], PROFILE)
+    trace.step("intake", "masking", "info", masking_summary(mapping))
 
     # 3. Call the profile's tools through the gateway (policy-checked and audited).
     #    Tools get masked text, except tools the profile marks as receiving identifiers
@@ -149,14 +182,22 @@ while True:
     notes, tools_used = [], []
     for tool in PROFILE.agents.get(AGENT_NAME, ()):
         receives_ids = tool in PROFILE.identifier_tools
+        agent = tool_agent(tool)
+        trace.start(agent, tool, f"{tool} through the gateway (policy check)")
         try:
             result = call_tool(AGENT_NAME, tool, {"query": req["message"] if receives_ids else masked_message},
                                request_id, PROFILE,
                                audit_args={"query": masked_message} if receives_ids else None, role=role)
         except ToolCallDenied as e:
             print("Denied:", e)
+            trace.step(agent, tool, "block", f"Denied by policy: role {role} may not use {tool}"
+                       if PROFILE.roles else f"Denied by policy: {AGENT_NAME} may not use {tool}")
             continue
         found = result.get("results", [])
+        summary = f"{len(found)} result(s)" + (f": {ids_text([n['id'] for n in found])}" if found else "")
+        if tool in PROFILE.role_filtered_tools and access and access["restricted"]:
+            summary += f"; not fetched for this role: {', '.join(access['restricted'])}"
+        trace.step(agent, tool, "pass" if found else "info", summary, returned=len(found))
         if found:
             tools_used.append(tool)          # only tools that returned data count for routing
             notes += found
@@ -174,10 +215,15 @@ while True:
     # 4. Decide which model answers (OPA policy, audited). External models only
     #    ever get masked text; the local model gets what the profile says.
     decision = route(PROFILE, mapping, tools_used, request_id, AGENT_NAME, role)
+    trace.step("router", "route", "info",
+               f"{decision.target.capitalize()} model {decision.model['name']}: {'; '.join(decision.reasons)}",
+               target=decision.target, sent_masked=decision.send_masked)
 
     # 5. Ask the model. If an external model fails, fall back to the local one.
     def ask(d: RouteDecision) -> str:
         user_text = masked_message if d.send_masked else req["message"]
+        trace.start("answer", "model", f"Asking {d.model['name']} ({d.target}, sees "
+                                       f"{'masked' if d.send_masked else 'original'} text, {len(notes)} note(s))")
         # Audit what the model saw. The audit never holds raw personal data:
         # when the local model sees the original, the masked text is recorded.
         audit.emit("audit.model_inputs", {
@@ -203,6 +249,7 @@ while True:
         if decision.target != "external":
             raise
         print(f"External model failed ({type(e).__name__}); using the local model: {request_id}")
+        trace.step("answer", "model", "error", f"External model failed ({type(e).__name__}); using the local model")
         decision = RouteDecision("local", PROFILE.routing["local_model"], PROFILE.local_model,
                                  send_masked=PROFILE.routing["local_input"] == "masked",
                                  reasons=["external model failed: fell back to the local model"])
@@ -214,23 +261,34 @@ while True:
         })
         model_answer = ask(decision)
     route_info = {"target": decision.target, "model": decision.model["name"]}
+    trace.step("answer", "model", "info", f"Draft answer ready ({len(model_answer)} characters, not shown)")
 
     # 6. Output guardrails on the RESTORED answer, so masked names can't hide anything:
     #    rules, then the grounding check, then the classifier (which sees the question too).
     restored_answer = unmask(model_answer, mapping) if decision.send_masked else model_answer
     out_check = check_output(restored_answer, PROFILE)
     out_layer = "rules"
-    if out_check.allowed:
+    trace.step("answer", "output_rules", "pass" if out_check.allowed else "block",
+               "No output rule matched" if out_check.allowed else f"Blocked by rule: {out_check.reason}")
+    if out_check.allowed and PROFILE.source_id_pattern is not None:
         out_check = check_citations(restored_answer, [n["id"] for n in notes], PROFILE)
         out_layer = "grounding"
+        cited = sorted({m.group(0) for m in PROFILE.source_id_pattern.finditer(restored_answer)})
+        trace.step("answer", "grounding", "pass" if out_check.allowed else "block",
+                   (f"Cites {ids_text(cited)}, all given to the model" if cited else "Cites no sources")
+                   if out_check.allowed else f"Blocked: {out_check.reason}", cited=cited)
     if out_check.allowed:
+        trace.start("answer", "output_classifier", "Safety classifier checking the answer with the question")
         out_check = classifier_check(req["message"], restored_answer, PROFILE)
         out_layer = "classifier"
+        trace.step("answer", "output_classifier", "pass" if out_check.allowed else "block",
+                   "Classifier: safe" if out_check.allowed else f"Blocked by the classifier: {out_check.category}")
     audit_guardrail(request_id, "output", out_layer, out_check, role)
     if not out_check.allowed:
         publish_response(request_id, reply(out_check, role), [],
                          {"stage": "output", "layer": out_layer, "category": out_check.category},
                          route_info, access)
+        trace.step("answer", "reply", "info", f"Answer withheld; fixed {out_check.category} reply sent")
         consumer.commit(message=msg)
         print(f"Blocked at output by {out_layer} ({out_check.category}): {request_id}")
         continue
@@ -238,6 +296,8 @@ while True:
     # 7. Publish the answer with its sources, then commit.
     sources = [{"id": n["id"], "title": n["title"]} for n in notes]
     publish_response(request_id, restored_answer, sources, None, route_info, access)
+    trace.step("answer", "reply", "info", f"Answer sent with {len(sources)} source(s)",
+               sources=[s["id"] for s in sources])
     consumer.commit(message=msg)
     print(f"Answered {request_id} for role {role} by {decision.target} model {decision.model['name']} "
           f"(masked {len(mapping)}, notes {[n['id'] for n in notes]})")

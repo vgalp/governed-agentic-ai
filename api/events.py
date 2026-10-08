@@ -14,9 +14,10 @@ import threading
 import time
 import uuid
 
+from agents.trace import TRACE_TOPIC
 from audit.chain import AUDIT_TOPICS
 
-EVENT_TOPICS = ["chat.requests", "chat.responses", *AUDIT_TOPICS]
+EVENT_TOPICS = ["chat.requests", "chat.responses", *AUDIT_TOPICS, TRACE_TOPIC]
 
 
 def sanitize(topic: str, value: dict) -> dict:
@@ -33,7 +34,7 @@ def sanitize(topic: str, value: dict) -> dict:
             "access": value.get("access"),
             "answer_chars": len(value.get("answer", "")),
         }
-    return value  # audit events already hold masked text and decisions only
+    return value  # audit and trace events already hold masked text and decisions only
 
 
 class EventBuffer:
