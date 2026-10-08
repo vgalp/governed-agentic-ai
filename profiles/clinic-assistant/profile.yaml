@@ -15,18 +15,33 @@ models:
     name: mistral
     location: local
     temperature: 0
-  # Used only for general questions with no personal information (see routing),
-  # and only when the API key environment variable is set. Otherwise all local.
-  external:
-    provider: openai_compatible
-    base_url: https://api.example.com/v1
-    name: some-model
+  # Hosted models, used only for questions that need no patient data and contain no
+  # personal information (see routing), and only when the API key is set in .env.
+  # With no key set, everything stays local. Model names change: check each provider's
+  # current list and change the name here, not in code.
+  openai:
+    provider: openai
+    name: gpt-4.1-mini
     location: external
-    api_key_env: EXTERNAL_MODEL_API_KEY
+    api_key_env: OPENAI_API_KEY
+  gemini:
+    provider: gemini
+    name: gemini-2.5-flash
+    location: external
+    api_key_env: GEMINI_API_KEY
+  claude:
+    provider: anthropic
+    name: claude-haiku-4-5-20251001
+    location: external
+    api_key_env: ANTHROPIC_API_KEY
 
 routing:
   local_model: local
-  external_model: external
+  # Which hosted model answers general questions. Change this line to switch provider,
+  # or start with EXTERNAL_MODEL=gemini (any external model listed above).
+  external_model: claude
+  # If it fails or has no key, try these in order (still masked), then the local model.
+  fallback: [openai, gemini]
   external_allowed: true
   send_external_when: no_personal_info     # anything with a name, phone, etc. stays local
   never_external_entities: [PERSON, PHONE_NUMBER, EMAIL_ADDRESS, LOCATION, US_SSN, CREDIT_CARD]

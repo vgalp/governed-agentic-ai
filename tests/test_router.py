@@ -131,7 +131,7 @@ def test_external_provider_sends_key_only_in_header(monkeypatch):
     sent = {}
 
     class Resp:
-        def raise_for_status(self): pass
+        status_code = 200
         def json(self): return {"choices": [{"message": {"content": "ok"}}]}
 
     def fake_post(url, headers=None, json=None, timeout=None):

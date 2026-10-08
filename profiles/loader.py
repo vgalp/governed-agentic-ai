@@ -12,7 +12,7 @@ with a clear message, never halfway through a request.
 
 import os
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from functools import lru_cache
 from pathlib import Path
 
@@ -22,7 +22,8 @@ PROFILES_DIR = Path(__file__).resolve().parent
 DEFAULT_PROFILE = "adhd-assistant"
 NAME_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 SCOPES = {"text", "sentence"}
-PROVIDERS = {"ollama", "openai_compatible", "mock"}
+PROVIDERS = {"ollama", "openai", "gemini", "anthropic", "openai_compatible", "mock"}
+HOSTED_PROVIDERS = {"openai", "gemini", "anthropic"}   # third-party services: always external
 LOCATIONS = {"local", "external"}
 SEND_EXTERNAL_WHEN = {"no_personal_info", "masked"}
 LOCAL_INPUT = {"masked", "original"}
@@ -224,6 +225,12 @@ def _models(raw, where: str) -> dict[str, dict]:
             _require(m, "base_url", w)
         if provider in {"ollama", "mock"} and location != "local":
             raise ProfileError(f"{w}: provider {provider} runs locally; location must be local")
+        if provider in HOSTED_PROVIDERS:
+            # A hosted model marked local would receive unmasked text: never allowed.
+            if location != "external":
+                raise ProfileError(f"{w}: provider {provider} is a third-party service; "
+                                   "location must be external")
+            _require(m, "api_key_env", w)
         models[key] = dict(m)
     return models
 
@@ -240,6 +247,7 @@ def _routing(raw, models: dict[str, dict], where: str) -> dict:
         "never_external_entities": tuple(raw.get("never_external_entities") or []),
         "never_external_labels": tuple(raw.get("never_external_labels") or []),
         "local_input": raw.get("local_input", "masked"),
+        "fallback": tuple(raw.get("fallback") or []),
     }
     lm = models.get(r["local_model"])
     if lm is None or lm["location"] != "local":
@@ -257,7 +265,36 @@ def _routing(raw, models: dict[str, dict], where: str) -> dict:
         raise ProfileError(f"{w}: send_external_when must be one of {sorted(SEND_EXTERNAL_WHEN)}")
     if r["local_input"] not in LOCAL_INPUT:
         raise ProfileError(f"{w}: local_input must be masked or original")
+    _check_fallback(r, models, w)
     return r
+
+
+def _check_fallback(r: dict, models: dict[str, dict], w: str) -> None:
+    """fallback: other external models to try, in order, if the external model fails or
+    has no key. The local model is always the last resort, so it is never listed."""
+    if r["fallback"] and r["external_model"] is None:
+        raise ProfileError(f"{w}: fallback needs an external_model")
+    seen = {r["external_model"]}
+    for key in r["fallback"]:
+        m = models.get(key)
+        if m is None or m["location"] != "external":
+            raise ProfileError(f"{w}: fallback '{key}' must be a model with location external "
+                               "(the local model is always the last resort)")
+        if key in seen:
+            raise ProfileError(f"{w}: fallback lists '{key}' twice or repeats the external model")
+        seen.add(key)
+
+
+def select_external_model(profile: Profile, key: str) -> Profile:
+    """The same profile with another of its external models in front (EXTERNAL_MODEL)."""
+    w = f"{profile.name}: EXTERNAL_MODEL={key}"
+    m = profile.models.get(key)
+    if m is None or m["location"] != "external":
+        names = sorted(k for k, v in profile.models.items() if v["location"] == "external")
+        raise ProfileError(f"{w}: not one of this profile's external models ({', '.join(names) or 'none'})")
+    routing = {**profile.routing, "external_model": key,
+               "fallback": tuple(k for k in profile.routing["fallback"] if k != key)}
+    return replace(profile, routing=routing)
 
 
 def _roles(raw: dict, granted: set[str], where: str, response_keys: set[str]):
@@ -432,11 +469,20 @@ def load_profile_from(path: Path) -> Profile:
 
 @lru_cache(maxsize=None)
 def load_profile(name: str | None = None) -> Profile:
-    """Load a profile by name (default: the PROFILE environment variable)."""
-    name = name or os.environ.get("PROFILE") or DEFAULT_PROFILE
+    """Load a profile by name (default: the PROFILE environment variable).
+
+    For the active profile, EXTERNAL_MODEL=<key> puts another of the profile's external
+    models in front, without editing the file (e.g. to compare providers). It can only
+    pick a model the profile already lists; anything else stops at startup."""
+    active = os.environ.get("PROFILE") or DEFAULT_PROFILE
+    name = name or active
     if not NAME_RE.match(name):
         raise ProfileError(f"invalid profile name: {name!r}")
-    return load_profile_from(PROFILES_DIR / name)
+    profile = load_profile_from(PROFILES_DIR / name)
+    choice = os.environ.get("EXTERNAL_MODEL")
+    if choice and name == active:
+        profile = select_external_model(profile, choice)
+    return profile
 
 
 def available_profiles() -> list[str]:
@@ -450,7 +496,8 @@ if __name__ == "__main__":
     for n in available_profiles():
         try:
             pr = load_profile(n)
-            ext = pr.routing["external_model"] if pr.routing["external_allowed"] else "none"
+            r = pr.routing
+            ext = (" -> ".join([r["external_model"], *r["fallback"]]) if r["external_allowed"] else "none")
             print(f"ok   {n}: {len(pr.input_rules)} input rules, {len(pr.output_rules)} output rules, "
                   f"{len(pr.responses)} responses, agents {list(pr.agents)}, "
                   f"local model {pr.local_model['name']}, external model {ext}")

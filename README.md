@@ -48,7 +48,7 @@ Every decision is written to an audit topic as a hash-chained, HMAC-signed event
 | Tamper-evident audit | Each audit event carries a sequence number, the previous event's hash and an HMAC-SHA256 signature; a verifier detects edits, deletions and reordering | Working |
 | Live dashboard | Shows each request moving through the pipeline in real time, without exposing personal information | Working |
 | Grounding check (layer 3) | Verifies answers against approved knowledge-base content | Planned |
-| Policy-based model routing | OPA decides whether a request may go to a local or an external model; the decision is audited | Working |
+| Policy-based model routing | OPA decides whether a request may go to a local or an external model (OpenAI, Gemini or Claude, chosen in the profile, with fallback); the decision is audited | Working |
 | Human approval gates | Risky agent actions wait for a person to approve | Planned |
 | Tracing and failure recovery | OpenTelemetry tracing, Saga-style rollback, idempotency | Planned |
 
@@ -104,6 +104,16 @@ echo "AUDIT_HMAC_KEY=$(openssl rand -hex 32)" > .env
 ```
 
 `.env` is git-ignored. Without a key, audit events are still hash-chained but unsigned, and the verifier reports them as unkeyed.
+
+**Optional: hosted models.** A profile can send general questions (no personal information, no private data) to a hosted model: OpenAI, Gemini or Claude. Add the keys you have to `.env`:
+
+```bash
+OPENAI_API_KEY=...
+GEMINI_API_KEY=...
+ANTHROPIC_API_KEY=...
+```
+
+The profile chooses which one is used (`routing.external_model`) and which to try next if it fails (`routing.fallback`); the local model is always the last resort. To compare providers without editing the profile: `EXTERNAL_MODEL=gemini PROFILE=clinic-assistant ./scripts/dev.sh restart`. With no keys set, everything stays local.
 
 **3. Start everything:**
 
@@ -177,7 +187,7 @@ api/             Chat API, live event stream, audit check (FastAPI)
 agents/          Planner agent
 profiles/        Deployment profiles and their loader
 router/          Model routing (OPA decision, code-side rules, audit)
-llm/             Model providers (Ollama, OpenAI-compatible, mock)
+llm/             Model providers (Ollama, OpenAI, Gemini, Claude, OpenAI-compatible, mock)
 privacy/         Personal-information masking (Presidio)
 gateway/         MCP gateway: policy check, tool call, audit
 policies/        OPA policies: tool permissions, model routing, and their tests

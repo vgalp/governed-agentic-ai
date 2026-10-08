@@ -30,7 +30,7 @@ from guardrails.rules import GuardrailDecision, check_input, check_output, class
 from llm.providers import ModelUnavailable, chat
 from privacy.masking import mask, unmask
 from profiles.loader import load_profile
-from router.router import RouteDecision, route
+from router.router import RouteDecision, audit_route, fallbacks, route
 
 AGENT_NAME = "planner"
 BOOTSTRAP = "localhost:9092"
@@ -46,7 +46,9 @@ consumer = Consumer({
 producer = Producer({"bootstrap.servers": BOOTSTRAP, "enable.idempotence": True})
 consumer.subscribe(["chat.requests"])
 audit = get_audit_chain(AGENT_NAME)   # tamper-evident audit, shared with the gateway
-_ext = PROFILE.external_model["name"] if PROFILE.routing["external_allowed"] else "none"
+_ext = (" -> ".join(f"{PROFILE.models[k]['provider']}/{PROFILE.models[k]['name']}"
+                    for k in [PROFILE.routing["external_model"], *PROFILE.routing["fallback"]])
+        if PROFILE.routing["external_allowed"] else "none")
 print(f"Planner agent listening on chat.requests (profile {PROFILE.name}, "
       f"local model {PROFILE.local_model['name']}, external model {_ext}, "
       f"guard {PROFILE.classifier.model})...")
@@ -216,13 +218,14 @@ while True:
     #    ever get masked text; the local model gets what the profile says.
     decision = route(PROFILE, mapping, tools_used, request_id, AGENT_NAME, role)
     trace.step("router", "route", "info",
-               f"{decision.target.capitalize()} model {decision.model['name']}: {'; '.join(decision.reasons)}",
-               target=decision.target, sent_masked=decision.send_masked)
+               f"{decision.target.capitalize()} model {decision.model['name']} ({decision.model['provider']}): "
+               f"{'; '.join(decision.reasons)}",
+               target=decision.target, provider=decision.model["provider"], sent_masked=decision.send_masked)
 
-    # 5. Ask the model. If an external model fails, fall back to the local one.
+    # 5. Ask the model.
     def ask(d: RouteDecision) -> str:
         user_text = masked_message if d.send_masked else req["message"]
-        trace.start("answer", "model", f"Asking {d.model['name']} ({d.target}, sees "
+        trace.start("answer", "model", f"Asking {d.model['name']} ({d.model['provider']}, {d.target}, sees "
                                        f"{'masked' if d.send_masked else 'original'} text, {len(notes)} note(s))")
         # Audit what the model saw. The audit never holds raw personal data:
         # when the local model sees the original, the masked text is recorded.
@@ -243,24 +246,26 @@ while True:
             {"role": "user", "content": user_text},
         ])
 
-    try:
-        model_answer = ask(decision)
-    except (requests.RequestException, ModelUnavailable, KeyError) as e:
-        if decision.target != "external":
-            raise
-        print(f"External model failed ({type(e).__name__}); using the local model: {request_id}")
-        trace.step("answer", "model", "error", f"External model failed ({type(e).__name__}); using the local model")
-        decision = RouteDecision("local", PROFILE.routing["local_model"], PROFILE.local_model,
-                                 send_masked=PROFILE.routing["local_input"] == "masked",
-                                 reasons=["external model failed: fell back to the local model"])
-        audit.emit("audit.routing", {
-            "request_id": request_id, "profile": PROFILE.name, "agent": AGENT_NAME, "role": role,
-            "target": "local", "model_key": decision.model_key, "model": decision.model["name"],
-            "provider": decision.model["provider"], "sent_masked": decision.send_masked,
-            "fallback": True, "reasons": decision.reasons,
-        })
-        model_answer = ask(decision)
-    route_info = {"target": decision.target, "model": decision.model["name"]}
+    #    If an external model fails, try the profile's fallback models in order (still
+    #    masked), then the local model. Each switch is audited and traced.
+    options = [decision, *fallbacks(PROFILE, decision)]
+    for i, option in enumerate(options):
+        try:
+            model_answer = ask(option)
+            decision = option
+            break
+        except (requests.RequestException, ModelUnavailable) as e:
+            if option.target != "external":
+                raise
+            nxt = options[i + 1]               # the local model is always last
+            print(f"{option.model['provider']}/{option.model['name']} failed ({e}); "
+                  f"trying {nxt.model['provider']}/{nxt.model['name']}: {request_id}")
+            trace.step("answer", "model", "error",
+                       f"{option.model['name']} ({option.model['provider']}) failed: {e}; "
+                       f"trying {nxt.model['name']} ({nxt.model['provider']})")
+            audit_route(PROFILE, nxt, request_id, AGENT_NAME, role, fallback=True)
+    route_info = {"target": decision.target, "model": decision.model["name"],
+                  "provider": decision.model["provider"]}
     trace.step("answer", "model", "info", f"Draft answer ready ({len(model_answer)} characters, not shown)")
 
     # 6. Output guardrails on the RESTORED answer, so masked names can't hide anything:
