@@ -208,7 +208,7 @@ function derive(req) {
 
   s.received = rq ? ["pass", `${rq.data.message_chars} characters (not displayed)${rq.data.role ? " · role " + rq.data.role : ""}`] : ["pass", "received"];
   if (!inG) s.input = ["wait", ""];
-  else if (inG.data.allowed) s.input = ["pass", `${inG.data.layer}: allowed`];
+  else if (inG.data.allowed) s.input = ["pass", `${inG.data.layer}: allowed${inG.data.override ? " · flag overridden: " + inG.data.override : ""}`];
   else s.input = ["block", `${inG.data.layer}: ${inG.data.category}`];
   if (acc) s.input = ["block", "role: missing or unknown"];
 

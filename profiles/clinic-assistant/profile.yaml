@@ -45,6 +45,9 @@ tools_receiving_identifiers: [search_records]
 records_db: data/clinic.db                 # built locally: see data/README.md
 roles: roles.yaml                          # who may see which record data
 cite_sources: true                         # the model sees source IDs so it can cite them
+# What a cited source ID looks like. An answer that cites an ID it was not given is
+# blocked (grounding check), e.g. citing the clinic-hours policy for a medication.
+source_id_pattern: '\b(kb-cl-\d{3}|pt-[0-9a-f]{8}|apt-\d{4}|med-\d+|enc-[0-9a-f]{8}|clm-[0-9a-f]{8})\b'
 
 prompt: prompt.md
 responses: responses.yaml

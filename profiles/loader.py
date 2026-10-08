@@ -39,6 +39,7 @@ class Rule:
     all: tuple[re.Pattern, ...]
     any: tuple[re.Pattern, ...]
     scope: str = "text"
+    none: tuple[re.Pattern, ...] = ()       # patterns that must NOT match
 
 
 @dataclass(frozen=True)
@@ -90,6 +91,8 @@ class Profile:
     data_classes: dict[str, str]                # data class -> description
     role_filtered_tools: tuple[str, ...]        # tools whose results are filtered by role
     examples: tuple[str, ...]                   # example questions for the chat page
+    classifier_exemptions: tuple[Rule, ...]     # narrow cases where an input classifier flag is overridden
+    source_id_pattern: re.Pattern | None        # what a cited source ID looks like (grounding check)
 
     def response(self, category: str, role: str | None = None) -> str:
         """The fixed reply for a category, worded for the role if the role has its own."""
@@ -183,10 +186,10 @@ def _rules(raw: list, stage: str, patterns: dict[str, re.Pattern]) -> tuple[Rule
     for i, r in enumerate(raw, 1):
         where = f"rules.yaml: {stage} rule {i}"
         category = _require(r, "category", where)
-        all_names, any_names = r.get("all", []), r.get("any", [])
+        all_names, any_names, none_names = r.get("all", []), r.get("any", []), r.get("none", [])
         if not all_names and not any_names:
             raise ProfileError(f"{where}: needs 'all' or 'any'")
-        for n in [*all_names, *any_names]:
+        for n in [*all_names, *any_names, *none_names]:
             if n not in patterns:
                 raise ProfileError(f"{where}: unknown pattern '{n}'")
         scope = r.get("scope", "text")
@@ -194,7 +197,8 @@ def _rules(raw: list, stage: str, patterns: dict[str, re.Pattern]) -> tuple[Rule
             raise ProfileError(f"{where}: scope must be one of {sorted(SCOPES)}")
         rules.append(Rule(category, r.get("reason", category),
                           tuple(patterns[n] for n in all_names),
-                          tuple(patterns[n] for n in any_names), scope))
+                          tuple(patterns[n] for n in any_names), scope,
+                          tuple(patterns[n] for n in none_names)))
     return tuple(rules)
 
 
@@ -329,6 +333,29 @@ def load_profile_from(path: Path) -> Profile:
         default_category=_require(c, "default_category", f"{where}: classifier"),
     )
 
+    # Narrow overrides of an input classifier flag (e.g. a pure record lookup flagged as
+    # medical advice). Never for crisis: a crisis flag can not be overridden.
+    exemptions = _rules(rules_raw.get("classifier_exemptions", []), "classifier_exemptions", patterns)
+    for i, ex in enumerate(exemptions, 1):
+        if ex.category not in {x.category for x in cats} | {classifier.default_category}:
+            raise ProfileError(f"rules.yaml: classifier_exemptions rule {i}: '{ex.category}' is not a "
+                               "classifier category")
+        if ex.category == "crisis":
+            raise ProfileError(f"rules.yaml: classifier_exemptions rule {i}: crisis flags can never be overridden")
+        if not ex.none:
+            raise ProfileError(f"rules.yaml: classifier_exemptions rule {i}: needs 'none' (words that "
+                               "cancel the exemption), so it stays narrow")
+
+    source_id_pattern = None
+    if p.get("source_id_pattern"):
+        try:
+            source_id_pattern = re.compile(p["source_id_pattern"])
+        except re.error as e:
+            raise ProfileError(f"{where}: source_id_pattern is not a valid regex: {e}") from e
+        if "ungrounded" not in responses:
+            raise ProfileError(f"{path.name}/responses.yaml: no response for ungrounded "
+                               "(needed because the profile checks citations)")
+
     # Every category that can block a message needs a fixed reply.
     used = {r.category for r in input_rules + output_rules}
     used |= {x.category for x in cats} | {classifier.default_category, "unavailable"}
@@ -398,6 +425,8 @@ def load_profile_from(path: Path) -> Profile:
         data_classes=data_classes,
         role_filtered_tools=role_filtered_tools,
         examples=tuple(p.get("examples") or []),
+        classifier_exemptions=exemptions,
+        source_id_pattern=source_id_pattern,
     )
 
 

@@ -34,12 +34,40 @@ patterns:
       - '(infection|disease|disorder|syndrome|itis|osis|emia|cancer|tumou?r|diabetes|pneumonia|flu|covid|fracture|depression|anxiety)'
       - '|(likely|probable) diagnosis)'
 
+  # A question that only asks what the record already lists ("what medications is
+  # X taking", "list the current medications for X").
+  record_lookup:
+    regex:
+      - '\b(what|which|list|show|tell me|look up|find|read)\b.{0,40}\b(medications?|medicines?|meds|prescriptions?)\b'
+      - '|\b(medications?|medicines?|meds|prescriptions?)\b.{0,30}\b(on file|on (his|her|their) list|listed|recorded)\b'
+      - '|\bcurrent (medications?|medicines?|meds|prescriptions?)\b'
+
+  # Words that turn a question into a request for a decision. Any of these cancels
+  # the lookup exemption below, so the classifier's flag stands.
+  decision_words:
+    regex: '\b(should|need to|have to|ought|must|increase|decrease|raise|lower|double|halve|adjust|titrate|taper|switch|change|stop|start|prescribe|recommend|suggest|give|add|combine|mix|safe|okay|ok|best|better|instead|alternative|how (much|many)|treat|treatment|for (his|her|their|my) [a-z]+)\b'
+
+  # In a model ANSWER: an invented fill-in field such as [METFORMIN_DOSE]. Real masking
+  # tokens always end in a number ([PERSON_1]), so a bracketed name without one was made up.
+  fabricated_placeholder:
+    regex: '\[[A-Z][A-Z_]*[A-Z]\]'
+
 input:
   - {category: crisis, reason: patient safety risk in input, any: [crisis]}
   - {category: medication, reason: medication decision requested, all: [medication], any: [dose_decision]}
   - {category: diagnosis, reason: diagnosis requested, any: [diagnosis_request]}
 
 output:
+  - {category: ungrounded, reason: model answer invents a fill-in field, any: [fabricated_placeholder]}
   - {category: medication, reason: model answer gives medication advice, scope: sentence,
      all: [medication], any: [output_advice]}
   - {category: diagnosis, reason: model answer suggests a diagnosis, any: [diagnosis_affirm]}
+
+# Narrow cases where an INPUT classifier flag is overridden. The safety classifier flags
+# plain record lookups ("What medications is X taking?") as medical advice; measured on
+# the development probe (eval/classifier_probe.py). A lookup with no decision words is
+# allowed through; the answer is still checked by the output rules, the grounding check
+# and the classifier. Crisis flags can never be overridden (the loader refuses it).
+classifier_exemptions:
+  - {category: medical_advice, reason: record lookup with no decision words,
+     any: [record_lookup], none: [decision_words]}

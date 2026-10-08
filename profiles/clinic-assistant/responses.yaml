@@ -30,3 +30,9 @@ role_required: >-
   Please choose your role first. What you can see depends on it, so I can't
   answer until I know whether you're a clinician, nurse, front desk or
   compliance officer.
+
+# Sent when an answer refers to a source it was not given, or invents a fill-in field.
+ungrounded: >-
+  I couldn't give a reliable answer: my draft referred to information that isn't in
+  the clinic's records. Please check the patient's record directly, or ask a more
+  specific question.

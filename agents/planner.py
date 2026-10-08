@@ -1,8 +1,9 @@
 """Planner agent: input guardrails, mask, retrieve approved content through the
 gateway, ask the model, output guardrails, restore details, publish.
 
-Guardrails run in two layers: fast rules (layer 1), then a safety classifier
-(layer 2) for what the rules miss.
+Guardrails run in layers: fast rules (layer 1), then a safety classifier (layer 2)
+for what the rules miss. On answers, profiles that cite sources also get a grounding
+check: an answer may only cite sources the model was given.
 
 Everything specific to the use case (model, prompt, rules, replies, classifier
 policy, privacy settings, knowledge base, tool permissions, roles) comes from the
@@ -20,7 +21,8 @@ from confluent_kafka import Consumer, Producer
 from audit.chain import get_audit_chain
 from gateway.gateway import ToolCallDenied, call_tool
 from guardrails.classifier import classifier_check
-from guardrails.rules import check_input, check_output
+from guardrails.grounding import check_citations
+from guardrails.rules import GuardrailDecision, check_input, check_output, classifier_exemption
 from llm.providers import ModelUnavailable, chat
 from privacy.masking import mask, unmask
 from profiles.loader import load_profile
@@ -46,17 +48,19 @@ print(f"Planner agent listening on chat.requests (profile {PROFILE.name}, "
       f"guard {PROFILE.classifier.model})...")
 
 
-def audit_guardrail(request_id: str, stage: str, layer: str, decision, role: str | None = None) -> None:
+def audit_guardrail(request_id: str, stage: str, layer: str, decision, role: str | None = None,
+                    override: str | None = None) -> None:
     audit.emit("audit.guardrails", {
         "request_id": request_id,
         "profile": PROFILE.name,
         "agent": AGENT_NAME,
         "role": role,
         "stage": stage,                      # "input" or "output"
-        "layer": layer,                      # "rules" or "classifier"
+        "layer": layer,                      # "rules", "classifier" or "grounding"
         "allowed": decision.allowed,
         "category": decision.category,
         "reason": decision.reason,
+        "override": override,                # set when a classifier flag was overridden by an exemption
     })
 
 
@@ -100,10 +104,17 @@ while True:
     #    leaves the system; unsafe requests never reach masking, tools, or the model.
     in_check = check_input(req["message"], PROFILE)
     in_layer = "rules"
+    override = None
     if in_check.allowed:
         in_check = classifier_check(req["message"], profile=PROFILE)
         in_layer = "classifier"
-    audit_guardrail(request_id, "input", in_layer, in_check, role)
+        # A narrow, profile-defined exemption (e.g. a pure record lookup flagged as
+        # medical advice). Never for crisis. The answer is still fully checked.
+        override = classifier_exemption(req["message"], in_check, PROFILE)
+        if override:
+            in_check = GuardrailDecision(True, in_check.category,
+                                         f"{in_check.reason}; overridden: {override}")
+    audit_guardrail(request_id, "input", in_layer, in_check, role, override)
     if not in_check.allowed:
         publish_response(request_id, reply(in_check, role), [],
                          {"stage": "input", "layer": in_layer, "category": in_check.category})
@@ -204,11 +215,14 @@ while True:
         model_answer = ask(decision)
     route_info = {"target": decision.target, "model": decision.model["name"]}
 
-    # 6. Output guardrails on the RESTORED answer, so masked names can't hide anything.
-    #    The classifier sees the question and the answer together.
+    # 6. Output guardrails on the RESTORED answer, so masked names can't hide anything:
+    #    rules, then the grounding check, then the classifier (which sees the question too).
     restored_answer = unmask(model_answer, mapping) if decision.send_masked else model_answer
     out_check = check_output(restored_answer, PROFILE)
     out_layer = "rules"
+    if out_check.allowed:
+        out_check = check_citations(restored_answer, [n["id"] for n in notes], PROFILE)
+        out_layer = "grounding"
     if out_check.allowed:
         out_check = classifier_check(req["message"], restored_answer, PROFILE)
         out_layer = "classifier"
