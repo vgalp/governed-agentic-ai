@@ -12,7 +12,7 @@ with a clear message, never halfway through a request.
 
 import os
 import re
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from functools import lru_cache
 from pathlib import Path
 
@@ -27,6 +27,8 @@ HOSTED_PROVIDERS = {"openai", "gemini", "anthropic"}   # third-party services: a
 LOCATIONS = {"local", "external"}
 SEND_EXTERNAL_WHEN = {"no_personal_info", "masked"}
 LOCAL_INPUT = {"masked", "original"}
+FIELD_TYPES = {"source", "datetime", "text"}
+ACTION_RESPONSES = ("action_pending", "action_denied", "action_unclear")
 
 
 class ProfileError(Exception):
@@ -67,6 +69,22 @@ class Role:
 
 
 @dataclass(frozen=True)
+class Action:
+    """A change the assistant may PROPOSE. A person must approve it before it is made."""
+    name: str
+    title: str
+    description: str
+    intent: re.Pattern               # a request matching this starts a proposal
+    tool: str                        # the tool that makes the change
+    agent: str                       # the only agent that may call that tool (after approval)
+    fields: dict[str, dict]          # what the proposal must contain: type, description, pattern
+    propose_roles: tuple[str, ...]   # who may ask for it
+    approve_roles: tuple[str, ...]   # who may approve it (never the person who asked)
+    expires_minutes: int             # unapproved after this: expired, nothing is changed
+    allowed_times: dict | None       # optional: weekdays and hours a datetime field must fall in
+
+
+@dataclass(frozen=True)
 class Profile:
     name: str
     title: str
@@ -94,6 +112,7 @@ class Profile:
     examples: tuple[str, ...]                   # example questions for the chat page
     classifier_exemptions: tuple[Rule, ...]     # narrow cases where an input classifier flag is overridden
     source_id_pattern: re.Pattern | None        # what a cited source ID looks like (grounding check)
+    actions: dict[str, Action] = field(default_factory=dict)   # changes the assistant may propose (need approval)
 
     def response(self, category: str, role: str | None = None) -> str:
         """The fixed reply for a category, worded for the role if the role has its own."""
@@ -126,6 +145,11 @@ class Profile:
         if self.roles:
             data["roles"] = {k: {"tools": list(v.tools), "data_classes": list(v.data_classes)}
                              for k, v in self.roles.items()}
+        if self.actions:
+            data["actions"] = {k: {"propose_roles": list(a.propose_roles),
+                                   "approve_roles": list(a.approve_roles),
+                                   **({"allowed_times": a.allowed_times} if a.allowed_times else {})}
+                               for k, a in self.actions.items()}
         return data
 
 
@@ -331,6 +355,64 @@ def _roles(raw: dict, granted: set[str], where: str, response_keys: set[str]):
     return roles, dict(classes), filtered
 
 
+def _actions(raw: dict, where: str, patterns: dict[str, re.Pattern], agents: dict[str, tuple[str, ...]],
+             roles: dict[str, Role]) -> dict[str, Action]:
+    """actions.yaml: changes the assistant may propose. Every action needs a person's
+    approval; the tool that makes the change belongs to one agent only, which runs it
+    after approval, so the agent that talks to the model can never make a change itself."""
+    if not roles:
+        raise ProfileError(f"{where}: actions need roles (who may ask, who may approve)")
+    actions = {}
+    for name, a in (raw or {}).items():
+        w = f"{where}: action '{name}'"
+        if not isinstance(a, dict):
+            raise ProfileError(f"{w}: must be a mapping")
+        intent = _require(a, "intent", w)
+        if intent not in patterns:
+            raise ProfileError(f"{w}: intent '{intent}' is not a pattern in rules.yaml")
+        tool = _require(a, "tool", w)
+        agent = a.get("agent", "executor")
+        if tool not in agents.get(agent, ()):
+            raise ProfileError(f"{w}: tool '{tool}' must be granted to agent '{agent}'")
+        others = sorted(n for n, tools in agents.items() if n != agent and tool in tools)
+        if others:
+            raise ProfileError(f"{w}: only '{agent}' may hold '{tool}'; also granted to {', '.join(others)}")
+        fields = a.get("fields") or {}
+        if not isinstance(fields, dict) or not fields:
+            raise ProfileError(f"{w}: 'fields' must describe at least one field")
+        checked = {}
+        for f, spec in fields.items():
+            spec = dict(spec or {})
+            if spec.get("type", "text") not in FIELD_TYPES:
+                raise ProfileError(f"{w}: field '{f}': type must be one of {sorted(FIELD_TYPES)}")
+            spec.setdefault("type", "text")
+            _require(spec, "description", f"{w}: field '{f}'")
+            if spec.get("pattern"):
+                spec["pattern"] = compile_pattern(f"{name}.{f}", {"regex": spec["pattern"]})
+            checked[f] = spec
+        propose = tuple(_require(a, "propose_roles", w))
+        approve = tuple(_require(a, "approve_roles", w))
+        for r in (*propose, *approve):
+            if r not in roles:
+                raise ProfileError(f"{w}: unknown role '{r}'")
+        for r in approve:
+            if tool not in roles[r].tools:
+                raise ProfileError(f"{w}: approver role '{r}' must have '{tool}' in its tools")
+        expires = a.get("expires_minutes", 30)
+        if not isinstance(expires, int) or expires <= 0:
+            raise ProfileError(f"{w}: expires_minutes must be a positive whole number")
+        times = a.get("allowed_times")
+        if times is not None:
+            f = _require(times, "field", f"{w}: allowed_times")
+            if checked.get(f, {}).get("type") != "datetime":
+                raise ProfileError(f"{w}: allowed_times.field '{f}' must be a datetime field")
+            times = {"field": f, "weekdays": list(times.get("weekdays", range(7))),
+                     "start_hour": int(times.get("start_hour", 0)), "end_hour": int(times.get("end_hour", 24))}
+        actions[name] = Action(name, a.get("title", name), a.get("description", ""), patterns[intent],
+                               tool, agent, checked, propose, approve, expires, times)
+    return actions
+
+
 # --- loading ------------------------------------------------------------------
 
 def load_profile_from(path: Path) -> Profile:
@@ -436,6 +518,15 @@ def load_profile_from(path: Path) -> Profile:
             raise ProfileError(f"{path.name}/responses.yaml: no response for role_required "
                                "(needed because the profile has roles)")
 
+    actions = {}
+    if p.get("actions"):
+        actions = _actions(_yaml(_file(path, p["actions"], where)), f"{path.name}/{p['actions']}",
+                           patterns, agents, roles)
+        missing = [r for r in ACTION_RESPONSES if r not in responses]
+        if missing:
+            raise ProfileError(f"{path.name}/responses.yaml: no response for {', '.join(missing)} "
+                               "(needed because the profile has actions)")
+
     privacy = p.get("privacy") or {}
     return Profile(
         name=name,
@@ -464,6 +555,7 @@ def load_profile_from(path: Path) -> Profile:
         examples=tuple(p.get("examples") or []),
         classifier_exemptions=exemptions,
         source_id_pattern=source_id_pattern,
+        actions=actions,
     )
 
 

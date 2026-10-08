@@ -36,3 +36,17 @@ ungrounded: >-
   I couldn't give a reliable answer: my draft referred to information that isn't in
   the clinic's records. Please check the patient's record directly, or ask a more
   specific question.
+
+# Changes (actions.yaml). {placeholders} are filled in by the pipeline.
+action_pending: >-
+  I've prepared this change, but nothing has been changed yet. It needs approval
+  by {approvers}, and it expires in {expires} minutes if no one approves it.
+  Proposed: {summary} (approval request {approval_id}).
+
+action_denied: >-
+  I can't prepare that change: {reasons}.
+
+action_unclear: >-
+  I couldn't prepare that change: {reason}. Please name the patient, which
+  appointment, and the new date and time, for example "Move Chester Aufderhar's
+  appointment on November 9 to November 13 at 10:00".

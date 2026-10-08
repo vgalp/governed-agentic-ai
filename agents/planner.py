@@ -14,23 +14,30 @@ which record data is fetched (OPA). The role is checked after the input guardrai
 so a crisis message is answered with the crisis reply even without a role.
 
 Every step is also published to agent.trace as it happens (agents/trace.py): a readable
-decision trace for the dashboard, with no personal data."""
+decision trace for the dashboard, with no personal data.
+
+A request for a change (profiles with actions, e.g. "move this appointment") is not
+answered: the planner prepares a proposal for a person to approve (agents/actions.py).
+It cannot make the change; only the executor agent can, after approval."""
 
 import json
+from datetime import datetime
 
 import requests
 from confluent_kafka import Consumer, Producer
 
+from agents import actions
 from agents.trace import Trace, ids_text, masking_summary, tool_agent
 from audit.chain import get_audit_chain
 from gateway.gateway import ToolCallDenied, call_tool
+from gateway.opa import decide
 from guardrails.classifier import classifier_check
 from guardrails.grounding import check_citations
 from guardrails.rules import GuardrailDecision, check_input, check_output, classifier_exemption
 from llm.providers import ModelUnavailable, chat
 from privacy.masking import mask, unmask
 from profiles.loader import load_profile
-from router.router import RouteDecision, audit_route, fallbacks, route
+from router.router import RouteDecision, audit_route, fallbacks, local_decision, route
 
 AGENT_NAME = "planner"
 BOOTSTRAP = "localhost:9092"
@@ -79,7 +86,8 @@ def reply(decision, role: str | None) -> str:
 
 
 def publish_response(request_id: str, answer: str, sources: list, guardrail: dict | None,
-                     route_info: dict | None = None, access: dict | None = None) -> None:
+                     route_info: dict | None = None, access: dict | None = None,
+                     approval: dict | None = None) -> None:
     producer.produce("chat.responses", key=request_id, value=json.dumps({
         "request_id": request_id,
         "profile": PROFILE.name,
@@ -89,9 +97,94 @@ def publish_response(request_id: str, answer: str, sources: list, guardrail: dic
         "guardrail": guardrail,
         "route": route_info,               # which model answered: shown as a badge in the UI
         "access": access,                  # role and the data classes it may not see
+        "approval": approval,              # a proposed change waiting for a person's approval
     }))
     producer.flush()
     audit.producer.flush()
+
+
+def audit_approval(request_id: str, role: str | None, stage: str, **fields) -> None:
+    audit.emit("audit.approvals", {"request_id": request_id, "profile": PROFILE.name,
+                                   "agent": AGENT_NAME, "role": role, "stage": stage, **fields})
+
+
+def action_policy(action, role: str | None, facts: dict) -> dict:
+    """OPA decides (policies/actions.rego). OPA unreachable: denied (fail closed)."""
+    try:
+        return decide(PROFILE, "actions/decision", {"profile": PROFILE.name, "action": action.name,
+                                                    "role": role, "facts": facts}) or {}
+    except requests.RequestException:
+        return {"allowed": False, "reasons": ["the approval policy is unreachable"]}
+
+
+def propose(action, req: dict, request_id: str, role: str | None, notes: list[dict], notes_text: str,
+            access: dict | None, trace: Trace) -> str:
+    """Turn a change request into a proposal for a person to approve. Nothing is changed.
+    Returns what happened: proposed, denied or unclear."""
+    def unclear(reason: str) -> str:
+        trace.step("action", "proposal", "block", f"Could not prepare the change: {reason}")
+        audit_approval(request_id, role, "unclear", action=action.name, reason=reason)
+        publish_response(request_id, PROFILE.response("action_unclear", role).format(reason=reason),
+                         [], {"stage": "action", "layer": "proposal", "category": "action_unclear"},
+                         access=access)
+        return "unclear"
+
+    given = [n["id"] for n in notes]
+    if not given:
+        return unclear("I found no records for that request")
+    # Proposals are always prepared by the local model: they are built from patient records.
+    d = local_decision(PROFILE, ["proposals are always prepared by the local model"])
+    audit_route(PROFILE, d, request_id, AGENT_NAME, role, fallback=False)
+    now = datetime.now()
+    trace.start("action", "proposal", f"Local model {d.model['name']} preparing the proposed change "
+                                      "(it cannot make the change)")
+    masked, mapping = mask(req["message"], PROFILE)
+    audit.emit("audit.model_inputs", {
+        "request_id": request_id, "profile": PROFILE.name, "agent": AGENT_NAME, "role": role,
+        "target": d.target, "model": d.model["name"], "model_input": masked,
+        "sent_masked": d.send_masked, "notes_used": given, "entities_masked": len(mapping),
+        "purpose": f"proposal: {action.name}",
+    })
+    try:
+        raw = chat(d.model, actions.extraction_messages(action, notes_text, req["message"], now))
+    except (requests.RequestException, ModelUnavailable):
+        return unclear("the local model is unavailable")
+    proposal = actions.parse_proposal(raw)
+    if isinstance(proposal, str):
+        return unclear(proposal)
+    args, error = actions.validate(action, proposal, given)
+    if error:
+        return unclear(error)
+    trace.step("action", "proposal", "pass", "Proposed: " + ", ".join(f"{k} {v}" for k, v in args.items()),
+               args=args)
+
+    decision = action_policy(action, role, actions.facts(action, args, now))
+    if not decision.get("allowed"):
+        reasons = decision.get("reasons") or ["denied by policy"]
+        trace.step("action", "policy", "block", f"Denied by policy: {'; '.join(reasons)}")
+        audit_approval(request_id, role, "denied", action=action.name, args=args, reasons=reasons)
+        publish_response(request_id, PROFILE.response("action_denied", role).format(reasons="; ".join(reasons)),
+                         [], {"stage": "action", "layer": "policy", "category": "action_denied"}, access=access)
+        return "denied"
+
+    text = actions.summary(action, args, notes, masker=lambda t: mask(t, PROFILE)[0])
+    approval = actions.new_approval(PROFILE, action, args, text, request_id, req.get("user_id"), role,
+                                    decision.get("approve_roles", []), now)
+    approvers = " or ".join(PROFILE.roles[r].title.lower() for r in approval["approve_roles"])
+    trace.step("action", "policy", "pass", f"Allowed by policy; needs approval by {approvers}")
+    producer.produce(actions.REQUESTED, key=approval["approval_id"],
+                     value=json.dumps({**approval, "trace_started_at": trace.started_at}))
+    audit_approval(request_id, role, "proposed", approval_id=approval["approval_id"], action=action.name,
+                   args=args, summary=text, requester=approval["requester"],
+                   approve_roles=approval["approve_roles"], expires_at=approval["expires_at"])
+    trace.step("action", "approval", "running",
+               f"Waiting for approval {approval['approval_id']} until {approval['expires_at'][11:16]}")
+    reply_text = PROFILE.response("action_pending", role).format(
+        approvers=approvers, expires=action.expires_minutes, summary=text, approval_id=approval["approval_id"])
+    publish_response(request_id, reply_text, [{"id": i, "title": "record"} for i in given if i in args.values()],
+                     None, {"target": d.target, "model": d.model["name"], "provider": d.model["provider"]},
+                     access, approval={"approval_id": approval["approval_id"], "status": "pending"})
+    return "proposed"
 
 
 while True:
@@ -178,6 +271,22 @@ while True:
     masked_message, mapping = mask(req["message"], PROFILE)
     trace.step("intake", "masking", "info", masking_summary(mapping))
 
+    # 2b. A request for a change? First ask OPA whether this role may ask for it at all.
+    action = actions.detect(PROFILE, req["message"]) if PROFILE.actions else None
+    if action:
+        trace.step("action", "detected", "info", f"Change requested: {action.title}")
+        allowed = action_policy(action, role, {})
+        if not allowed.get("allowed"):
+            reasons = allowed.get("reasons") or ["denied by policy"]
+            trace.step("action", "policy", "block", f"Denied by policy: {'; '.join(reasons)}")
+            audit_approval(request_id, role, "denied", action=action.name, reasons=reasons)
+            publish_response(request_id, PROFILE.response("action_denied", role).format(reasons="; ".join(reasons)),
+                             [], {"stage": "action", "layer": "policy", "category": "action_denied"},
+                             access=access)
+            consumer.commit(message=msg)
+            print(f"Change denied ({action.name}, role {role}): {request_id}")
+            continue
+
     # 3. Call the profile's tools through the gateway (policy-checked and audited).
     #    Tools get masked text, except tools the profile marks as receiving identifiers
     #    (a local records lookup needs the real name); the audit still records masked text.
@@ -213,6 +322,13 @@ while True:
         notes_text += (f"\n\nAccess: the person asking is {access['role_title']}. Their role may not see: "
                        f"{hidden}. If they ask about these, say their role does not allow it and suggest "
                        "who on staff could help. Do not guess.")
+
+    # 3b. A change request gets a proposal for a person to approve, not an answer.
+    if action:
+        outcome = propose(action, req, request_id, role, notes, notes_text, access, trace)
+        consumer.commit(message=msg)
+        print(f"Change request {action.name}: {outcome}: {request_id}")
+        continue
 
     # 4. Decide which model answers (OPA policy, audited). External models only
     #    ever get masked text; the local model gets what the profile says.

@@ -14,10 +14,11 @@ import threading
 import time
 import uuid
 
+from agents.actions import APPROVAL_TOPICS
 from agents.trace import TRACE_TOPIC
 from audit.chain import AUDIT_TOPICS
 
-EVENT_TOPICS = ["chat.requests", "chat.responses", *AUDIT_TOPICS, TRACE_TOPIC]
+EVENT_TOPICS = ["chat.requests", "chat.responses", *AUDIT_TOPICS, TRACE_TOPIC, *APPROVAL_TOPICS]
 
 
 def sanitize(topic: str, value: dict) -> dict:
@@ -32,9 +33,10 @@ def sanitize(topic: str, value: dict) -> dict:
             "sources": [s.get("id") for s in value.get("sources", [])],
             "route": value.get("route"),
             "access": value.get("access"),
+            "approval": value.get("approval"),
             "answer_chars": len(value.get("answer", "")),
         }
-    return value  # audit and trace events already hold masked text and decisions only
+    return value  # audit, trace and approval events already hold masked text, IDs and decisions only
 
 
 class EventBuffer:

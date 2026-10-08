@@ -39,6 +39,8 @@
   .rolebar select { font: inherit; padding: 4px 8px; border-radius: 8px; border: 1px solid var(--line);
                     background: var(--panel); color: var(--text); }
   .badge.route { color: var(--muted, #555); background: rgba(127, 127, 127, .14); }
+  .badge.wait { color: #1f4fd1; background: #e8eefc; }
+  .status { margin-top: 6px; font-size: 13px; }
   .pending { color: var(--muted); font-style: italic; }
   form { display: flex; gap: 8px; margin-top: 12px; }
   textarea { flex: 1; resize: none; height: 48px; padding: 12px; border-radius: 10px; font: inherit;
@@ -88,7 +90,11 @@ function meta(div, data, seconds) {
   m.className = "meta";
   const badge = document.createElement("span");
   const g = data.guardrail;
-  if (g) {
+  if (data.approval) {
+    badge.className = "badge wait";
+    badge.textContent = `AWAITING APPROVAL · ${data.approval.approval_id}`;
+    followApproval(div, badge, data.approval.approval_id);
+  } else if (g) {
     badge.className = "badge block";
     badge.textContent = `BLOCKED · ${g.stage} · ${g.layer || "rules"} · ${g.category}`;
   } else {
@@ -122,6 +128,27 @@ function meta(div, data, seconds) {
   extra.textContent = `${seconds.toFixed(1)}s` + (sources ? ` · sources: ${sources}` : "");
   m.appendChild(extra);
   div.appendChild(m);
+}
+
+// A proposed change: show what happens to it (approved and done, rejected, expired).
+const FINAL = {done: "badge ok", rejected: "badge block", expired: "badge block", refused: "badge block", failed: "badge block"};
+async function followApproval(div, badge, id) {
+  for (let i = 0; i < 720; i++) {
+    await new Promise(res => setTimeout(res, 3000));
+    let a;
+    try { a = await (await fetch(`/approvals/${id}`)).json(); } catch { continue; }
+    if (!FINAL[a.status]) { if (a.status === "approved") badge.textContent = `APPROVED · ${id} · making the change…`; continue; }
+    badge.className = FINAL[a.status];
+    badge.textContent = `${a.status.toUpperCase()} · ${id}`;
+    const s = document.createElement("div");
+    s.className = "status";
+    if (a.status === "done") s.textContent = `Done: ${a.result.appointment_id} moved from ${a.result.before.replace("T", " ")} to ${a.result.after.replace("T", " ")}.`;
+    else if (a.status === "expired") s.textContent = "No one approved this in time. Nothing was changed.";
+    else if (a.status === "rejected") s.textContent = "This change was rejected. Nothing was changed.";
+    else s.textContent = `Not made: ${(a.reasons || []).join("; ")}. Nothing was changed.`;
+    div.appendChild(s);
+    return;
+  }
 }
 
 async function ask(text) {

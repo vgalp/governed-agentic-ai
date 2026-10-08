@@ -100,7 +100,7 @@
   .note { font-size: 12px; color: var(--muted); margin-top: 10px; }
   .follow { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
   .empty { color: var(--muted); padding: 20px 0; text-align: center; }
-  .lanes { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; margin-top: 6px; }
+  .lanes { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; margin-top: 6px; }
   @media (max-width: 560px) { .lanes { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
   .lane { border-radius: 10px; padding: 8px 10px; border: 1px solid transparent; }
   .lane .name { font-weight: 600; font-size: 13px; }
@@ -119,6 +119,17 @@
   .o-info { color: var(--muted); background: var(--skip-bg); }
   .o-running { color: var(--active); background: var(--active-bg); animation: pulse 1.2s ease-in-out infinite; }
   .o-unused { color: var(--skip); background: var(--skip-bg); }
+  .appr { border: 1px solid var(--line); border-radius: 10px; padding: 10px; margin-top: 8px; }
+  .appr .top { display: flex; justify-content: space-between; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .appr .id { font: 12px var(--mono); color: var(--muted); }
+  .appr .sum { margin: 6px 0; font-size: 13px; word-break: break-word; }
+  .appr .who { font-size: 12px; color: var(--muted); }
+  .appr .act { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; align-items: center; }
+  .appr select { font: inherit; font-size: 12px; padding: 3px 6px; border-radius: 6px; border: 1px solid var(--line);
+                 background: var(--panel); color: var(--text); }
+  .appr .ok { border: 0; background: var(--pass); color: #fff; border-radius: 6px; padding: 4px 10px; font-size: 12px; }
+  .appr .no { border: 1px solid var(--line); background: var(--panel); color: var(--block); border-radius: 6px; padding: 4px 10px; font-size: 12px; }
+  .appr .msg { font-size: 12px; color: var(--block); }
 </style>
 </head>
 <body>
@@ -172,6 +183,12 @@
 
     <div>
       <div class="panel">
+        <h2>Approvals</h2>
+        <div class="note" style="margin-top:0">Changes the assistant proposed. Nothing changes until a person with an
+          approver role approves; never the person who asked. Demo only: a real deployment takes the approver from sign-in.</div>
+        <div id="approvals"><div class="empty">No proposed changes yet.</div></div>
+      </div>
+      <div class="panel" style="margin-top:14px">
         <h2>Totals</h2>
         <div class="counters" id="counters"></div>
       </div>
@@ -194,7 +211,7 @@ const STAGES = [
   ["output", "Output guardrails"],
   ["response", "Response sent"],
 ];
-const AGENTS = ["intake", "knowledge", "records", "router", "answer"];
+const AGENTS = ["intake", "knowledge", "records", "router", "answer", "action"];
 const OUTCOME_WORDS = {pass: "passed", block: "blocked", override: "overridden", info: "done",
                        error: "error", running: "running…", unused: "not used"};
 const requests = new Map();   // request_id -> {id, events: [], first}
@@ -260,8 +277,22 @@ function derive(req) {
     const next = STAGES.find(([k]) => s[k][0] === "wait");
     if (next) s[next[0]] = ["active", "working…"];
   }
+  // Once the response is out, stages that never ran were not needed (e.g. a proposed change).
+  if (resp) for (const [k] of STAGES) {
+    if (s[k][0] === "wait") s[k] = ["skip", "not used"];
+    if (s[k][0] === "active") s[k] = ["pass", resp.data.approval ? "proposal prepared" : "done"];
+  }
   let outcome;
-  if (resp && resp.data.guardrail) { const g = resp.data.guardrail; outcome = ["block", `BLOCKED · ${g.stage} · ${g.layer || "rules"} · ${g.category}`]; }
+  if (resp && resp.data.approval) {
+    // A proposed change: show what became of it.
+    const ex = [...req.events].reverse().find(e => e.topic === "actions.executed" && e.data.status !== "approval_refused");
+    const dc = [...req.events].reverse().find(e => e.topic === "approvals.decided" && e.data.decision !== "approve");
+    if (ex && ex.data.status === "done") outcome = ["pass", "CHANGE MADE AFTER APPROVAL"];
+    else if (ex) outcome = ["block", `CHANGE NOT MADE · ${ex.data.status}`];
+    else if (dc) outcome = ["block", `${dc.data.decision === "expired" ? "EXPIRED" : "REJECTED"} · NOTHING CHANGED`];
+    else outcome = ["active", "PROPOSED · AWAITING APPROVAL"];
+  }
+  else if (resp && resp.data.guardrail) { const g = resp.data.guardrail; outcome = ["block", `BLOCKED · ${g.stage} · ${g.layer || "rules"} · ${g.category}`]; }
   else if (resp) outcome = ["pass", "ANSWERED"];
   else outcome = ["active", "IN PROGRESS"];
   return {s, mi, resp, outcome};
@@ -306,7 +337,9 @@ function renderSelected() {
 // The decision trace: steps in order. A "running" step is hidden once the same step
 // has finished; while it is still running it pulses.
 function traceSteps(req) {
-  const steps = req.events.filter(e => e.topic === "agent.trace").map(e => e.data).sort((a, b) => a.seq - b.seq);
+  // Steps come from several processes (planner, executor): order by time, then by sequence.
+  const steps = req.events.filter(e => e.topic === "agent.trace").map(e => e.data)
+    .sort((a, b) => (a.timestamp - b.timestamp) || (a.seq - b.seq));
   return steps.filter((s, i) => s.outcome !== "running" ||
     !steps.slice(i + 1).some(o => o.agent === s.agent && o.step === s.step && o.outcome !== "running"));
 }
@@ -315,12 +348,16 @@ function renderTrace(req) {
   const steps = traceSteps(req);
   const resp = find(req, "chat.responses");
   $("lanes").replaceChildren(...AGENTS.map(a => {
+    // The lane shows where the agent ended up: its last step decides (a refused approval
+    // followed by a real one ends as passed).
     const mine = steps.filter(s => s.agent === a);
+    const last = mine[mine.length - 1];
     let state = "unused";
-    if (mine.some(s => s.outcome === "block")) state = "block";
-    else if (mine.some(s => s.outcome === "running") && !resp) state = "running";
+    if (!last) state = "unused";
+    else if (last.outcome === "block") state = "block";
+    else if (last.outcome === "running") state = "running";
     else if (mine.some(s => s.outcome === "error" || s.outcome === "override")) state = "override";
-    else if (mine.length) state = "pass";
+    else state = "pass";
     const c = el("div", `lane o-${state}`);
     c.append(el("div", "name", a), el("div", "state", state === "override" ? "flagged" : OUTCOME_WORDS[state]));
     return c;
@@ -349,6 +386,10 @@ function summarize(e) {
     case "audit.guardrails": return `audit.guardrails · ${d.stage} ${d.layer} · ${d.allowed ? "allowed" : "blocked: " + d.category}${seq}`;
     case "audit.tool_calls": return `audit.tool_calls · ${d.role ? d.role + " · " : ""}${d.agent} → ${d.tool} · ${d.decision}${d.returned !== undefined ? " · " + d.returned + " returned" : ""}${seq}`;
     case "audit.model_inputs": return `audit.model_inputs · ${d.model} · ${d.entities_masked} masked${seq}`;
+    case "approvals.requested": return `approvals.requested · ${d.approval_id} · ${d.title}`;
+    case "approvals.decided": return `approvals.decided · ${d.approval_id} · ${d.decision}${d.approver_role ? " by " + d.approver_role : ""}`;
+    case "actions.executed": return `actions.executed · ${d.approval_id} · ${d.status}`;
+    case "audit.approvals": return `audit.approvals · ${d.approval_id || ""} · ${d.stage}${seq}`;
     case "agent.trace": return `agent.trace · ${d.agent} · ${d.step} · ${OUTCOME_WORDS[d.outcome] || d.outcome}`;
     case "audit.routing": return `audit.routing · ${d.target} → ${d.model}${d.fallback ? " (fallback)" : ""} · ${d.sent_masked ? "masked" : "original"}${seq}`;
     default: return e.topic;
@@ -357,11 +398,14 @@ function summarize(e) {
 
 function renderLists() {
   const all = [...requests.values()];
-  let answered = 0, blockedIn = 0, blockedOut = 0, toolsOk = 0, toolsDenied = 0, masked = 0;
+  let answered = 0, blockedIn = 0, blockedOut = 0, toolsOk = 0, toolsDenied = 0, masked = 0, proposed = 0, made = 0;
   for (const r of all) {
     const resp = find(r, "chat.responses");
-    if (resp && !resp.data.guardrail) answered++;
-    if (resp && resp.data.guardrail) (resp.data.guardrail.stage === "input" ? blockedIn++ : blockedOut++);
+    if (resp && resp.data.approval) proposed++;
+    else if (resp && !resp.data.guardrail) answered++;
+    if (resp && resp.data.guardrail && resp.data.guardrail.stage === "input") blockedIn++;
+    if (resp && resp.data.guardrail && resp.data.guardrail.stage === "output") blockedOut++;
+    if (find(r, "actions.executed", d => d.status === "done")) made++;
     for (const e of r.events) {
       if (e.topic === "audit.tool_calls") e.data.decision === "allow" ? toolsOk++ : toolsDenied++;
       if (e.topic === "audit.model_inputs") masked += e.data.entities_masked || 0;
@@ -369,7 +413,8 @@ function renderLists() {
   }
   const counters = [["Requests", all.length], ["Answered", answered], ["Blocked at input", blockedIn],
                     ["Blocked at output", blockedOut], ["Tool calls allowed", toolsOk], ["Tool calls denied", toolsDenied],
-                    ["Personal details masked", masked], ["Events seen", feed.length]];
+                    ["Personal details masked", masked], ["Changes proposed", proposed],
+                    ["Changes made after approval", made], ["Events seen", feed.length]];
   $("counters").replaceChildren(...counters.map(([k, v]) => {
     const c = el("div", "counter"); c.append(el("div", "v", String(v)), el("div", "k", k)); return c;
   }));
@@ -391,6 +436,58 @@ function renderLists() {
     row.append(el("span", "t", clock(e.received_at) + "  "), el("span", "topic", e.topic), document.createTextNode(`  ${short(e.data.request_id)}  ${summarize(e).split(" · ").slice(1).join(" · ")}`));
     return row;
   }));
+}
+
+// --- approvals ---------------------------------------------------------------
+const roleTitles = {};
+let roleKeys = [];
+let approvalMsgs = {};
+const STATUS_CHIP = {pending: "active", approved: "active", done: "pass", rejected: "block",
+                     expired: "block", refused: "block", failed: "block"};
+
+async function loadApprovals() {
+  try {
+    const list = await (await fetch("/approvals")).json();
+    const box = $("approvals");
+    if (!list.length) { box.replaceChildren(el("div", "empty", "No proposed changes yet.")); return; }
+    box.replaceChildren(...list.slice(0, 8).map(a => {
+      const c = el("div", "appr");
+      const top = el("div", "top");
+      top.append(el("span", "id", `${a.approval_id} · asked by ${roleTitles[a.requester_role] || a.requester_role}`),
+                 el("span", `chip ${STATUS_CHIP[a.status] || "active"}`, a.status.toUpperCase()));
+      c.append(top, el("div", "sum", a.summary));
+      const approvers = a.approve_roles.map(r => roleTitles[r] || r).join(" or ");
+      if (a.status === "pending") {
+        c.append(el("div", "who", `Needs approval by ${approvers} · expires ${a.expires_at.slice(11, 16)}`));
+        if (a.refused) c.append(el("div", "msg", `Last approval not accepted: ${a.refused.join("; ")}`));
+        const act = el("div", "act");
+        const sel = el("select");
+        for (const k of roleKeys) sel.add(new Option(`as ${roleTitles[k]}`, k));
+        sel.value = a.approve_roles[0] || roleKeys[0];
+        const ok = el("button", "ok", "Approve"), no = el("button", "no", "Reject");
+        ok.onclick = () => decideApproval(a.approval_id, "approve", sel.value);
+        no.onclick = () => decideApproval(a.approval_id, "reject", sel.value);
+        act.append(sel, ok, no);
+        if (approvalMsgs[a.approval_id]) act.append(el("span", "msg", approvalMsgs[a.approval_id]));
+        c.append(act);
+      } else {
+        const by = a.decided_role ? `${a.status === "expired" ? "" : "Decided by " + (roleTitles[a.decided_role] || a.decided_role)}` : "";
+        const res = a.result && a.result.after ? ` · ${a.result.appointment_id} now ${a.result.after.replace("T", " ")}` : "";
+        const why = a.reasons && a.reasons.length ? ` · ${a.reasons.join("; ")}` : "";
+        c.append(el("div", "who", `${by}${res}${why}`));
+      }
+      return c;
+    }));
+  } catch { /* the API is restarting */ }
+}
+
+async function decideApproval(id, decision, role) {
+  // The dashboard is its own user ("dashboard"), so it can approve a request sent from the chat page,
+  // but not one sent from this dashboard: nobody approves their own request.
+  const r = await fetch(`/approvals/${id}/decision`, {method: "POST", headers: {"Content-Type": "application/json"},
+                        body: JSON.stringify({decision, role, user_id: "dashboard"})});
+  approvalMsgs[id] = r.ok ? "" : `Not recorded (${r.status})`;
+  setTimeout(loadApprovals, 300);
 }
 
 let pending = false;
@@ -429,6 +526,8 @@ async function send(text) {
 // Examples and roles come from the active profile.
 fetch("/profile").then(r => r.json()).then(p => {
   $("ptitle").textContent = p.title;
+  for (const r of p.roles) roleTitles[r.key] = r.title;
+  roleKeys = p.roles.map(r => r.key);
   if (p.roles.length) {
     for (const r of p.roles) $("role").add(new Option(r.title, r.key));
     $("role").value = p.roles[0].key;
@@ -442,7 +541,8 @@ $("sendForm").onsubmit = e => { e.preventDefault(); const t = $("sendInput").val
 $("verifyBtn").onclick = verifyAudit;
 setInterval(render, 1000);        // keeps "running" states and progress fresh
 setInterval(verifyAudit, 15000);
-render(); verifyAudit(); connect();
+setInterval(loadApprovals, 2000);
+render(); verifyAudit(); connect(); loadApprovals();
 </script>
 </body>
 </html>

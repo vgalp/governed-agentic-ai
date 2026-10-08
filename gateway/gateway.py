@@ -24,6 +24,7 @@ from profiles.loader import Profile, load_profile
 TOOL_SERVERS = {
     "search_knowledge": "http://127.0.0.1:8100/mcp",
     "search_records": "http://127.0.0.1:8101/mcp",
+    "reschedule_appointment": "http://127.0.0.1:8102/mcp",   # changes; executor agent only
 }
 
 

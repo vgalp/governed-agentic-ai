@@ -1,0 +1,30 @@
+# Changes the assistant may PROPOSE. It never makes a change itself:
+#   1. the local model turns the request into a proposal (fields below);
+#   2. the code checks the proposal (IDs must come from the records it was given);
+#   3. OPA decides whether it is allowed and who must approve (policies/actions.rego);
+#   4. a person with an approver role approves or rejects it, never the person who asked;
+#   5. only then does the executor agent make the change through the gateway.
+# Every step is audited (audit.approvals) and shown in the decision trace.
+
+reschedule_appointment:
+  title: Reschedule an appointment
+  description: Move one of the patient's upcoming appointments to a new date and time.
+  intent: reschedule_request             # pattern in rules.yaml that starts a proposal
+  tool: reschedule_appointment           # makes the change; granted to the executor agent only
+  agent: executor
+  fields:
+    appointment_id:
+      type: source                       # must be a source ID the model was given
+      pattern: '^apt-\d{4}$'
+      description: ID of the appointment to move, exactly as written in the notes (apt-...)
+    new_start:
+      type: datetime
+      description: the new date and time, as YYYY-MM-DDTHH:MM
+  propose_roles: [front_desk, nurse, clinician]
+  approve_roles: [clinician, nurse]
+  expires_minutes: 30                    # not approved in time: expired, nothing changes
+  allowed_times:                         # clinic opening hours (checked by OPA)
+    field: new_start
+    weekdays: [0, 1, 2, 3, 4]            # Monday to Friday
+    start_hour: 8
+    end_hour: 17

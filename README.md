@@ -47,9 +47,9 @@ Every decision is written to an audit topic as a hash-chained, HMAC-signed event
 | Guardrails, layer 2 (classifier) | Llama Guard 3 8B with a custom policy (S1 self-harm risk, S2 medical advice); fails closed | Working |
 | Tamper-evident audit | Each audit event carries a sequence number, the previous event's hash and an HMAC-SHA256 signature; a verifier detects edits, deletions and reordering | Working |
 | Live dashboard | Shows each request moving through the pipeline in real time, without exposing personal information | Working |
-| Grounding check (layer 3) | Verifies answers against approved knowledge-base content | Planned |
+| Grounding check | An answer may cite only sources the model was given; invented fill-in fields are blocked | Working |
 | Policy-based model routing | OPA decides whether a request may go to a local or an external model (OpenAI, Gemini or Claude, chosen in the profile, with fallback); the decision is audited | Working |
-| Human approval gates | Risky agent actions wait for a person to approve | Planned |
+| Human approval before changes | The assistant only proposes changes (e.g. moving an appointment); OPA decides who must approve; a person with an approver role approves, never the person who asked; only then does a separate executor agent make the change, once | Working |
 | Tracing and failure recovery | OpenTelemetry tracing, Saga-style rollback, idempotency | Planned |
 
 Design decisions are recorded in [`docs/decisions/`](docs/decisions/).
@@ -214,7 +214,7 @@ docs/            Architecture notes and decision records
 - [x] `redteam_v2`: harder frozen set (indirect crisis, implied diagnosis, unnamed medication, adversarial prompts)
 - [x] Deployment profiles: plug-and-play use cases with no code change
 - [x] Policy-based model routing (local vs external model, decided by OPA and audited)
-- [ ] Human approval gates for risky agent actions
+- [x] Human approval before changes (propose, policy, approve, execute once; all audited)
 - [ ] Signed audit checkpoints (truncation detection)
 - [ ] Fine-tuned safety classifier and grounding check (layer 3)
 - [ ] Clinician-reviewed knowledge base and fixed responses

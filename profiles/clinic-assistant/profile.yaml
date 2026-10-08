@@ -51,6 +51,7 @@ routing:
 tool_data_labels:
   search_knowledge: approved_content       # clinic policies
   search_records: patient_record           # patient records: never leave the machine
+  reschedule_appointment: patient_record   # changes a patient's appointment (after approval)
 
 # search_records looks patients up by name, so it gets the real question. It runs
 # locally, and the gateway audits the masked question. Only tools whose data label
@@ -59,6 +60,7 @@ tools_receiving_identifiers: [search_records]
 
 records_db: data/clinic.db                 # built locally: see data/README.md
 roles: roles.yaml                          # who may see which record data
+actions: actions.yaml                      # changes the assistant may propose; a person approves
 cite_sources: true                         # the model sees source IDs so it can cite them
 # What a cited source ID looks like. An answer that cites an ID it was not given is
 # blocked (grounding check), e.g. citing the clinic-hours policy for a medication.
@@ -85,6 +87,9 @@ knowledge_base: data/knowledge_base.json
 agents:
   planner:
     tools: [search_knowledge, search_records]
+  # Makes approved changes only. The planner, which talks to the model, cannot.
+  executor:
+    tools: [reschedule_appointment]
 
 # Shown as example buttons on the chat page.
 examples:
@@ -92,4 +97,5 @@ examples:
   - What medications is Chester Aufderhar taking?
   - When is Chester Aufderhar's next appointment?
   - Does Jesse Wolf owe anything?
+  - Move Chester Aufderhar's next appointment to November 13 at 10:00.
   - How much insulin should we give Mr Smith?

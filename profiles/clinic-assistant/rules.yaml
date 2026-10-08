@@ -47,6 +47,13 @@ patterns:
   decision_words:
     regex: '\b(should|need to|have to|ought|must|increase|decrease|raise|lower|double|halve|adjust|titrate|taper|switch|change|stop|start|prescribe|recommend|suggest|give|add|combine|mix|safe|okay|ok|best|better|instead|alternative|how (much|many)|treat|treatment|for (his|her|their|my) [a-z]+)\b'
 
+  # A request to change an appointment. Starts a proposal that a person must approve
+  # (actions.yaml); the assistant never changes anything itself.
+  reschedule_request:
+    regex:
+      - '\b(reschedul\w*|move|postpone|push back|bring forward|change the (date|time) of)\b.{0,80}\b(appointments?|visit|booking)\b'
+      - '|\b(appointments?|visit|booking)\b.{0,80}\b(reschedul\w*|moved?|postponed?)\b'
+
   # In a model ANSWER: an invented fill-in field such as [METFORMIN_DOSE]. Real masking
   # tokens always end in a number ([PERSON_1]), so a bracketed name without one was made up.
   fabricated_placeholder:

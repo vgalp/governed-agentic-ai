@@ -23,9 +23,10 @@ from collections import Counter
 
 TRACE_TOPIC = "agent.trace"
 
-# Which agent owns each step. Today one process (the planner) runs every step; in the
-# multi-agent pipeline each becomes its own agent, and the trace keeps these names.
-AGENTS = ("intake", "knowledge", "records", "router", "answer")
+# Which agent owns each step. Today the planner runs the first five; in the multi-agent
+# pipeline each becomes its own agent, and the trace keeps these names. "action" holds a
+# proposed change, its approval and its execution (planner, then the executor agent).
+AGENTS = ("intake", "knowledge", "records", "router", "answer", "action")
 TOOL_AGENTS = {"search_knowledge": "knowledge", "search_records": "records"}
 
 # running: a slow step has started (classifier, tool call, model)
@@ -60,13 +61,15 @@ class Trace:
     """The trace of one request. Publishes each step to agent.trace as it happens."""
 
     def __init__(self, producer, profile: str, request_id: str, role: str | None = None,
-                 process: str = "planner"):
+                 process: str = "planner", started_at: float | None = None):
         self.producer = producer
         self.profile = profile
         self.request_id = request_id
         self.role = role
         self.process = process          # which running process did the step
-        self.t0 = time.monotonic()
+        # Wall-clock start of the request, so steps from another process (the executor,
+        # minutes later) line up on the same timeline.
+        self.started_at = started_at if started_at is not None else time.time()
         self.seq = 0
         self._started: dict[tuple[str, str], float] = {}
 
@@ -96,8 +99,8 @@ class Trace:
             "outcome": outcome,
             "summary": summary,
             "details": details,
-            "seq": self.seq,                                   # order within this request
-            "elapsed_ms": round((now - self.t0) * 1000),       # since the request was picked up
+            "seq": self.seq,                                   # order within this process's steps
+            "elapsed_ms": round((time.time() - self.started_at) * 1000),   # since the request was picked up
             "duration_ms": round((now - started) * 1000) if started is not None else None,
             "timestamp": time.time(),
         }

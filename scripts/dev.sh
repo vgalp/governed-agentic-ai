@@ -6,7 +6,7 @@
 #   ./scripts/dev.sh down      stop the Python services and the Docker containers
 #   ./scripts/dev.sh restart   stop, then start
 #   ./scripts/dev.sh status    show what is running, and warn about duplicate processes
-#   ./scripts/dev.sh logs [knowledge-base|records|api|planner]   follow logs
+#   ./scripts/dev.sh logs [knowledge-base|records|appointments|api|planner|executor]   follow logs
 #
 #   PROFILE=<name> ./scripts/dev.sh start   run another profile (default: adhd-assistant)
 #
@@ -18,7 +18,7 @@ cd "$(dirname "$0")/.."
 
 LOG_DIR="logs"
 PY=".venv/bin/python"
-TOPICS="chat.requests chat.responses audit.model_inputs audit.tool_calls audit.guardrails audit.routing agent.trace"
+TOPICS="chat.requests chat.responses audit.model_inputs audit.tool_calls audit.guardrails audit.routing audit.approvals agent.trace approvals.requested approvals.decided actions.executed"
 MODELS="mistral llama-guard3:8b"
 export PYTHONUNBUFFERED=1   # write logs immediately
 export PROFILE="${PROFILE:-adhd-assistant}"   # which profile every service loads (see profiles/)
@@ -27,8 +27,10 @@ export PROFILE="${PROFILE:-adhd-assistant}"   # which profile every service load
 SERVICES=(
   "knowledge-base|-m mcp_servers\.knowledge_base|mcp_servers.knowledge_base.server|8100"
   "records|-m mcp_servers\.records|mcp_servers.records.server|8101"
+  "appointments|-m mcp_servers\.appointments|mcp_servers.appointments.server|8102"
   "api|-m uvicorn api\.main|uvicorn api.main:app --port 8000|8000"
   "planner|-m agents\.planner|agents.planner|"
+  "executor|-m agents\.executor|agents.executor|"
 )
 
 say()  { printf '\033[1m%s\033[0m\n' "$*"; }

@@ -2,13 +2,16 @@ import json
 import threading
 import uuid
 from contextlib import asynccontextmanager
+from datetime import datetime
 from pathlib import Path
+from typing import Literal
 
 from confluent_kafka import Consumer, Producer
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel
 
+from agents import actions
 from api.events import buffer, consume_events, event_stream
 from audit.chain import key_from_env, unkeyed_chains, verify_chain
 from profiles.loader import load_profile
@@ -19,6 +22,7 @@ UI_DIR = Path(__file__).resolve().parent.parent / "ui"
 producer = Producer({"bootstrap.servers": BOOTSTRAP, "enable.idempotence": True})
 PROFILE = load_profile()        # same PROFILE as the agents (set by scripts/dev.sh)
 responses: dict[str, dict] = {}  # in-memory for now; replaced later
+approvals = actions.ApprovalState()   # rebuilt from Kafka at startup
 
 
 def consume_responses():
@@ -39,15 +43,38 @@ def consume_responses():
         responses[data["request_id"]] = data
 
 
+def consume_approvals():
+    consumer = Consumer({
+        "bootstrap.servers": BOOTSTRAP,
+        "group.id": f"api-approvals-{uuid.uuid4()}",
+        "auto.offset.reset": "earliest",
+        "enable.auto.commit": False,
+    })
+    consumer.subscribe(actions.APPROVAL_TOPICS)
+    while True:
+        msg = consumer.poll(1.0)
+        if msg is None or msg.error():
+            continue
+        approvals.apply(msg.topic(), json.loads(msg.value()))
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     threading.Thread(target=consume_responses, daemon=True).start()
+    threading.Thread(target=consume_approvals, daemon=True).start()
     threading.Thread(target=consume_events, args=(BOOTSTRAP,), daemon=True).start()
     yield
     producer.flush()
 
 
 app = FastAPI(title="Governed Agentic AI - Chat API", lifespan=lifespan)
+
+
+class Decision(BaseModel):
+    decision: Literal["approve", "reject"]
+    user_id: str                # demo only: a real deployment takes the approver from sign-in
+    role: str | None = None
+    note: str | None = None
 
 
 class ChatRequest(BaseModel):
@@ -119,3 +146,35 @@ def get_chat(request_id: str):
     if request_id not in responses:
         return {"status": "pending"}
     return {"status": "done", **responses[request_id]}
+
+
+@app.get("/approvals")
+def list_approvals():
+    """Proposed changes, newest first. IDs and masked text only."""
+    return sorted(approvals.approvals.values(), key=lambda a: a["created_at"], reverse=True)[:50]
+
+
+@app.get("/approvals/{approval_id}")
+def get_approval(approval_id: str):
+    a = approvals.approvals.get(approval_id)
+    if a is None:
+        raise HTTPException(404, "no such approval request")
+    return a
+
+
+@app.post("/approvals/{approval_id}/decision")
+def decide_approval(approval_id: str, d: Decision):
+    """Record a person's decision. Whether the change is then made is decided by the
+    executor agent and OPA (approver role, not the person who asked, not expired),
+    not here."""
+    a = approvals.approvals.get(approval_id)
+    if a is None:
+        raise HTTPException(404, "no such approval request")
+    if a["status"] != "pending":
+        raise HTTPException(409, f"already {a['status']}")
+    producer.produce(actions.DECIDED, key=approval_id, value=json.dumps({
+        "approval_id": approval_id, "request_id": a["request_id"], "decision": d.decision, "approver": d.user_id,
+        "approver_role": d.role, "note": d.note, "decided_at": datetime.now().isoformat(timespec="seconds"),
+    }))
+    producer.flush()
+    return {"approval_id": approval_id, "decision": d.decision, "status": "recorded"}
