@@ -1,0 +1,35 @@
+# Fixed replies when a guardrail blocks. Written for CASEWORKERS at a fictional county
+# benefits office, not for applicants. DRAFTS pending review by the office's program
+# and legal staff.
+
+crisis: >-
+  This may be a safety emergency. If anyone is in immediate danger, call 911. Tell
+  your supervisor now and follow the office's safety protocol; do not leave the
+  person on their own if they are with you. The 988 Suicide & Crisis Lifeline (call
+  or text 988 in the U.S.) can also help.
+
+eligibility_decision: >-
+  I can't decide eligibility. That is the eligibility worker's determination under
+  the program's rules. I can show what the case record lists (status, documents,
+  reported income and payments) to support it.
+
+integrity_judgment: >-
+  I can't judge whether someone is honest. If you have a specific concern, refer it
+  to the program integrity unit using the office's referral process. I can show
+  what the case record lists, such as which income is verified.
+
+unavailable: >-
+  Sorry, I can't answer right now because a safety check is unavailable. Please try
+  again shortly. If anyone is in danger, call 911 and tell your supervisor.
+
+# Sent when a request has no role, or a role this profile does not define.
+role_required: >-
+  Please choose your role first. What you can see depends on it, so I can't answer
+  until I know whether you're an intake worker, eligibility worker, supervisor or
+  quality auditor.
+
+# Sent when an answer refers to a source it was not given, or invents a fill-in field.
+ungrounded: >-
+  I couldn't give a reliable answer: my draft referred to information that isn't in
+  the case records. Please check the case file directly, or ask a more specific
+  question.

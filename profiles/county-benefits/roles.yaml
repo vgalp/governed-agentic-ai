@@ -1,0 +1,36 @@
+# Who may see what at the (fictional) county benefits office. OPA enforces this:
+# the records server reads only the data classes a role may see, and the gateway
+# drops anything else. Generic, illustrative roles, not any real agency's.
+#
+# The role is chosen in the chat page for this demo. A real deployment takes it
+# from the organization's sign-in system, never from the user.
+
+data_classes:
+  contact: Name, birth year, district and preferred language
+  case_status: Programs applied for, case status and the next step
+  documents: Documents requested, received, missing or rejected
+  income: Reported income sources and amounts
+  payments: Benefit payments issued, scheduled or held
+
+roles:
+  intake_worker:
+    title: Intake worker
+    tools: [search_knowledge, search_records]
+    data_classes: [contact, case_status, documents]      # no income, no payments
+  eligibility_worker:
+    title: Eligibility worker
+    tools: [search_knowledge, search_records]
+    data_classes: [contact, case_status, documents, income, payments]
+  supervisor:
+    title: Supervisor
+    tools: [search_knowledge, search_records]
+    data_classes: [contact, case_status, documents, income, payments]
+    responses:
+      eligibility_decision: >-
+        I don't make eligibility decisions, for any role, including supervisors:
+        that stays your determination under the program's rules. I can show what
+        the case record lists (status, documents, income, payments) to support it.
+  auditor:
+    title: Quality auditor
+    tools: [search_knowledge]          # policies only; no case records
+    data_classes: []

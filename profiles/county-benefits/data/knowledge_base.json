@@ -1,0 +1,72 @@
+[
+  {
+    "id": "mc-001",
+    "title": "Office hours",
+    "text": "Maple County Human Services is open Monday to Friday, 8:30 to 16:30, and closed on weekends and county holidays. Walk-in intake ends at 15:30.",
+    "tags": ["hours", "open", "closed", "office", "walk-in", "holiday"],
+    "status": "SAMPLE - fictional county policy, not legal or program guidance"
+  },
+  {
+    "id": "mc-002",
+    "title": "Documents for a SNAP application",
+    "text": "A SNAP application needs photo ID, proof of income for the last 30 days (such as pay stubs), and proof of address (a lease, rent receipt or utility bill). Caseworkers list anything missing on the case and give the applicant a written due date.",
+    "tags": ["snap", "documents", "application", "income", "pay", "stubs", "id", "address", "lease", "rent", "proof"],
+    "status": "SAMPLE - fictional county policy, not legal or program guidance"
+  },
+  {
+    "id": "mc-003",
+    "title": "Processing times",
+    "text": "The office aims to decide SNAP applications within 30 days of the application date, and within 7 days when an applicant qualifies for expedited service. Medicaid applications are usually decided within 45 days. A missing document pauses the case until it arrives or the due date passes.",
+    "tags": ["processing", "time", "long", "days", "decided", "decision", "expedited", "snap", "medicaid", "wait"],
+    "status": "SAMPLE - fictional county policy, not legal or program guidance"
+  },
+  {
+    "id": "mc-004",
+    "title": "Missing documents and reminders",
+    "text": "When a document is missing, the caseworker sends a written reminder with the due date and offers help getting it. If it is still missing on the due date, the eligibility worker reviews the case before anything is closed. Applicants can ask for more time.",
+    "tags": ["missing", "document", "reminder", "due", "late", "extension", "time", "closed"],
+    "status": "SAMPLE - fictional county policy, not legal or program guidance"
+  },
+  {
+    "id": "mc-005",
+    "title": "Who decides eligibility",
+    "text": "Only an eligibility worker decides whether a household is eligible, following the program's rules, and a supervisor reviews contested or unusual cases. Assistants and tools may summarize the case record but never make or recommend the decision.",
+    "tags": ["eligible", "eligibility", "decide", "decision", "approve", "deny", "determination", "supervisor"],
+    "status": "SAMPLE - fictional county policy, not legal or program guidance"
+  },
+  {
+    "id": "mc-006",
+    "title": "Program integrity concerns",
+    "text": "Staff do not judge whether an applicant is honest. A specific concern, such as income that does not match a document, is referred to the program integrity unit using the referral form, with the facts only. The case continues while the referral is reviewed.",
+    "tags": ["fraud", "integrity", "lying", "honest", "concern", "referral", "suspicious", "income"],
+    "status": "SAMPLE - fictional county policy, not legal or program guidance"
+  },
+  {
+    "id": "mc-007",
+    "title": "Appeals and fair hearings",
+    "text": "An applicant who disagrees with a decision can ask for a fair hearing within the time stated on the notice. Staff tell applicants how to appeal and never discourage an appeal.",
+    "tags": ["appeal", "hearing", "fair", "disagree", "denied", "notice", "decision"],
+    "status": "SAMPLE - fictional county policy, not legal or program guidance"
+  },
+  {
+    "id": "mc-008",
+    "title": "Emergency assistance",
+    "text": "Emergency Assistance helps with an urgent need such as a utility shut-off or eviction notice. A supervisor reviews every emergency payment before it is released; payments waiting for that review are marked held.",
+    "tags": ["emergency", "assistance", "urgent", "utility", "shut-off", "eviction", "payment", "held", "supervisor"],
+    "status": "SAMPLE - fictional county policy, not legal or program guidance"
+  },
+  {
+    "id": "mc-009",
+    "title": "Language access",
+    "text": "Applicants can get free interpretation in any language and translated notices in Spanish. Record the preferred language on the applicant's record and book an interpreter before an interview.",
+    "tags": ["language", "interpreter", "interpretation", "translation", "spanish", "notice", "interview"],
+    "status": "SAMPLE - fictional county policy, not legal or program guidance"
+  },
+  {
+    "id": "mc-010",
+    "title": "Confidentiality",
+    "text": "Case information is shared only with staff who need it for their work and with the applicant. Do not confirm to callers whether someone has a case. Phone numbers and addresses are not shown in the assistant.",
+    "tags": ["confidential", "privacy", "share", "caller", "phone", "address", "information"],
+    "status": "SAMPLE - fictional county policy, not legal or program guidance"
+  }
+]

@@ -1,0 +1,86 @@
+# Profile: an assistant for caseworkers at a FICTIONAL county benefits office
+# (Maple County Human Services). Answers from case records and approved office
+# policies only. It never decides eligibility and never judges whether someone is
+# honest: people decide. All data is synthetic. Select with PROFILE=county-benefits.
+#
+# Built from configuration only: no code was added for this profile.
+
+name: county-benefits
+title: County benefits caseworker assistant
+description: >-
+  Helps caseworkers at a fictional county benefits office find case status,
+  missing documents, reported income and payments, with a source for every
+  answer. Not an eligibility decision tool.
+version: 1
+
+models:
+  local:
+    provider: ollama
+    name: mistral
+    location: local
+    temperature: 0
+  # Hosted models, only for questions about office policy that hold no personal
+  # information and use no case records (see routing), and only with a key in .env.
+  openai:
+    provider: openai
+    name: gpt-4.1-mini
+    location: external
+    api_key_env: OPENAI_API_KEY
+  gemini:
+    provider: gemini
+    name: gemini-2.5-flash
+    location: external
+    api_key_env: GEMINI_API_KEY
+  claude:
+    provider: anthropic
+    name: claude-haiku-4-5-20251001
+    location: external
+    api_key_env: ANTHROPIC_API_KEY
+
+routing:
+  local_model: local
+  external_model: claude
+  fallback: [openai, gemini]
+  external_allowed: true
+  send_external_when: no_personal_info     # a name, phone number etc. keeps the request local
+  never_external_entities: [PERSON, PHONE_NUMBER, EMAIL_ADDRESS, LOCATION, US_SSN, CREDIT_CARD]
+  never_external_labels: [case_record]     # case records never leave the office
+  local_input: original                    # caseworkers look applicants up by name
+
+tools: tools.yaml                          # each tool: server, kind, data label
+records_db: data/county.db                 # built locally from data/seed.sql: see data/README.md
+records_map: records.yaml                  # how the database becomes records (no SQL)
+roles: roles.yaml                          # who may see which case data
+cite_sources: true
+source_id_pattern: '\b(mc-\d{3}|apl-\d{4}|case-\d{4}|doc-\d{4}|inc-\d{4}|pay-\d{4})\b'
+
+prompt: prompt.md
+responses: responses.yaml
+rules: rules.yaml
+
+classifier:
+  model: llama-guard3:8b
+  policy: classifier_policy.md
+  categories:
+    - {code: S1, name: safety risk, category: crisis}
+    - {code: S2, name: eligibility or integrity decision, category: eligibility_decision}
+  default_category: eligibility_decision
+
+privacy:
+  entities: [PERSON, PHONE_NUMBER, EMAIL_ADDRESS, LOCATION, US_SSN, CREDIT_CARD, IP_ADDRESS]
+  allow_list: [SNAP, Medicaid]             # program names, not personal information
+
+knowledge_base: data/knowledge_base.json
+
+agents:
+  planner:
+    tools: [search_knowledge, search_records]
+
+# Shown as example buttons on the chat page.
+examples:
+  - What documents are still missing for Dana Whitfield?
+  - What is the status of Marcus Oyelaran's SNAP case?
+  - What income has Rosa Delgado reported?
+  - How long does a SNAP application usually take?
+  - Is Tom Brandt eligible for emergency assistance?
+  - Is Lena Kovacs lying about her income?

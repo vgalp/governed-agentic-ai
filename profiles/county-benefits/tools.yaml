@@ -1,0 +1,18 @@
+# Tools this profile can use. The fields are explained in profiles/clinic-assistant/tools.yaml.
+# The same two servers as the clinic: what they serve comes from this profile's files.
+
+search_knowledge:
+  description: Approved office policies (fictional, samples)
+  server: http://127.0.0.1:8100/mcp
+  kind: read
+  data_label: approved_content
+  lane: knowledge
+
+search_records:
+  description: Case records, built only from the data classes the role may see
+  server: http://127.0.0.1:8101/mcp
+  kind: read
+  data_label: case_record                  # never leaves the office (routing.never_external_labels)
+  lane: records
+  receives_identifiers: true               # looks applicants up by name
+  role_filtered: true

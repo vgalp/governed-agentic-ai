@@ -1,0 +1,63 @@
+# Layer 1 guardrails for the county benefits caseworker assistant (same format as
+# the other profiles). Caseworkers may READ what a case record says: status, missing
+# documents, reported income, payments. What is blocked is a DECISION about a person:
+# whether they are eligible, and whether they are honest.
+
+patterns:
+  # Someone may be at risk. Caseworkers relay this ("the client said he wants to die").
+  crisis:
+    terms: ['suicid\w*', 'kill (himself|herself|themselves|myself)', 'end (his|her|their|my) life',
+            'wants? to die', 'hurt(ing)? (himself|herself|themselves|myself)', 'self[- ]?harm\w*',
+            'overdosed?', 'threaten\w* to (hurt|kill)', 'afraid (he|she|they) will hurt',
+            'being (hit|beaten|abused)']
+
+  # A request for an eligibility determination: only an eligibility worker decides,
+  # under the program's rules.
+  eligibility_request:
+    regex:
+      # (?-i:...) is case-sensitive: a capitalized first and last name, so a general policy
+      # question ("are college students eligible for SNAP?") is not blocked.
+      - '\b(is|are) (he|she|they|the (applicant|client|household)|(?-i:[A-Z][a-z]+ [A-Z][a-z]+)) (eligible|ineligible)'
+      - '|\b(does|do|would|will) (he|she|they|the (applicant|client|household)|(?-i:[A-Z][a-z]+ [A-Z][a-z]+)) (qualify|be eligible|get approved|be approved|be denied)'
+      - '|\bshould (we|i) (approve|deny|close|terminate|reduce|cut off)'
+      - '|\b(determine|decide) (his |her |their )?eligibility'
+      - '|\b(approve|deny) (the|this|her|his|their) (application|case|claim|benefits?)\b'
+
+  # A request to judge someone's honesty. Concerns go to the program integrity unit.
+  integrity_request:
+    regex:
+      - '\b(is|are) (he|she|they|the (applicant|client)|(?-i:[A-Z][a-z]+ [A-Z][a-z]+)) (lying|honest|telling the truth|hiding|cheating)'
+      - '|\b(lying|lie|lied) about\b'
+      - '|\b(is|looks like|seems like|could (this|it) be) (fraud|fraudulent|suspicious)\b'
+      - '|\bcommit(ting|ted)? fraud\b|\b(scam|scamming|gaming) the system\b|\bcan (we|i) trust (him|her|them)\b'
+
+  # In a model ANSWER: a determination about a person (a pronoun, "the household", or a
+  # capitalized name). General policy wording ("when an applicant qualifies for
+  # expedited service") is not blocked.
+  output_determination:
+    regex:
+      - '\b(he|she|they|the (applicant|client|household)|(?-i:[A-Z][a-z]+ [A-Z][a-z]+)) (is|are) (not |likely |probably )?(eligible|ineligible)\b'
+      - '|\b(he|she|they|the (applicant|client|household)|(?-i:[A-Z][a-z]+ [A-Z][a-z]+)) (likely |probably )?(qualif(y|ies)|does not qualify|doesn.t qualify|will (likely |probably )?be (approved|denied))\b'
+      - '|\bshould be (approved|denied|closed|terminated|reduced)\b'
+
+  # In a model ANSWER: wording that accuses someone of dishonesty.
+  output_accusation:
+    regex:
+      - '\b(he|she|they|the (applicant|client)|(?-i:[A-Z][a-z]+ [A-Z][a-z]+)) (is|are|may be|might be|could be|seems to be|appears to be) (lying|dishonest|hiding|committing fraud)\b'
+      - '|\b(likely|possible|probable) fraud\b|\bappears fraudulent\b|\bsuspicious activity\b'
+
+  # In a model ANSWER: an invented fill-in field such as [INCOME_AMOUNT]. Real masking
+  # tokens always end in a number ([PERSON_1]), so a bracketed name without one was made up.
+  fabricated_placeholder:
+    regex: '\[[A-Z][A-Z_]*[A-Z]\]'
+
+input:
+  - {category: crisis, reason: safety risk in input, any: [crisis]}
+  - {category: eligibility_decision, reason: eligibility decision requested, any: [eligibility_request]}
+  - {category: integrity_judgment, reason: judgment of honesty requested, any: [integrity_request]}
+
+output:
+  - {category: ungrounded, reason: model answer invents a fill-in field, any: [fabricated_placeholder]}
+  - {category: eligibility_decision, reason: model answer states an eligibility determination,
+     any: [output_determination]}
+  - {category: integrity_judgment, reason: model answer judges honesty, any: [output_accusation]}

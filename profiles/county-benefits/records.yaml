@@ -1,0 +1,57 @@
+# How the county's case database (data/county.db) becomes records the assistant can
+# cite. Same format as profiles/clinic-assistant/records.yaml; the records server is
+# the same code. phone and street_address are in the database but not named here,
+# so they are never read.
+
+subject:
+  noun: applicant
+  table: applicants
+  id: id
+  name: name
+  record:
+    source_id: {prefix: apl-}
+    data_class: contact
+    title: "Applicant: {name}"
+    text: "{name}, born {birth_year}, {district} district, prefers {language}."
+
+records:
+  cases:
+    table: cases
+    link: applicant_id
+    source_id: {prefix: case-}
+    data_class: case_status
+    order_by: [opened desc]
+    title: Case
+    text: "{subject}: {program} case opened {opened|date}, status {status}."
+    optional: {next_step: " Next step: {next_step}."}
+
+  documents:
+    table: documents
+    link: applicant_id
+    source_id: {prefix: doc-}
+    data_class: documents
+    order_by: [status, due]
+    title: Document
+    text: "{subject}: {kind}, {status}."
+    optional: {due: " Needed by {due|date}."}
+
+  income:
+    table: income
+    link: applicant_id
+    source_id: {prefix: inc-}
+    data_class: income
+    title: Reported income
+    text: "{subject}: {source}, {monthly_amount|money} a month as reported (verified: {verified})."
+
+  payments:
+    table: payments
+    link: applicant_id
+    source_id: {prefix: pay-}
+    data_class: payments
+    order_by: [issued_on desc]
+    limit: 5
+    title: Payment
+    text: "{subject}: {program} payment of {amount|money} for {issued_on|date}, {status}."
+
+max_results: 15
+status: synthetic record             # added to every record: this data is synthetic
