@@ -43,8 +43,8 @@ def test_profile_has_no_code():
 
 def test_profile_loads_with_its_own_roles_and_tools():
     assert set(P.roles) == {"intake_worker", "eligibility_worker", "supervisor", "auditor"}
-    assert set(P.tools) == {"search_knowledge", "search_records"}
-    assert P.actions == {}                          # read-only: no changes in this profile
+    assert set(P.tools) == {"search_knowledge", "search_records", "release_payment"}
+    assert set(P.actions) == {"release_payment"}    # one change, made by the shared change server
     assert P.tools["search_records"].data_label in P.routing["never_external_labels"]
 
 
@@ -158,7 +158,7 @@ def test_every_office_policy_passes_the_answer_rules():
 
 def test_example_buttons_show_both_answers_and_blocks():
     results = [check_input(e, P).allowed for e in P.examples]
-    assert results == [True, True, True, True, False, False]
+    assert results == [True, True, True, True, False, False, True]
 
 
 def test_role_reply_for_supervisors():

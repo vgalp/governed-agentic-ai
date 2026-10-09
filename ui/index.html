@@ -142,7 +142,7 @@ async function followApproval(div, badge, id) {
     badge.textContent = `${a.status.toUpperCase()} · ${id}`;
     const s = document.createElement("div");
     s.className = "status";
-    if (a.status === "done") s.textContent = `Done: ${a.result.appointment_id} moved from ${a.result.before.replace("T", " ")} to ${a.result.after.replace("T", " ")}.`;
+    if (a.status === "done") s.textContent = `Done: ${a.result.summary}.`;
     else if (a.status === "expired") s.textContent = "No one approved this in time. Nothing was changed.";
     else if (a.status === "rejected") s.textContent = "This change was rejected. Nothing was changed.";
     else s.textContent = `Not made: ${(a.reasons || []).join("; ")}. Nothing was changed.`;

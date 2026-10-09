@@ -31,6 +31,13 @@ patterns:
       - '|\b(is|looks like|seems like|could (this|it) be) (fraud|fraudulent|suspicious)\b'
       - '|\bcommit(ting|ted)? fraud\b|\b(scam|scamming|gaming) the system\b|\bcan (we|i) trust (him|her|them)\b'
 
+  # A request to release a held payment. Starts a proposal that a supervisor must
+  # approve (actions.yaml); the assistant never releases anything itself.
+  release_request:
+    regex:
+      - '\b(release|unhold|un-hold|lift the hold on)\b.{0,80}\bpayments?\b'
+      - '|\bpayments?\b.{0,80}\b(released?|unheld)\b'
+
   # In a model ANSWER: a determination about a person (a pronoun, "the household", or a
   # capitalized name). General policy wording ("when an applicant qualifies for
   # expedited service") is not blocked.

@@ -16,3 +16,9 @@ search_records:
   lane: records
   receives_identifiers: true               # looks applicants up by name
   role_filtered: true
+
+release_payment:
+  description: Releases a held payment, after a supervisor approves (actions.yaml, change:)
+  server: http://127.0.0.1:8102/mcp         # the generic change server, same as the clinic's
+  kind: change
+  data_label: case_record

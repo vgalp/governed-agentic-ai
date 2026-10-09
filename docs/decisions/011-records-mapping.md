@@ -48,3 +48,4 @@ database (library members and loans) with no code change.
   free-text search across records, and matching on anything but a name are not supported yet.
 - The tool that makes changes (rescheduling) is still written for the clinic; change tools
   stay code, reviewed one by one, behind human approval (ADR 009).
+  Superseded by [ADR 012](012-generic-change-tool.md): changes are described in the profile too.

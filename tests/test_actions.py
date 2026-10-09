@@ -2,6 +2,7 @@
 that makes the change. The policy itself is tested with OPA: opa test policies/ -v"""
 
 import importlib.util
+import json
 import shutil
 import sqlite3
 from datetime import datetime
@@ -20,7 +21,7 @@ _spec = importlib.util.spec_from_file_location("build_db", DATA / "build_db.py")
 build_db = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(build_db)
 
-server = pytest.importorskip("mcp_servers.appointments.server")
+server = pytest.importorskip("mcp_servers.changes.server")
 records = pytest.importorskip("mcp_servers.records.server")
 
 P = load_profile("clinic-assistant")
@@ -238,44 +239,62 @@ def first_appointment(db):
     return sqlite3.connect(db).execute("SELECT id, starts_at FROM appointments ORDER BY id").fetchone()
 
 
+def reschedule(db, aid, start, approval):
+    """What the executor sends: the approved field values and the approval ID, nothing else."""
+    return server.apply(db, ACTION, {"appointment_id": aid, "new_start": start}, approval)
+
+
 def test_reschedule_changes_the_appointment(db):
     aid, before = first_appointment(db)
-    r = server.reschedule(db, aid, "2026-11-13T10:00", "ap-1")
-    assert r == {"status": "done", "appointment_id": aid, "before": before, "after": "2026-11-13T10:00"}
+    r = reschedule(db, aid, "2026-11-13T10:00", "ap-1")
+    assert r["status"] == "done" and r["record_id"] == aid
+    assert r["before"] == {"starts_at": before} and r["after"] == {"starts_at": "2026-11-13T10:00"}
+    assert r["summary"] == f"{aid} moved from {before.replace('T', ' at ')} to 2026-11-13 at 10:00"
     assert first_appointment(db)[1] == "2026-11-13T10:00"
 
 
 def test_the_same_approval_changes_nothing_twice(db):
     aid, _ = first_appointment(db)
-    server.reschedule(db, aid, "2026-11-13T10:00", "ap-1")
-    again = server.reschedule(db, aid, "2026-11-20T11:00", "ap-1")
-    assert again["status"] == "already_done"
+    reschedule(db, aid, "2026-11-13T10:00", "ap-1")
+    again = reschedule(db, aid, "2026-11-20T11:00", "ap-1")
+    assert again["status"] == "already_done" and again["after"] == {"starts_at": "2026-11-13T10:00"}
     assert first_appointment(db)[1] == "2026-11-13T10:00"
 
 
 def test_every_change_is_logged_with_its_approval(db):
     aid, before = first_appointment(db)
-    server.reschedule(db, aid, "2026-11-13T10:00", "ap-1")
-    row = sqlite3.connect(db).execute("SELECT approval_id, target, before, after FROM action_log").fetchone()
-    assert row == ("ap-1", aid, before, "2026-11-13T10:00")
+    reschedule(db, aid, "2026-11-13 10:00", "ap-1")
+    row = sqlite3.connect(db).execute("SELECT approval_id, action, target, before, after FROM action_log").fetchone()
+    assert row[:3] == ("ap-1", "reschedule_appointment", aid)
+    assert json.loads(row[3]) == {"starts_at": before} and json.loads(row[4]) == {"starts_at": "2026-11-13T10:00"}
 
 
 @pytest.mark.parametrize("aid, start, approval, reason", [
     ("apt-9999", "2026-11-13T10:00", "ap-1", "not found"),
+    ("med-0001", "2026-11-13T10:00", "ap-1", "does not look right"),
     (None, "Friday", "ap-1", "not a date and time"),
     (None, "2026-11-13T10:00", "", "no approval ID"),
 ])
 def test_bad_changes_are_refused(db, aid, start, approval, reason):
     aid = aid or first_appointment(db)[0]
-    r = server.reschedule(db, aid, start, approval)
+    r = reschedule(db, aid, start, approval)
     assert r["status"] == "failed" and reason in r["reason"]
+
+
+def test_only_a_scheduled_appointment_is_moved(db):
+    aid, before = first_appointment(db)
+    with sqlite3.connect(db) as conn:
+        conn.execute("UPDATE appointments SET status = 'cancelled' WHERE id = ?", (aid,))
+    r = reschedule(db, aid, "2026-11-13T10:00", "ap-1")
+    assert r["status"] == "failed" and "status is cancelled, not scheduled" in r["reason"]
+    assert first_appointment(db)[1] == before
 
 
 def test_records_show_the_new_time(db):
     aid, _ = first_appointment(db)
     pid = sqlite3.connect(db).execute("SELECT patient_id FROM appointments WHERE id = ?", (aid,)).fetchone()[0]
     name = sqlite3.connect(db).execute("SELECT name FROM patients WHERE id = ?", (pid,)).fetchone()[0]
-    server.reschedule(db, aid, "2026-11-13T10:00", "ap-1")
+    reschedule(db, aid, "2026-11-13T10:00", "ap-1")
     found = records.search(db, f"When is {name}'s appointment?", ["patient_details", "appointments"],
                            P.records_map)["results"]
     assert any(r["id"] == aid and "2026-11-13 at 10:00" in r["text"] for r in found)

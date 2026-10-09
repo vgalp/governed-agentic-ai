@@ -5,6 +5,11 @@
 #   4. a person with an approver role approves or rejects it, never the person who asked;
 #   5. only then does the executor agent make the change through the gateway.
 # Every step is audited (audit.approvals) and shown in the decision trace.
+#
+# change: says exactly what the change server (mcp_servers/changes) writes once a person
+# approved. No SQL and no code: a record type from records.yaml, the field holding its
+# cited ID, the columns written, and what the record must still look like. The executor
+# only sends the approved field values and the approval ID.
 
 reschedule_appointment:
   title: Reschedule an appointment
@@ -28,3 +33,9 @@ reschedule_appointment:
     weekdays: [0, 1, 2, 3, 4]            # Monday to Friday
     start_hour: 8
     end_hour: 17
+  change:
+    record: appointments                 # record type in records.yaml (table, ID column, prefix)
+    id_field: appointment_id             # the field holding the cited ID of the row to change
+    set_from: {starts_at: new_start}     # column <- approved field value
+    only_if: {status: scheduled}         # a cancelled or completed appointment is not moved
+  done_text: "{id} moved from {before_starts_at|datetime} to {after_starts_at|datetime}"

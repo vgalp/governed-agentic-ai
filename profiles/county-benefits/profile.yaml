@@ -51,6 +51,7 @@ tools: tools.yaml                          # each tool: server, kind, data label
 records_db: data/county.db                 # built locally from data/seed.sql: see data/README.md
 records_map: records.yaml                  # how the database becomes records (no SQL)
 roles: roles.yaml                          # who may see which case data
+actions: actions.yaml                      # changes a person must approve (release a held payment)
 cite_sources: true
 source_id_pattern: '\b(mc-\d{3}|apl-\d{4}|case-\d{4}|doc-\d{4}|inc-\d{4}|pay-\d{4})\b'
 
@@ -75,6 +76,8 @@ knowledge_base: data/knowledge_base.json
 agents:
   planner:
     tools: [search_knowledge, search_records]
+  executor:                                # makes approved changes; never sees a question
+    tools: [release_payment]
 
 # Shown as example buttons on the chat page.
 examples:
@@ -84,3 +87,4 @@ examples:
   - How long does a SNAP application usually take?
   - Is Tom Brandt eligible for emergency assistance?
   - Is Lena Kovacs lying about her income?
+  - Release Lena Kovacs's held emergency assistance payment

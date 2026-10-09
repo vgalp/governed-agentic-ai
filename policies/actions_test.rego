@@ -48,13 +48,13 @@ test_unknown_action_is_denied if {
 test_weekend_is_denied if {
 	facts := {"new_start": {"weekday": 5, "hour": 10, "minute": 0, "in_past": false}}
 	d := actions.decision with input as ask("nurse", facts) with data.profiles as clinic
-	d.reasons == ["the new time is on a day the clinic is closed"]
+	d.reasons == ["the proposed time is on a day that is not allowed"]
 }
 
 test_after_hours_is_denied if {
 	facts := {"new_start": {"weekday": 2, "hour": 17, "minute": 30, "in_past": false}}
 	d := actions.decision with input as ask("nurse", facts) with data.profiles as clinic
-	d.reasons == ["the new time is outside opening hours"]
+	d.reasons == ["the proposed time is outside the allowed hours"]
 }
 
 test_past_time_is_denied if {

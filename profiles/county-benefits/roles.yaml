@@ -23,7 +23,7 @@ roles:
     data_classes: [contact, case_status, documents, income, payments]
   supervisor:
     title: Supervisor
-    tools: [search_knowledge, search_records]
+    tools: [search_knowledge, search_records, release_payment]   # may approve releases
     data_classes: [contact, case_status, documents, income, payments]
     responses:
       eligibility_decision: >-

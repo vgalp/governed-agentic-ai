@@ -30,7 +30,7 @@ search_records:
   role_filtered: true
 
 reschedule_appointment:
-  description: Moves an appointment, after a person approves (actions.yaml)
-  server: http://127.0.0.1:8102/mcp
+  description: Moves an appointment, after a person approves (actions.yaml, change:)
+  server: http://127.0.0.1:8102/mcp         # the generic change server (mcp_servers/changes)
   kind: change
   data_label: patient_record

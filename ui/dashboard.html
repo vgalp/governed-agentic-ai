@@ -472,7 +472,7 @@ async function loadApprovals() {
         c.append(act);
       } else {
         const by = a.decided_role ? `${a.status === "expired" ? "" : "Decided by " + (roleTitles[a.decided_role] || a.decided_role)}` : "";
-        const res = a.result && a.result.after ? ` · ${a.result.appointment_id} now ${a.result.after.replace("T", " ")}` : "";
+        const res = a.result && a.result.summary ? ` · ${a.result.summary}` : "";
         const why = a.reasons && a.reasons.length ? ` · ${a.reasons.join("; ")}` : "";
         c.append(el("div", "who", `${by}${res}${why}`));
       }

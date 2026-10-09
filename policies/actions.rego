@@ -21,20 +21,21 @@ deny_reasons contains sprintf("role %s may not request this change", [input.role
 }
 
 # A datetime field limited to certain days and hours (e.g. clinic opening hours).
+# The reasons are worded for any profile: nothing here is specific to a clinic.
 # Only checked once the proposal has facts; the first check is about the role only.
 time_facts := input.facts[a.allowed_times.field]
 
-deny_reasons contains "the new time is in the past" if time_facts.in_past == true
+deny_reasons contains "the proposed time is in the past" if time_facts.in_past == true
 
-deny_reasons contains "the new time is on a day the clinic is closed" if {
+deny_reasons contains "the proposed time is on a day that is not allowed" if {
 	not time_facts.weekday in a.allowed_times.weekdays
 }
 
-deny_reasons contains "the new time is outside opening hours" if {
+deny_reasons contains "the proposed time is outside the allowed hours" if {
 	time_facts.hour < a.allowed_times.start_hour
 }
 
-deny_reasons contains "the new time is outside opening hours" if {
+deny_reasons contains "the proposed time is outside the allowed hours" if {
 	time_facts.hour >= a.allowed_times.end_hour
 }
 

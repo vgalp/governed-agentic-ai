@@ -19,6 +19,8 @@ from pathlib import Path
 
 import yaml
 
+from profiles.changes import Change
+from profiles.changes import parse as parse_change
 from profiles.records_map import MappingError, RecordsMap
 from profiles.records_map import parse as parse_records_map
 
@@ -104,6 +106,7 @@ class Action:
     approve_roles: tuple[str, ...]   # who may approve it (never the person who asked)
     expires_minutes: int             # unapproved after this: expired, nothing is changed
     allowed_times: dict | None       # optional: weekdays and hours a datetime field must fall in
+    change: Change | None = None     # what the change server writes (None: a tool written in code)
 
 
 @dataclass(frozen=True)
@@ -466,7 +469,8 @@ def _roles(raw: dict, granted: set[str], where: str, response_keys: set[str]):
 
 
 def _actions(raw: dict, where: str, patterns: dict[str, re.Pattern], agents: dict[str, tuple[str, ...]],
-             roles: dict[str, Role], tools: dict[str, Tool]) -> dict[str, Action]:
+             roles: dict[str, Role], tools: dict[str, Tool],
+             records_map: RecordsMap | None = None) -> dict[str, Action]:
     """actions.yaml: changes the assistant may propose. Every action needs a person's
     approval; the tool that makes the change belongs to one agent only, which runs it
     after approval, so the agent that talks to the model can never make a change itself."""
@@ -522,8 +526,18 @@ def _actions(raw: dict, where: str, patterns: dict[str, re.Pattern], agents: dic
                 raise ProfileError(f"{w}: allowed_times.field '{f}' must be a datetime field")
             times = {"field": f, "weekdays": list(times.get("weekdays", range(7))),
                      "start_hour": int(times.get("start_hour", 0)), "end_hour": int(times.get("end_hour", 24))}
+        change = None
+        if a.get("change") is not None:
+            try:
+                change = parse_change(a["change"], a.get("done_text"), f"{w}: change", checked, records_map)
+            except MappingError as e:
+                raise ProfileError(str(e)) from e
+        elif a.get("done_text"):
+            raise ProfileError(f"{w}: done_text needs a change block")
+        if any(x.tool == tool for x in actions.values()):
+            raise ProfileError(f"{w}: tool '{tool}' is already used by another action; one tool per action")
         actions[name] = Action(name, a.get("title", name), a.get("description", ""), patterns[intent],
-                               tool, agent, checked, propose, approve, expires, times)
+                               tool, agent, checked, propose, approve, expires, times, change)
     return actions
 
 
@@ -624,17 +638,6 @@ def load_profile_from(path: Path) -> Profile:
             raise ProfileError(f"{path.name}/responses.yaml: no response for role_required "
                                "(needed because the profile has roles)")
 
-    actions = {}
-    if p.get("actions"):
-        actions = _actions(_yaml(_file(path, p["actions"], where)), f"{path.name}/{p['actions']}",
-                           patterns, agents, roles, tools)
-        missing = [r for r in ACTION_RESPONSES if r not in responses]
-        if missing:
-            raise ProfileError(f"{path.name}/responses.yaml: no response for {', '.join(missing)} "
-                               "(needed because the profile has actions)")
-
-    _check_tools(tools, agents, routing, roles, actions, f"{path.name}/{tools_file}")
-
     # records.yaml: how the records database becomes records. Its data classes must be
     # the ones roles.yaml knows, so role filtering covers every record.
     records_map = None
@@ -650,6 +653,17 @@ def load_profile_from(path: Path) -> Profile:
                                             set(data_classes))
         except MappingError as e:
             raise ProfileError(str(e)) from e
+
+    actions = {}
+    if p.get("actions"):
+        actions = _actions(_yaml(_file(path, p["actions"], where)), f"{path.name}/{p['actions']}",
+                           patterns, agents, roles, tools, records_map)
+        missing = [r for r in ACTION_RESPONSES if r not in responses]
+        if missing:
+            raise ProfileError(f"{path.name}/responses.yaml: no response for {', '.join(missing)} "
+                               "(needed because the profile has actions)")
+
+    _check_tools(tools, agents, routing, roles, actions, f"{path.name}/{tools_file}")
 
     privacy = p.get("privacy") or {}
     return Profile(

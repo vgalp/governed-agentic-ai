@@ -83,7 +83,7 @@ Details: [`eval/results/redteam_v1_notes.md`](eval/results/redteam_v1_notes.md),
 
 - **Healthcare:** an assistant that helps adults with ADHD plan their day, build routines and get tasks done, and sends medication, diagnosis and crisis topics to fixed, reviewable responses. Knowledge base entries are samples pending clinician review.
 - **Healthcare, with records:** a staff assistant for a primary-care clinic (`clinic-assistant`): role-based access to synthetic patient records, cited answers, and appointment changes that a person must approve.
-- **Government:** a caseworker assistant for a fictional county benefits office (`county-benefits`): case status, missing documents, reported income and payments by role, and fixed replies instead of eligibility decisions or judgments of honesty. It was built from configuration files only, with no code ([write-up](docs/progress/2026-10-08-second-profile.md)).
+- **Government:** a caseworker assistant for a fictional county benefits office (`county-benefits`): case status, missing documents, reported income and payments by role, and fixed replies instead of eligibility decisions or judgments of honesty, and held payments released only after a supervisor approves. It was built from configuration files only, with no code ([write-up](docs/progress/2026-10-08-second-profile.md)).
 
 ## Quick start
 
@@ -188,18 +188,20 @@ Adding a tool is a profile change, not a code change: an entry in `tools.yaml` a
 
 Connecting an organization's records is also a profile change. `records.yaml` names the tables and columns, which data class each record belongs to, and how it reads; the records server builds every query itself, so the file holds no SQL. A role's query reads only the columns it may see, and every name is checked against the database at startup. See [ADR 011](docs/decisions/011-records-mapping.md).
 
+Approved changes are configuration as well. An action in `actions.yaml` names the record type, the columns it writes and what the record must still look like (a payment must still be held); one change server makes every profile's changes from that, with no SQL in the file. The executor only sends the approved values and the approval ID, and each change is made once, logged with its approval in the same transaction. See [ADR 012](docs/decisions/012-generic-change-tool.md).
+
 ## Project structure
 
 ```
 api/             Chat API, live event stream, audit check (FastAPI)
-agents/          Planner agent
+agents/          Planner and executor agents
 profiles/        Deployment profiles and their loader
 router/          Model routing (OPA decision, code-side rules, audit)
 llm/             Model providers (Ollama, OpenAI, Gemini, Claude, OpenAI-compatible, mock)
 privacy/         Personal-information masking (Presidio)
 gateway/         MCP gateway: policy check, tool call, audit
 policies/        OPA policies: tool permissions, model routing, and their tests
-mcp_servers/     MCP servers: knowledge base, records (follows records.yaml), appointments
+mcp_servers/     MCP servers: knowledge base, records (follows records.yaml), changes (follows actions.yaml)
 guardrails/      Layer 1 rules and layer 2 safety classifier
 audit/           Hash-chained, signed audit events and the verifier
 ui/              Chat page and live dashboard
@@ -224,11 +226,11 @@ docs/            Architecture notes and decision records
 - [x] Policy-based model routing (local vs external model, decided by OPA and audited)
 - [x] Human approval before changes (propose, policy, approve, execute once; all audited)
 - [x] Tool registry and records mapping in the profile; a second use case (county benefits) from configuration only
+- [x] Changes from configuration (generic change tool): the county profile releases held payments with no code
 - [ ] Signed audit checkpoints (truncation detection)
 - [ ] Fine-tuned safety classifier and grounding check (layer 3)
 - [ ] Clinician-reviewed knowledge base and fixed responses
 - [ ] Tracing, failure recovery (Saga pattern) and chaos tests
-- [ ] Changes from configuration (generic change tool), so profiles such as county benefits can propose approved changes
 - [ ] Redesigned chat page and dashboard, and a basic login so the role comes from sign-in (demo accounts only)
 - [ ] Technical report
 

@@ -1,42 +1,51 @@
-# 008: Choosing the hosted model provider: OpenAI, Gemini or Claude
+# 011: Records mapping instead of records code
 
-Status: Accepted · Date: 2026-10-07
+Status: Accepted · Date: 2026-10-08
 
 ## Context
-Organizations want to use capable hosted models for general questions while keeping
-private data on their own systems, and many already have an agreement with one provider.
-Routing (ADR 004) already decides whether a request may leave at all; until now a profile
-could name only one external model, through a generic OpenAI-compatible setting.
+The records server was written for one clinic. Its code named the `patients` table, held
+five hand-written queries (appointments, medications, visits, claims, patient details), the
+sentence for each record, and which data class each record belonged to. Another organization,
+or the same clinic with different table names, would have needed a programmer to rewrite it.
+That contradicts the goal of a reference architecture other organizations can adopt.
 
 ## Decision
-- Three hosted providers are supported: `openai`, `gemini` (through Google's
-  OpenAI-compatible API) and `anthropic` (Claude, through the Messages API). Each needs
-  only an address (with a default), a model name and the name of the environment variable
-  that holds its API key. No provider libraries are added.
-- A profile lists the models it may use. `routing.external_model` picks the one in front;
-  `routing.fallback` lists others to try, in order. The local model is always the last
-  resort and is never listed.
-- The first model in that order whose key is set is used. If a call fails (no connection,
-  an HTTP error, no answer text), the next is tried, still with masked text: the policy
-  already allowed this data out. Each switch is audited (`audit.routing`, `fallback: true`)
-  and shown in the decision trace.
-- `EXTERNAL_MODEL=<key>` at startup puts another of the profile's listed models in front,
-  for demos and comparisons. It cannot add a model the profile does not list.
-- The provider makes no difference to what may leave: the routing policy and the checks in
-  code are unchanged. Patient records and personal information stay local whichever
-  provider is configured (tested for all three).
-- A hosted provider can never be marked `location: local`, since local models may see
-  unmasked text; the loader refuses it. Hosted providers must name an API key variable.
-- Provider errors report the HTTP status only, never the response body, which may echo
-  the request.
-- Users never choose the model. The organization's profile does.
+A profile describes its records database in `records.yaml`, and the records server follows it:
+
+- **subject**: the table of people a question can be about (patients, applicants, members),
+  its ID and name columns, and the "about this person" record.
+- **records**: each record type's table, the column linking it to the subject, its data class,
+  how its citable source ID is formed, an optional fixed filter (`only_where`), order, limit,
+  title and text.
+- **more_detail**: extra columns shown only to roles that may also see another data class
+  (for the clinic: what a visit was for, `visit_clinical`, on top of `visit_dates`).
+
+Rules:
+
+- **No SQL in the mapping.** It names tables and columns only (letters, digits and `_`). The
+  server builds every query itself, quotes every name and passes values as parameters. A
+  profile file cannot run arbitrary SQL, change data or read a table it does not name.
+- **Read only what the role may see.** A query selects only the columns the role's records
+  use. A front-desk lookup reads a visit's date and type, never what it was for. The old code
+  read those columns and left them out of the text; now they are never read.
+- **Checked twice.** At load time: names, filters, limits, and that every data class is in
+  `roles.yaml`. At server start: every table and column against the real database. A mismatch
+  stops the server with the list of problems, never halfway through a request.
+- `records_db` and `records_map` go together, and a mapping needs roles.
+
+## Proof
+Before changing the server, its output was recorded for every sample patient, every role,
+every data class on its own, last-name lookups, an ambiguous name, a question with no name and
+a role with no access: 70 cases, 107 records (`tests/data/records_golden.json`). The mapping-
+driven server returns exactly the same output for all 70. A second test maps an unrelated
+database (library members and loans) with no code change.
 
 ## Consequences
-- Switching provider is one line in the profile, or one setting at startup.
-- The same guardrail evaluation can be run through each provider and the local model,
-  to show that the controls behave the same whichever model answers.
-- Not yet: different data permissions per provider (for example, allowing internal data
-  to go only to a provider the organization has a business associate agreement with).
-  Added when a pilot needs it.
-- Model names change over time; they are configuration, checked against each provider's
-  current list.
+- Connecting another organization's data is a profile change: `records.yaml` plus its roles.
+- SQLite only. The mapping format does not depend on SQLite, so PostgreSQL can be added
+  without changing it.
+- One kind of subject per profile, with records linked directly to it. Multi-step joins,
+  free-text search across records, and matching on anything but a name are not supported yet.
+- The tool that makes changes (rescheduling) is still written for the clinic; change tools
+  stay code, reviewed one by one, behind human approval (ADR 009).
+  Superseded by [ADR 012](012-generic-change-tool.md): changes are described in the profile too.

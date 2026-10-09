@@ -1,0 +1,30 @@
+# Changes the assistant may PROPOSE at the (fictional) county benefits office. Same
+# steps as the clinic (profiles/clinic-assistant/actions.yaml): the local model turns
+# the request into a proposal, the code checks it, OPA decides who may ask and who
+# must approve, a supervisor approves it, and only then does the executor agent make
+# the change. The assistant never decides whether a payment should be released:
+# a supervisor does, by approving or rejecting the proposal.
+#
+# Built from configuration only: the change server (mcp_servers/changes) is the same
+# one the clinic uses; what it writes comes from the change: block below.
+
+release_payment:
+  title: Release a held payment
+  description: Release one of the applicant's held benefit payments, after supervisor review.
+  intent: release_request                # pattern in rules.yaml that starts a proposal
+  tool: release_payment                  # makes the change; granted to the executor agent only
+  agent: executor
+  fields:
+    payment_id:
+      type: source                       # must be a source ID the model was given
+      pattern: '^pay-\d{4}$'
+      description: ID of the held payment to release, exactly as written in the records (pay-...)
+  propose_roles: [eligibility_worker, supervisor]
+  approve_roles: [supervisor]            # never the person who asked (policies/actions.rego)
+  expires_minutes: 60
+  change:
+    record: payments                     # record type in records.yaml (table payments, cited pay-)
+    id_field: payment_id
+    set: {status: issued}                # the only column written
+    only_if: {status: held}              # an issued or scheduled payment is never touched
+  done_text: "{id} released: status {before_status} -> {after_status}"

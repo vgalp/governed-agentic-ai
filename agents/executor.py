@@ -109,7 +109,9 @@ def on_decision(approval: dict, decision: dict) -> None:
     act = PROFILE.actions[approval["action"]]
     trace.start("action", "execute", f"{act.tool} through the gateway")
     try:
-        result = call_tool(AGENT_NAME, act.tool, {**approval["args"], "approval_id": approval["approval_id"]},
+        # Only the approved values and the approval ID: what they change is set by the
+        # profile, on the change server (actions.yaml, change:).
+        result = call_tool(AGENT_NAME, act.tool, {"fields": approval["args"], "approval_id": approval["approval_id"]},
                            approval["request_id"], PROFILE, role=role)
     except ToolCallDenied as e:
         trace.step("action", "execute", "block", "Denied by the gateway policy")
@@ -122,10 +124,9 @@ def on_decision(approval: dict, decision: dict) -> None:
         publish_result(approval, "failed", decision, reasons=[type(e).__name__])
         return
     status = "done" if result.get("status") in {"done", "already_done"} else "failed"
-    detail = (f"{result.get('appointment_id', '')} moved from {result.get('before', '?')} to {result.get('after', '?')}"
-              if status == "done" else result.get("reason", "failed"))
+    detail = result.get("summary", "") if status == "done" else result.get("reason", "failed")
     trace.step("action", "execute", "pass" if status == "done" else "error",
-               ("Done: " if status == "done" else "Failed: ") + detail.replace("T", " "))
+               ("Done: " if status == "done" else "Failed: ") + detail)
     audit_approval(approval, status, result=result)
     publish_result(approval, status, decision, result=result,
                    reasons=None if status == "done" else [result.get("reason", "failed")])

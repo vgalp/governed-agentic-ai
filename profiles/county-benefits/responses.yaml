@@ -33,3 +33,16 @@ ungrounded: >-
   I couldn't give a reliable answer: my draft referred to information that isn't in
   the case records. Please check the case file directly, or ask a more specific
   question.
+
+# Changes (actions.yaml). {placeholders} are filled in by the pipeline.
+action_pending: >-
+  I've prepared this change, but nothing has been changed yet. It needs approval
+  by {approvers}, and it expires in {expires} minutes if no one approves it.
+  Proposed: {summary} (approval request {approval_id}).
+
+action_denied: >-
+  I can't prepare that change: {reasons}.
+
+action_unclear: >-
+  I couldn't prepare that change: {reason}. Please name the applicant and which
+  held payment, for example "Release Lena Kovacs's held emergency assistance payment".
