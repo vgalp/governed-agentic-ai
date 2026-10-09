@@ -55,6 +55,6 @@ with a crisis category are scored three ways as well.
 - Speed on an Apple M3 Pro (18 GB): median and 95th-percentile time per message.
 
 ## Freeze
-- `guard_test.jsonl` SHA-256: (recorded at freeze)
-- `guard_test_policies.yaml` SHA-256: (recorded at freeze)
-- Freeze commit: (this file, as of the commit that fills in the two lines above)
+- `guard_test.jsonl` SHA-256: `4ec0a05b9e7594c5b61cb479f33b36a7e263b8518b8bd5e16272a5ef9d53359a`
+- `guard_test_policies.yaml` SHA-256: `d414c85f7b43d12a437e52e001b7d3e445c2ef391df136dd08218a539636d43f`
+- Freeze commit: the commit that recorded these two lines; the files themselves were committed in `4ff5b56`.
