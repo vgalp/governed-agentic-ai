@@ -1,0 +1,1787 @@
+[
+ {
+  "query": "Tell me about Chester Aufderhar",
+  "view": "role:clinician",
+  "classes": [
+   "patient_details",
+   "appointments",
+   "visit_dates",
+   "visit_clinical",
+   "medications",
+   "claims"
+  ],
+  "result": {
+   "results": [
+    {
+     "id": "pt-d3b9ef3f",
+     "title": "Patient: Chester Aufderhar",
+     "text": "Chester Aufderhar, born 1966-11-27, sex M, lives in Wareham.",
+     "data_classes": [
+      "patient_details"
+     ],
+     "status": "synthetic record"
+    },
+    {
+     "id": "apt-0001",
+     "title": "Upcoming appointment",
+     "text": "Chester Aufderhar: Follow-up visit on 2026-11-09 at 09:30 (scheduled).",
+     "data_classes": [
+      "appointments"
+     ],
+     "status": "synthetic record"
+    },
+    {
+     "id": "apt-0003",
+     "title": "Upcoming appointment",
+     "text": "Chester Aufderhar: Annual physical on 2026-11-09 at 15:00 (scheduled).",
+     "data_classes": [
+      "appointments"
+     ],
+     "status": "synthetic record"
+    },
+    {
+     "id": "apt-0002",
+     "title": "Upcoming appointment",
+     "text": "Chester Aufderhar: Consultation on 2026-11-16 at 11:00 (scheduled).",
+     "data_classes": [
+      "appointments"
+     ],
+     "status": "synthetic record"
+    },
+    {
+     "id": "med-8",
+     "title": "Current medication",
+     "text": "Chester Aufderhar: Hydrochlorothiazide 25 MG Oral Tablet, on the list since 2026-03-08. Reason recorded: Essential hypertension (disorder).",
+     "data_classes": [
+      "medications"
+     ],
+     "status": "synthetic record"
+    },
+    {
+     "id": "med-9",
+     "title": "Current medication",
+     "text": "Chester Aufderhar: lisinopril 10 MG Oral Tablet, on the list since 2026-03-08. Reason recorded: Essential hypertension (disorder).",
+     "data_classes": [
+      "medications"
+     ],
+     "status": "synthetic record"
+    },
+    {
+     "id": "med-10",
+     "title": "Current medication",
+     "text": "Chester Aufderhar: amLODIPine 2.5 MG Oral Tablet, on the list since 2026-03-08. Reason recorded: Essential hypertension (disorder).",
+     "data_classes": [
+      "medications"
+     ],
+     "status": "synthetic record"
+    },
+    {
+     "id": "enc-ec1074ef",
+     "title": "Past visit",
+     "text": "Chester Aufderhar: wellness visit on 2026-03-08, General examination of patient (procedure).",
+     "data_classes": [
+      "visit_dates",
+      "visit_clinical"
+     ],
+     "status": "synthetic record"
+    },
+    {
+     "id": "enc-82c94a73",
+     "title": "Past visit",
+     "text": "Chester Aufderhar: ambulatory visit on 2025-03-16, Encounter for check up (procedure). Reason recorded: Patient referral for dental care (procedure).",
+     "data_classes": [
+      "visit_dates",
+      "visit_clinical"
+     ],
+     "status": "synthetic record"
+    },
+    {
+     "id": "enc-96bc2b28",
+     "title": "Past visit",
+     "text": "Chester Aufderhar: wellness visit on 2025-03-02, General examination of patient (procedure).",
+     "data_classes": [
+      "visit_dates",
+      "visit_clinical"
+     ],
+     "status": "synthetic record"
+    },
+    {
+     "id": "clm-df2a0cf3",
+     "title": "Claim",
+     "text": "Chester Aufderhar: visit on 2026-03-08, amount 778.78, insurance paid 678.78, patient status CLOSED, patient still owes 0.00.",
+     "data_classes": [
+      "claims"
+     ],
+     "status": "synthetic record"
+    },
+    {
+     "id": "clm-b2217fb7",
+     "title": "Claim",
+     "text": "Chester Aufderhar: visit on 2026-03-08, amount 778.78, insurance paid 678.78, patient status CLOSED, patient still owes 0.00.",
+     "data_classes": [
+      "claims"
+     ],
+     "status": "synthetic record"
+    },
+    {
+     "id": "clm-67804311",
+     "title": "Claim",
+     "text": "Chester Aufderhar: visit on 2026-03-08, amount 778.78, insurance paid 678.78, patient status CLOSED, patient still owes 0.00.",
+     "data_classes": [
+      "claims"
+     ],
+     "status": "synthetic record"
+    }
+   ]
+  }
+ },
+ {
+  "query": "Tell me about Chester Aufderhar",
+  "view": "role:nurse",
+  "classes": [
+   "patient_details",
+   "appointments",
+   "visit_dates",
+   "visit_clinical",
+   "medications"
+  ],
+  "result": {
+   "results": [
+    {
+     "id": "pt-d3b9ef3f",
+     "title": "Patient: Chester Aufderhar",
+     "text": "Chester Aufderhar, born 1966-11-27, sex M, lives in Wareham.",
+     "data_classes": [
+      "patient_details"
+     ],
+     "status": "synthetic record"
+    },
+    {
+     "id": "apt-0001",
+     "title": "Upcoming appointment",
+     "text": "Chester Aufderhar: Follow-up visit on 2026-11-09 at 09:30 (scheduled).",
+     "data_classes": [
+      "appointments"
+     ],
+     "status": "synthetic record"
+    },
+    {
+     "id": "apt-0003",
+     "title": "Upcoming appointment",
+     "text": "Chester Aufderhar: Annual physical on 2026-11-09 at 15:00 (scheduled).",
+     "data_classes": [
+      "appointments"
+     ],
+     "status": "synthetic record"
+    },
+    {
+     "id": "apt-0002",
+     "title": "Upcoming appointment",
+     "text": "Chester Aufderhar: Consultation on 2026-11-16 at 11:00 (scheduled).",
+     "data_classes": [
+      "appointments"
+     ],
+     "status": "synthetic record"
+    },
+    {
+     "id": "med-8",
+     "title": "Current medication",
+     "text": "Chester Aufderhar: Hydrochlorothiazide 25 MG Oral Tablet, on the list since 2026-03-08. Reason recorded: Essential hypertension (disorder).",
+     "data_classes": [
+      "medications"
+     ],
+     "status": "synthetic record"
+    },
+    {
+     "id": "med-9",
+     "title": "Current medication",
+     "text": "Chester Aufderhar: lisinopril 10 MG Oral Tablet, on the list since 2026-03-08. Reason recorded: Essential hypertension (disorder).",
+     "data_classes": [
+      "medications"
+     ],
+     "status": "synthetic record"
+    },
+    {
+     "id": "med-10",
+     "title": "Current medication",
+     "text": "Chester Aufderhar: amLODIPine 2.5 MG Oral Tablet, on the list since 2026-03-08. Reason recorded: Essential hypertension (disorder).",
+     "data_classes": [
+      "medications"
+     ],
+     "status": "synthetic record"
+    },
+    {
+     "id": "enc-ec1074ef",
+     "title": "Past visit",
+     "text": "Chester Aufderhar: wellness visit on 2026-03-08, General examination of patient (procedure).",
+     "data_classes": [
+      "visit_dates",
+      "visit_clinical"
+     ],
+     "status": "synthetic record"
+    },
+    {
+     "id": "enc-82c94a73",
+     "title": "Past visit",
+     "text": "Chester Aufderhar: ambulatory visit on 2025-03-16, Encounter for check up (procedure). Reason recorded: Patient referral for dental care (procedure).",
+     "data_classes": [
+      "visit_dates",
+      "visit_clinical"
+     ],
+     "status": "synthetic record"
+    },
+    {
+     "id": "enc-96bc2b28",
+     "title": "Past visit",
+     "text": "Chester Aufderhar: wellness visit on 2025-03-02, General examination of patient (procedure).",
+     "data_classes": [
+      "visit_dates",
+      "visit_clinical"
+     ],
+     "status": "synthetic record"
+    }
+   ]
+  }
+ },
+ {
+  "query": "Tell me about Chester Aufderhar",
+  "view": "role:front_desk",
+  "classes": [
+   "patient_details",
+   "appointments",
+   "visit_dates",
+   "claims"
+  ],
+  "result": {
+   "results": [
+    {
+     "id": "pt-d3b9ef3f",
+     "title": "Patient: Chester Aufderhar",
+     "text": "Chester Aufderhar, born 1966-11-27, sex M, lives in Wareham.",
+     "data_classes": [
+      "patient_details"
+     ],
+     "status": "synthetic record"
+    },
+    {
+     "id": "apt-0001",
+     "title": "Upcoming appointment",
+     "text": "Chester Aufderhar: Follow-up visit on 2026-11-09 at 09:30 (scheduled).",
+     "data_classes": [
+      "appointments"
+     ],
+     "status": "synthetic record"
+    },
+    {
+     "id": "apt-0003",
+     "title": "Upcoming appointment",
+     "text": "Chester Aufderhar: Annual physical on 2026-11-09 at 15:00 (scheduled).",
+     "data_classes": [
+      "appointments"
+     ],
+     "status": "synthetic record"
+    },
+    {
+     "id": "apt-0002",
+     "title": "Upcoming appointment",
+     "text": "Chester Aufderhar: Consultation on 2026-11-16 at 11:00 (scheduled).",
+     "data_classes": [
+      "appointments"
+     ],
+     "status": "synthetic record"
+    },
+    {
+     "id": "enc-ec1074ef",
+     "title": "Past visit",
+     "text": "Chester Aufderhar: wellness visit on 2026-03-08.",
+     "data_classes": [
+      "visit_dates"
+     ],
+     "status": "synthetic record"
+    },
+    {
+     "id": "enc-82c94a73",
+     "title": "Past visit",
+     "text": "Chester Aufderhar: ambulatory visit on 2025-03-16.",
+     "data_classes": [
+      "visit_dates"
+     ],
+     "status": "synthetic record"
+    },
+    {
+     "id": "enc-96bc2b28",
+     "title": "Past visit",
+     "text": "Chester Aufderhar: wellness visit on 2025-03-02.",
+     "data_classes": [
+      "visit_dates"
+     ],
+     "status": "synthetic record"
+    },
+    {
+     "id": "clm-df2a0cf3",
+     "title": "Claim",
+     "text": "Chester Aufderhar: visit on 2026-03-08, amount 778.78, insurance paid 678.78, patient status CLOSED, patient still owes 0.00.",
+     "data_classes": [
+      "claims"
+     ],
+     "status": "synthetic record"
+    },
+    {
+     "id": "clm-b2217fb7",
+     "title": "Claim",
+     "text": "Chester Aufderhar: visit on 2026-03-08, amount 778.78, insurance paid 678.78, patient status CLOSED, patient still owes 0.00.",
+     "data_classes": [
+      "claims"
+     ],
+     "status": "synthetic record"
+    },
+    {
+     "id": "clm-67804311",
+     "title": "Claim",
+     "text": "Chester Aufderhar: visit on 2026-03-08, amount 778.78, insurance paid 678.78, patient status CLOSED, patient still owes 0.00.",
+     "data_classes": [
+      "claims"
+     ],
+     "status": "synthetic record"
+    }
+   ]
+  }
+ },
+ {
+  "query": "Tell me about Chester Aufderhar",
+  "view": "role:compliance",
+  "classes": [],
+  "result": {
+   "results": [],
+   "note": "this role may not see patient records"
+  }
+ },
+ {
+  "query": "Tell me about Chester Aufderhar",
+  "view": "class:patient_details",
+  "classes": [
+   "patient_details"
+  ],
+  "result": {
+   "results": [
+    {
+     "id": "pt-d3b9ef3f",
+     "title": "Patient: Chester Aufderhar",
+     "text": "Chester Aufderhar, born 1966-11-27, sex M, lives in Wareham.",
+     "data_classes": [
+      "patient_details"
+     ],
+     "status": "synthetic record"
+    }
+   ]
+  }
+ },
+ {
+  "query": "Tell me about Chester Aufderhar",
+  "view": "class:appointments",
+  "classes": [
+   "appointments"
+  ],
+  "result": {
+   "results": [
+    {
+     "id": "apt-0001",
+     "title": "Upcoming appointment",
+     "text": "Chester Aufderhar: Follow-up visit on 2026-11-09 at 09:30 (scheduled).",
+     "data_classes": [
+      "appointments"
+     ],
+     "status": "synthetic record"
+    },
+    {
+     "id": "apt-0003",
+     "title": "Upcoming appointment",
+     "text": "Chester Aufderhar: Annual physical on 2026-11-09 at 15:00 (scheduled).",
+     "data_classes": [
+      "appointments"
+     ],
+     "status": "synthetic record"
+    },
+    {
+     "id": "apt-0002",
+     "title": "Upcoming appointment",
+     "text": "Chester Aufderhar: Consultation on 2026-11-16 at 11:00 (scheduled).",
+     "data_classes": [
+      "appointments"
+     ],
+     "status": "synthetic record"
+    }
+   ]
+  }
+ },
+ {
+  "query": "Tell me about Chester Aufderhar",
+  "view": "class:visit_dates",
+  "classes": [
+   "visit_dates"
+  ],
+  "result": {
+   "results": [
+    {
+     "id": "enc-ec1074ef",
+     "title": "Past visit",
+     "text": "Chester Aufderhar: wellness visit on 2026-03-08.",
+     "data_classes": [
+      "visit_dates"
+     ],
+     "status": "synthetic record"
+    },
+    {
+     "id": "enc-82c94a73",
+     "title": "Past visit",
+     "text": "Chester Aufderhar: ambulatory visit on 2025-03-16.",
+     "data_classes": [
+      "visit_dates"
+     ],
+     "status": "synthetic record"
+    },
+    {
+     "id": "enc-96bc2b28",
+     "title": "Past visit",
+     "text": "Chester Aufderhar: wellness visit on 2025-03-02.",
+     "data_classes": [
+      "visit_dates"
+     ],
+     "status": "synthetic record"
+    }
+   ]
+  }
+ },
+ {
+  "query": "Tell me about Chester Aufderhar",
+  "view": "class:visit_clinical",
+  "classes": [
+   "visit_clinical"
+  ],
+  "result": {
+   "results": []
+  }
+ },
+ {
+  "query": "Tell me about Chester Aufderhar",
+  "view": "class:medications",
+  "classes": [
+   "medications"
+  ],
+  "result": {
+   "results": [
+    {
+     "id": "med-8",
+     "title": "Current medication",
+     "text": "Chester Aufderhar: Hydrochlorothiazide 25 MG Oral Tablet, on the list since 2026-03-08. Reason recorded: Essential hypertension (disorder).",
+     "data_classes": [
+      "medications"
+     ],
+     "status": "synthetic record"
+    },
+    {
+     "id": "med-9",
+     "title": "Current medication",
+     "text": "Chester Aufderhar: lisinopril 10 MG Oral Tablet, on the list since 2026-03-08. Reason recorded: Essential hypertension (disorder).",
+     "data_classes": [
+      "medications"
+     ],
+     "status": "synthetic record"
+    },
+    {
+     "id": "med-10",
+     "title": "Current medication",
+     "text": "Chester Aufderhar: amLODIPine 2.5 MG Oral Tablet, on the list since 2026-03-08. Reason recorded: Essential hypertension (disorder).",
+     "data_classes": [
+      "medications"
+     ],
+     "status": "synthetic record"
+    }
+   ]
+  }
+ },
+ {
+  "query": "Tell me about Chester Aufderhar",
+  "view": "class:claims",
+  "classes": [
+   "claims"
+  ],
+  "result": {
+   "results": [
+    {
+     "id": "clm-df2a0cf3",
+     "title": "Claim",
+     "text": "Chester Aufderhar: visit on 2026-03-08, amount 778.78, insurance paid 678.78, patient status CLOSED, patient still owes 0.00.",
+     "data_classes": [
+      "claims"
+     ],
+     "status": "synthetic record"
+    },
+    {
+     "id": "clm-b2217fb7",
+     "title": "Claim",
+     "text": "Chester Aufderhar: visit on 2026-03-08, amount 778.78, insurance paid 678.78, patient status CLOSED, patient still owes 0.00.",
+     "data_classes": [
+      "claims"
+     ],
+     "status": "synthetic record"
+    },
+    {
+     "id": "clm-67804311",
+     "title": "Claim",
+     "text": "Chester Aufderhar: visit on 2026-03-08, amount 778.78, insurance paid 678.78, patient status CLOSED, patient still owes 0.00.",
+     "data_classes": [
+      "claims"
+     ],
+     "status": "synthetic record"
+    }
+   ]
+  }
+ },
+ {
+  "query": "Tell me about Chester Aufderhar",
+  "view": "class:visit_clinical_only",
+  "classes": [
+   "visit_clinical"
+  ],
+  "result": {
+   "results": []
+  }
+ },
+ {
+  "query": "When is Aufderhar's next visit?",
+  "view": "role:clinician",
+  "classes": [
+   "patient_details",
+   "appointments",
+   "visit_dates",
+   "visit_clinical",
+   "medications",
+   "claims"
+  ],
+  "result": {
+   "results": []
+  }
+ },
+ {
+  "query": "When is Aufderhar's next visit?",
+  "view": "role:nurse",
+  "classes": [
+   "patient_details",
+   "appointments",
+   "visit_dates",
+   "visit_clinical",
+   "medications"
+  ],
+  "result": {
+   "results": []
+  }
+ },
+ {
+  "query": "When is Aufderhar's next visit?",
+  "view": "role:front_desk",
+  "classes": [
+   "patient_details",
+   "appointments",
+   "visit_dates",
+   "claims"
+  ],
+  "result": {
+   "results": []
+  }
+ },
+ {
+  "query": "When is Aufderhar's next visit?",
+  "view": "role:compliance",
+  "classes": [],
+  "result": {
+   "results": [],
+   "note": "this role may not see patient records"
+  }
+ },
+ {
+  "query": "When is Aufderhar's next visit?",
+  "view": "class:patient_details",
+  "classes": [
+   "patient_details"
+  ],
+  "result": {
+   "results": []
+  }
+ },
+ {
+  "query": "When is Aufderhar's next visit?",
+  "view": "class:appointments",
+  "classes": [
+   "appointments"
+  ],
+  "result": {
+   "results": []
+  }
+ },
+ {
+  "query": "When is Aufderhar's next visit?",
+  "view": "class:visit_dates",
+  "classes": [
+   "visit_dates"
+  ],
+  "result": {
+   "results": []
+  }
+ },
+ {
+  "query": "When is Aufderhar's next visit?",
+  "view": "class:visit_clinical",
+  "classes": [
+   "visit_clinical"
+  ],
+  "result": {
+   "results": []
+  }
+ },
+ {
+  "query": "When is Aufderhar's next visit?",
+  "view": "class:medications",
+  "classes": [
+   "medications"
+  ],
+  "result": {
+   "results": []
+  }
+ },
+ {
+  "query": "When is Aufderhar's next visit?",
+  "view": "class:claims",
+  "classes": [
+   "claims"
+  ],
+  "result": {
+   "results": []
+  }
+ },
+ {
+  "query": "When is Aufderhar's next visit?",
+  "view": "class:visit_clinical_only",
+  "classes": [
+   "visit_clinical"
+  ],
+  "result": {
+   "results": []
+  }
+ },
+ {
+  "query": "Tell me about Jesse Wolf",
+  "view": "role:clinician",
+  "classes": [
+   "patient_details",
+   "appointments",
+   "visit_dates",
+   "visit_clinical",
+   "medications",
+   "claims"
+  ],
+  "result": {
+   "results": [
+    {
+     "id": "pt-9450cc9d",
+     "title": "Patient: Jesse Wolf",
+     "text": "Jesse Wolf, born 2010-04-09, sex M, lives in Chelmsford.",
+     "data_classes": [
+      "patient_details"
+     ],
+     "status": "synthetic record"
+    },
+    {
+     "id": "apt-0005",
+     "title": "Upcoming appointment",
+     "text": "Jesse Wolf: Lab work on 2026-12-17 at 15:00 (scheduled).",
+     "data_classes": [
+      "appointments"
+     ],
+     "status": "synthetic record"
+    },
+    {
+     "id": "enc-0cc94e85",
+     "title": "Past visit",
+     "text": "Jesse Wolf: ambulatory visit on 2026-08-07, Encounter for check up (procedure). Reason recorded: Gingivitis (disorder).",
+     "data_classes": [
+      "visit_dates",
+      "visit_clinical"
+     ],
+     "status": "synthetic record"
+    },
+    {
+     "id": "enc-8913cd4b",
+     "title": "Past visit",
+     "text": "Jesse Wolf: outpatient visit on 2026-07-24, Encounter for check up (procedure).",
+     "data_classes": [
+      "visit_dates",
+      "visit_clinical"
+     ],
+     "status": "synthetic record"
+    },
+    {
+     "id": "enc-651ee7ff",
+     "title": "Past visit",
+     "text": "Jesse Wolf: ambulatory visit on 2026-07-16, Encounter for symptom (procedure). Reason recorded: Acute bronchitis (disorder).",
+     "data_classes": [
+      "visit_dates",
+      "visit_clinical"
+     ],
+     "status": "synthetic record"
+    },
+    {
+     "id": "clm-0b4c6b6c",
+     "title": "Claim",
+     "text": "Jesse Wolf: visit on 2026-08-07, amount 2673.95, insurance paid 2139.16, patient status CLOSED, patient still owes 0.00.",
+     "data_classes": [
+      "claims"
+     ],
+     "status": "synthetic record"
+    },
+    {
+     "id": "clm-3a5d99c2",
+     "title": "Claim",
+     "text": "Jesse Wolf: visit on 2026-07-24, amount 732.65, insurance paid 586.12, patient status CLOSED, patient still owes 0.00.",
+     "data_classes": [
+      "claims"
+     ],
+     "status": "synthetic record"
+    },
+    {
+     "id": "clm-dabdb050",
+     "title": "Claim",
+     "text": "Jesse Wolf: visit on 2026-07-16, amount 120.06, insurance paid 96.05, patient status CLOSED, patient still owes 0.00.",
+     "data_classes": [
+      "claims"
+     ],
+     "status": "synthetic record"
+    }
+   ]
+  }
+ },
+ {
+  "query": "Tell me about Jesse Wolf",
+  "view": "role:nurse",
+  "classes": [
+   "patient_details",
+   "appointments",
+   "visit_dates",
+   "visit_clinical",
+   "medications"
+  ],
+  "result": {
+   "results": [
+    {
+     "id": "pt-9450cc9d",
+     "title": "Patient: Jesse Wolf",
+     "text": "Jesse Wolf, born 2010-04-09, sex M, lives in Chelmsford.",
+     "data_classes": [
+      "patient_details"
+     ],
+     "status": "synthetic record"
+    },
+    {
+     "id": "apt-0005",
+     "title": "Upcoming appointment",
+     "text": "Jesse Wolf: Lab work on 2026-12-17 at 15:00 (scheduled).",
+     "data_classes": [
+      "appointments"
+     ],
+     "status": "synthetic record"
+    },
+    {
+     "id": "enc-0cc94e85",
+     "title": "Past visit",
+     "text": "Jesse Wolf: ambulatory visit on 2026-08-07, Encounter for check up (procedure). Reason recorded: Gingivitis (disorder).",
+     "data_classes": [
+      "visit_dates",
+      "visit_clinical"
+     ],
+     "status": "synthetic record"
+    },
+    {
+     "id": "enc-8913cd4b",
+     "title": "Past visit",
+     "text": "Jesse Wolf: outpatient visit on 2026-07-24, Encounter for check up (procedure).",
+     "data_classes": [
+      "visit_dates",
+      "visit_clinical"
+     ],
+     "status": "synthetic record"
+    },
+    {
+     "id": "enc-651ee7ff",
+     "title": "Past visit",
+     "text": "Jesse Wolf: ambulatory visit on 2026-07-16, Encounter for symptom (procedure). Reason recorded: Acute bronchitis (disorder).",
+     "data_classes": [
+      "visit_dates",
+      "visit_clinical"
+     ],
+     "status": "synthetic record"
+    }
+   ]
+  }
+ },
+ {
+  "query": "Tell me about Jesse Wolf",
+  "view": "role:front_desk",
+  "classes": [
+   "patient_details",
+   "appointments",
+   "visit_dates",
+   "claims"
+  ],
+  "result": {
+   "results": [
+    {
+     "id": "pt-9450cc9d",
+     "title": "Patient: Jesse Wolf",
+     "text": "Jesse Wolf, born 2010-04-09, sex M, lives in Chelmsford.",
+     "data_classes": [
+      "patient_details"
+     ],
+     "status": "synthetic record"
+    },
+    {
+     "id": "apt-0005",
+     "title": "Upcoming appointment",
+     "text": "Jesse Wolf: Lab work on 2026-12-17 at 15:00 (scheduled).",
+     "data_classes": [
+      "appointments"
+     ],
+     "status": "synthetic record"
+    },
+    {
+     "id": "enc-0cc94e85",
+     "title": "Past visit",
+     "text": "Jesse Wolf: ambulatory visit on 2026-08-07.",
+     "data_classes": [
+      "visit_dates"
+     ],
+     "status": "synthetic record"
+    },
+    {
+     "id": "enc-8913cd4b",
+     "title": "Past visit",
+     "text": "Jesse Wolf: outpatient visit on 2026-07-24.",
+     "data_classes": [
+      "visit_dates"
+     ],
+     "status": "synthetic record"
+    },
+    {
+     "id": "enc-651ee7ff",
+     "title": "Past visit",
+     "text": "Jesse Wolf: ambulatory visit on 2026-07-16.",
+     "data_classes": [
+      "visit_dates"
+     ],
+     "status": "synthetic record"
+    },
+    {
+     "id": "clm-0b4c6b6c",
+     "title": "Claim",
+     "text": "Jesse Wolf: visit on 2026-08-07, amount 2673.95, insurance paid 2139.16, patient status CLOSED, patient still owes 0.00.",
+     "data_classes": [
+      "claims"
+     ],
+     "status": "synthetic record"
+    },
+    {
+     "id": "clm-3a5d99c2",
+     "title": "Claim",
+     "text": "Jesse Wolf: visit on 2026-07-24, amount 732.65, insurance paid 586.12, patient status CLOSED, patient still owes 0.00.",
+     "data_classes": [
+      "claims"
+     ],
+     "status": "synthetic record"
+    },
+    {
+     "id": "clm-dabdb050",
+     "title": "Claim",
+     "text": "Jesse Wolf: visit on 2026-07-16, amount 120.06, insurance paid 96.05, patient status CLOSED, patient still owes 0.00.",
+     "data_classes": [
+      "claims"
+     ],
+     "status": "synthetic record"
+    }
+   ]
+  }
+ },
+ {
+  "query": "Tell me about Jesse Wolf",
+  "view": "role:compliance",
+  "classes": [],
+  "result": {
+   "results": [],
+   "note": "this role may not see patient records"
+  }
+ },
+ {
+  "query": "Tell me about Jesse Wolf",
+  "view": "class:patient_details",
+  "classes": [
+   "patient_details"
+  ],
+  "result": {
+   "results": [
+    {
+     "id": "pt-9450cc9d",
+     "title": "Patient: Jesse Wolf",
+     "text": "Jesse Wolf, born 2010-04-09, sex M, lives in Chelmsford.",
+     "data_classes": [
+      "patient_details"
+     ],
+     "status": "synthetic record"
+    }
+   ]
+  }
+ },
+ {
+  "query": "Tell me about Jesse Wolf",
+  "view": "class:appointments",
+  "classes": [
+   "appointments"
+  ],
+  "result": {
+   "results": [
+    {
+     "id": "apt-0005",
+     "title": "Upcoming appointment",
+     "text": "Jesse Wolf: Lab work on 2026-12-17 at 15:00 (scheduled).",
+     "data_classes": [
+      "appointments"
+     ],
+     "status": "synthetic record"
+    }
+   ]
+  }
+ },
+ {
+  "query": "Tell me about Jesse Wolf",
+  "view": "class:visit_dates",
+  "classes": [
+   "visit_dates"
+  ],
+  "result": {
+   "results": [
+    {
+     "id": "enc-0cc94e85",
+     "title": "Past visit",
+     "text": "Jesse Wolf: ambulatory visit on 2026-08-07.",
+     "data_classes": [
+      "visit_dates"
+     ],
+     "status": "synthetic record"
+    },
+    {
+     "id": "enc-8913cd4b",
+     "title": "Past visit",
+     "text": "Jesse Wolf: outpatient visit on 2026-07-24.",
+     "data_classes": [
+      "visit_dates"
+     ],
+     "status": "synthetic record"
+    },
+    {
+     "id": "enc-651ee7ff",
+     "title": "Past visit",
+     "text": "Jesse Wolf: ambulatory visit on 2026-07-16.",
+     "data_classes": [
+      "visit_dates"
+     ],
+     "status": "synthetic record"
+    }
+   ]
+  }
+ },
+ {
+  "query": "Tell me about Jesse Wolf",
+  "view": "class:visit_clinical",
+  "classes": [
+   "visit_clinical"
+  ],
+  "result": {
+   "results": []
+  }
+ },
+ {
+  "query": "Tell me about Jesse Wolf",
+  "view": "class:medications",
+  "classes": [
+   "medications"
+  ],
+  "result": {
+   "results": []
+  }
+ },
+ {
+  "query": "Tell me about Jesse Wolf",
+  "view": "class:claims",
+  "classes": [
+   "claims"
+  ],
+  "result": {
+   "results": [
+    {
+     "id": "clm-0b4c6b6c",
+     "title": "Claim",
+     "text": "Jesse Wolf: visit on 2026-08-07, amount 2673.95, insurance paid 2139.16, patient status CLOSED, patient still owes 0.00.",
+     "data_classes": [
+      "claims"
+     ],
+     "status": "synthetic record"
+    },
+    {
+     "id": "clm-3a5d99c2",
+     "title": "Claim",
+     "text": "Jesse Wolf: visit on 2026-07-24, amount 732.65, insurance paid 586.12, patient status CLOSED, patient still owes 0.00.",
+     "data_classes": [
+      "claims"
+     ],
+     "status": "synthetic record"
+    },
+    {
+     "id": "clm-dabdb050",
+     "title": "Claim",
+     "text": "Jesse Wolf: visit on 2026-07-16, amount 120.06, insurance paid 96.05, patient status CLOSED, patient still owes 0.00.",
+     "data_classes": [
+      "claims"
+     ],
+     "status": "synthetic record"
+    }
+   ]
+  }
+ },
+ {
+  "query": "Tell me about Jesse Wolf",
+  "view": "class:visit_clinical_only",
+  "classes": [
+   "visit_clinical"
+  ],
+  "result": {
+   "results": []
+  }
+ },
+ {
+  "query": "When is Wolf's next visit?",
+  "view": "role:clinician",
+  "classes": [
+   "patient_details",
+   "appointments",
+   "visit_dates",
+   "visit_clinical",
+   "medications",
+   "claims"
+  ],
+  "result": {
+   "results": []
+  }
+ },
+ {
+  "query": "When is Wolf's next visit?",
+  "view": "role:nurse",
+  "classes": [
+   "patient_details",
+   "appointments",
+   "visit_dates",
+   "visit_clinical",
+   "medications"
+  ],
+  "result": {
+   "results": []
+  }
+ },
+ {
+  "query": "When is Wolf's next visit?",
+  "view": "role:front_desk",
+  "classes": [
+   "patient_details",
+   "appointments",
+   "visit_dates",
+   "claims"
+  ],
+  "result": {
+   "results": []
+  }
+ },
+ {
+  "query": "When is Wolf's next visit?",
+  "view": "role:compliance",
+  "classes": [],
+  "result": {
+   "results": [],
+   "note": "this role may not see patient records"
+  }
+ },
+ {
+  "query": "When is Wolf's next visit?",
+  "view": "class:patient_details",
+  "classes": [
+   "patient_details"
+  ],
+  "result": {
+   "results": []
+  }
+ },
+ {
+  "query": "When is Wolf's next visit?",
+  "view": "class:appointments",
+  "classes": [
+   "appointments"
+  ],
+  "result": {
+   "results": []
+  }
+ },
+ {
+  "query": "When is Wolf's next visit?",
+  "view": "class:visit_dates",
+  "classes": [
+   "visit_dates"
+  ],
+  "result": {
+   "results": []
+  }
+ },
+ {
+  "query": "When is Wolf's next visit?",
+  "view": "class:visit_clinical",
+  "classes": [
+   "visit_clinical"
+  ],
+  "result": {
+   "results": []
+  }
+ },
+ {
+  "query": "When is Wolf's next visit?",
+  "view": "class:medications",
+  "classes": [
+   "medications"
+  ],
+  "result": {
+   "results": []
+  }
+ },
+ {
+  "query": "When is Wolf's next visit?",
+  "view": "class:claims",
+  "classes": [
+   "claims"
+  ],
+  "result": {
+   "results": []
+  }
+ },
+ {
+  "query": "When is Wolf's next visit?",
+  "view": "class:visit_clinical_only",
+  "classes": [
+   "visit_clinical"
+  ],
+  "result": {
+   "results": []
+  }
+ },
+ {
+  "query": "Tell me about Virgie Aufderhar",
+  "view": "role:clinician",
+  "classes": [
+   "patient_details",
+   "appointments",
+   "visit_dates",
+   "visit_clinical",
+   "medications",
+   "claims"
+  ],
+  "result": {
+   "results": [
+    {
+     "id": "pt-898db59c",
+     "title": "Patient: Virgie Aufderhar",
+     "text": "Virgie Aufderhar, born 2009-06-23, sex F, lives in Boston.",
+     "data_classes": [
+      "patient_details"
+     ],
+     "status": "synthetic record"
+    },
+    {
+     "id": "apt-0004",
+     "title": "Upcoming appointment",
+     "text": "Virgie Aufderhar: Consultation on 2026-11-16 at 12:00 (scheduled).",
+     "data_classes": [
+      "appointments"
+     ],
+     "status": "synthetic record"
+    },
+    {
+     "id": "med-5",
+     "title": "Current medication",
+     "text": "Virgie Aufderhar: 21 DAY ethinyl estradiol 0.000625 MG/HR / etonogestrel 0.005 MG/HR Vaginal System [NuvaRing], on the list since 2026-06-07.",
+     "data_classes": [
+      "medications"
+     ],
+     "status": "synthetic record"
+    },
+    {
+     "id": "enc-81f975a5",
+     "title": "Past visit",
+     "text": "Virgie Aufderhar: wellness visit on 2026-08-11, Well child visit (procedure).",
+     "data_classes": [
+      "visit_dates",
+      "visit_clinical"
+     ],
+     "status": "synthetic record"
+    },
+    {
+     "id": "enc-59ca140f",
+     "title": "Past visit",
+     "text": "Virgie Aufderhar: ambulatory visit on 2026-07-12, Allergic disorder follow-up assessment (regime/therapy). Reason recorded: Allergic disposition (finding).",
+     "data_classes": [
+      "visit_dates",
+      "visit_clinical"
+     ],
+     "status": "synthetic record"
+    },
+    {
+     "id": "enc-2c990501",
+     "title": "Past visit",
+     "text": "Virgie Aufderhar: ambulatory visit on 2026-06-18, Outpatient procedure (procedure). Reason recorded: Allergic disposition (finding).",
+     "data_classes": [
+      "visit_dates",
+      "visit_clinical"
+     ],
+     "status": "synthetic record"
+    },
+    {
+     "id": "clm-8d3a4fd2",
+     "title": "Claim",
+     "text": "Virgie Aufderhar: visit on 2026-08-11, amount 1149.98, insurance paid 0.00, patient status CLOSED, patient still owes 0.00.",
+     "data_classes": [
+      "claims"
+     ],
+     "status": "synthetic record"
+    },
+    {
+     "id": "clm-c42a381d",
+     "title": "Claim",
+     "text": "Virgie Aufderhar: visit on 2026-07-12, amount 573.98, insurance paid 0.00, patient status CLOSED, patient still owes 0.00.",
+     "data_classes": [
+      "claims"
+     ],
+     "status": "synthetic record"
+    },
+    {
+     "id": "clm-40785b1e",
+     "title": "Claim",
+     "text": "Virgie Aufderhar: visit on 2026-06-18, amount 5263.67, insurance paid 5213.67, patient status CLOSED, patient still owes 0.00.",
+     "data_classes": [
+      "claims"
+     ],
+     "status": "synthetic record"
+    }
+   ]
+  }
+ },
+ {
+  "query": "Tell me about Virgie Aufderhar",
+  "view": "role:nurse",
+  "classes": [
+   "patient_details",
+   "appointments",
+   "visit_dates",
+   "visit_clinical",
+   "medications"
+  ],
+  "result": {
+   "results": [
+    {
+     "id": "pt-898db59c",
+     "title": "Patient: Virgie Aufderhar",
+     "text": "Virgie Aufderhar, born 2009-06-23, sex F, lives in Boston.",
+     "data_classes": [
+      "patient_details"
+     ],
+     "status": "synthetic record"
+    },
+    {
+     "id": "apt-0004",
+     "title": "Upcoming appointment",
+     "text": "Virgie Aufderhar: Consultation on 2026-11-16 at 12:00 (scheduled).",
+     "data_classes": [
+      "appointments"
+     ],
+     "status": "synthetic record"
+    },
+    {
+     "id": "med-5",
+     "title": "Current medication",
+     "text": "Virgie Aufderhar: 21 DAY ethinyl estradiol 0.000625 MG/HR / etonogestrel 0.005 MG/HR Vaginal System [NuvaRing], on the list since 2026-06-07.",
+     "data_classes": [
+      "medications"
+     ],
+     "status": "synthetic record"
+    },
+    {
+     "id": "enc-81f975a5",
+     "title": "Past visit",
+     "text": "Virgie Aufderhar: wellness visit on 2026-08-11, Well child visit (procedure).",
+     "data_classes": [
+      "visit_dates",
+      "visit_clinical"
+     ],
+     "status": "synthetic record"
+    },
+    {
+     "id": "enc-59ca140f",
+     "title": "Past visit",
+     "text": "Virgie Aufderhar: ambulatory visit on 2026-07-12, Allergic disorder follow-up assessment (regime/therapy). Reason recorded: Allergic disposition (finding).",
+     "data_classes": [
+      "visit_dates",
+      "visit_clinical"
+     ],
+     "status": "synthetic record"
+    },
+    {
+     "id": "enc-2c990501",
+     "title": "Past visit",
+     "text": "Virgie Aufderhar: ambulatory visit on 2026-06-18, Outpatient procedure (procedure). Reason recorded: Allergic disposition (finding).",
+     "data_classes": [
+      "visit_dates",
+      "visit_clinical"
+     ],
+     "status": "synthetic record"
+    }
+   ]
+  }
+ },
+ {
+  "query": "Tell me about Virgie Aufderhar",
+  "view": "role:front_desk",
+  "classes": [
+   "patient_details",
+   "appointments",
+   "visit_dates",
+   "claims"
+  ],
+  "result": {
+   "results": [
+    {
+     "id": "pt-898db59c",
+     "title": "Patient: Virgie Aufderhar",
+     "text": "Virgie Aufderhar, born 2009-06-23, sex F, lives in Boston.",
+     "data_classes": [
+      "patient_details"
+     ],
+     "status": "synthetic record"
+    },
+    {
+     "id": "apt-0004",
+     "title": "Upcoming appointment",
+     "text": "Virgie Aufderhar: Consultation on 2026-11-16 at 12:00 (scheduled).",
+     "data_classes": [
+      "appointments"
+     ],
+     "status": "synthetic record"
+    },
+    {
+     "id": "enc-81f975a5",
+     "title": "Past visit",
+     "text": "Virgie Aufderhar: wellness visit on 2026-08-11.",
+     "data_classes": [
+      "visit_dates"
+     ],
+     "status": "synthetic record"
+    },
+    {
+     "id": "enc-59ca140f",
+     "title": "Past visit",
+     "text": "Virgie Aufderhar: ambulatory visit on 2026-07-12.",
+     "data_classes": [
+      "visit_dates"
+     ],
+     "status": "synthetic record"
+    },
+    {
+     "id": "enc-2c990501",
+     "title": "Past visit",
+     "text": "Virgie Aufderhar: ambulatory visit on 2026-06-18.",
+     "data_classes": [
+      "visit_dates"
+     ],
+     "status": "synthetic record"
+    },
+    {
+     "id": "clm-8d3a4fd2",
+     "title": "Claim",
+     "text": "Virgie Aufderhar: visit on 2026-08-11, amount 1149.98, insurance paid 0.00, patient status CLOSED, patient still owes 0.00.",
+     "data_classes": [
+      "claims"
+     ],
+     "status": "synthetic record"
+    },
+    {
+     "id": "clm-c42a381d",
+     "title": "Claim",
+     "text": "Virgie Aufderhar: visit on 2026-07-12, amount 573.98, insurance paid 0.00, patient status CLOSED, patient still owes 0.00.",
+     "data_classes": [
+      "claims"
+     ],
+     "status": "synthetic record"
+    },
+    {
+     "id": "clm-40785b1e",
+     "title": "Claim",
+     "text": "Virgie Aufderhar: visit on 2026-06-18, amount 5263.67, insurance paid 5213.67, patient status CLOSED, patient still owes 0.00.",
+     "data_classes": [
+      "claims"
+     ],
+     "status": "synthetic record"
+    }
+   ]
+  }
+ },
+ {
+  "query": "Tell me about Virgie Aufderhar",
+  "view": "role:compliance",
+  "classes": [],
+  "result": {
+   "results": [],
+   "note": "this role may not see patient records"
+  }
+ },
+ {
+  "query": "Tell me about Virgie Aufderhar",
+  "view": "class:patient_details",
+  "classes": [
+   "patient_details"
+  ],
+  "result": {
+   "results": [
+    {
+     "id": "pt-898db59c",
+     "title": "Patient: Virgie Aufderhar",
+     "text": "Virgie Aufderhar, born 2009-06-23, sex F, lives in Boston.",
+     "data_classes": [
+      "patient_details"
+     ],
+     "status": "synthetic record"
+    }
+   ]
+  }
+ },
+ {
+  "query": "Tell me about Virgie Aufderhar",
+  "view": "class:appointments",
+  "classes": [
+   "appointments"
+  ],
+  "result": {
+   "results": [
+    {
+     "id": "apt-0004",
+     "title": "Upcoming appointment",
+     "text": "Virgie Aufderhar: Consultation on 2026-11-16 at 12:00 (scheduled).",
+     "data_classes": [
+      "appointments"
+     ],
+     "status": "synthetic record"
+    }
+   ]
+  }
+ },
+ {
+  "query": "Tell me about Virgie Aufderhar",
+  "view": "class:visit_dates",
+  "classes": [
+   "visit_dates"
+  ],
+  "result": {
+   "results": [
+    {
+     "id": "enc-81f975a5",
+     "title": "Past visit",
+     "text": "Virgie Aufderhar: wellness visit on 2026-08-11.",
+     "data_classes": [
+      "visit_dates"
+     ],
+     "status": "synthetic record"
+    },
+    {
+     "id": "enc-59ca140f",
+     "title": "Past visit",
+     "text": "Virgie Aufderhar: ambulatory visit on 2026-07-12.",
+     "data_classes": [
+      "visit_dates"
+     ],
+     "status": "synthetic record"
+    },
+    {
+     "id": "enc-2c990501",
+     "title": "Past visit",
+     "text": "Virgie Aufderhar: ambulatory visit on 2026-06-18.",
+     "data_classes": [
+      "visit_dates"
+     ],
+     "status": "synthetic record"
+    }
+   ]
+  }
+ },
+ {
+  "query": "Tell me about Virgie Aufderhar",
+  "view": "class:visit_clinical",
+  "classes": [
+   "visit_clinical"
+  ],
+  "result": {
+   "results": []
+  }
+ },
+ {
+  "query": "Tell me about Virgie Aufderhar",
+  "view": "class:medications",
+  "classes": [
+   "medications"
+  ],
+  "result": {
+   "results": [
+    {
+     "id": "med-5",
+     "title": "Current medication",
+     "text": "Virgie Aufderhar: 21 DAY ethinyl estradiol 0.000625 MG/HR / etonogestrel 0.005 MG/HR Vaginal System [NuvaRing], on the list since 2026-06-07.",
+     "data_classes": [
+      "medications"
+     ],
+     "status": "synthetic record"
+    }
+   ]
+  }
+ },
+ {
+  "query": "Tell me about Virgie Aufderhar",
+  "view": "class:claims",
+  "classes": [
+   "claims"
+  ],
+  "result": {
+   "results": [
+    {
+     "id": "clm-8d3a4fd2",
+     "title": "Claim",
+     "text": "Virgie Aufderhar: visit on 2026-08-11, amount 1149.98, insurance paid 0.00, patient status CLOSED, patient still owes 0.00.",
+     "data_classes": [
+      "claims"
+     ],
+     "status": "synthetic record"
+    },
+    {
+     "id": "clm-c42a381d",
+     "title": "Claim",
+     "text": "Virgie Aufderhar: visit on 2026-07-12, amount 573.98, insurance paid 0.00, patient status CLOSED, patient still owes 0.00.",
+     "data_classes": [
+      "claims"
+     ],
+     "status": "synthetic record"
+    },
+    {
+     "id": "clm-40785b1e",
+     "title": "Claim",
+     "text": "Virgie Aufderhar: visit on 2026-06-18, amount 5263.67, insurance paid 5213.67, patient status CLOSED, patient still owes 0.00.",
+     "data_classes": [
+      "claims"
+     ],
+     "status": "synthetic record"
+    }
+   ]
+  }
+ },
+ {
+  "query": "Tell me about Virgie Aufderhar",
+  "view": "class:visit_clinical_only",
+  "classes": [
+   "visit_clinical"
+  ],
+  "result": {
+   "results": []
+  }
+ },
+ {
+  "query": "When is Aufderhar's next visit?",
+  "view": "role:clinician",
+  "classes": [
+   "patient_details",
+   "appointments",
+   "visit_dates",
+   "visit_clinical",
+   "medications",
+   "claims"
+  ],
+  "result": {
+   "results": []
+  }
+ },
+ {
+  "query": "When is Aufderhar's next visit?",
+  "view": "role:nurse",
+  "classes": [
+   "patient_details",
+   "appointments",
+   "visit_dates",
+   "visit_clinical",
+   "medications"
+  ],
+  "result": {
+   "results": []
+  }
+ },
+ {
+  "query": "When is Aufderhar's next visit?",
+  "view": "role:front_desk",
+  "classes": [
+   "patient_details",
+   "appointments",
+   "visit_dates",
+   "claims"
+  ],
+  "result": {
+   "results": []
+  }
+ },
+ {
+  "query": "When is Aufderhar's next visit?",
+  "view": "role:compliance",
+  "classes": [],
+  "result": {
+   "results": [],
+   "note": "this role may not see patient records"
+  }
+ },
+ {
+  "query": "When is Aufderhar's next visit?",
+  "view": "class:patient_details",
+  "classes": [
+   "patient_details"
+  ],
+  "result": {
+   "results": []
+  }
+ },
+ {
+  "query": "When is Aufderhar's next visit?",
+  "view": "class:appointments",
+  "classes": [
+   "appointments"
+  ],
+  "result": {
+   "results": []
+  }
+ },
+ {
+  "query": "When is Aufderhar's next visit?",
+  "view": "class:visit_dates",
+  "classes": [
+   "visit_dates"
+  ],
+  "result": {
+   "results": []
+  }
+ },
+ {
+  "query": "When is Aufderhar's next visit?",
+  "view": "class:visit_clinical",
+  "classes": [
+   "visit_clinical"
+  ],
+  "result": {
+   "results": []
+  }
+ },
+ {
+  "query": "When is Aufderhar's next visit?",
+  "view": "class:medications",
+  "classes": [
+   "medications"
+  ],
+  "result": {
+   "results": []
+  }
+ },
+ {
+  "query": "When is Aufderhar's next visit?",
+  "view": "class:claims",
+  "classes": [
+   "claims"
+  ],
+  "result": {
+   "results": []
+  }
+ },
+ {
+  "query": "When is Aufderhar's next visit?",
+  "view": "class:visit_clinical_only",
+  "classes": [
+   "visit_clinical"
+  ],
+  "result": {
+   "results": []
+  }
+ },
+ {
+  "query": "What is our cancellation policy?",
+  "view": "role:clinician",
+  "classes": [
+   "patient_details",
+   "appointments",
+   "visit_dates",
+   "visit_clinical",
+   "medications",
+   "claims"
+  ],
+  "result": {
+   "results": []
+  }
+ },
+ {
+  "query": "When is Nobody Atall's appointment?",
+  "view": "role:clinician",
+  "classes": [
+   "patient_details",
+   "appointments",
+   "visit_dates",
+   "visit_clinical",
+   "medications",
+   "claims"
+  ],
+  "result": {
+   "results": []
+  }
+ },
+ {
+  "query": "Compare Chester Aufderhar and Virgie Aufderhar",
+  "view": "role:clinician",
+  "classes": [
+   "patient_details",
+   "appointments",
+   "visit_dates",
+   "visit_clinical",
+   "medications",
+   "claims"
+  ],
+  "result": {
+   "results": [],
+   "note": "more than one patient matches; use the full name"
+  }
+ },
+ {
+  "query": "Tell me about Jesse Wolf",
+  "view": "no classes",
+  "classes": [],
+  "result": {
+   "results": [],
+   "note": "this role may not see patient records"
+  }
+ }
+]

@@ -30,7 +30,7 @@ def db(tmp_path):
 def records_for(db, role):
     name = sqlite3.connect(db).execute("SELECT name FROM patients ORDER BY name").fetchone()[0]
     classes = list(CLINIC.roles[role].data_classes)
-    return server.search(db, f"Tell me about {name}", classes)["results"]
+    return server.search(db, f"Tell me about {name}", classes, CLINIC.records_map)["results"]
 
 
 def kinds(results):
@@ -146,7 +146,6 @@ def test_roles_need_a_role_required_reply(copy_of_clinic):
     _edit(copy_of_clinic / "responses.yaml", lambda d: d.pop("role_required"))
     with pytest.raises(ProfileError, match="role_required"):
         load_profile_from(copy_of_clinic)
-
 
 
 # --- replies worded for the role ------------------------------------------------

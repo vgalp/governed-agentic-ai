@@ -3,8 +3,8 @@
 A profile is a folder under profiles/ that holds everything specific to one use
 case: the model, system prompt, guardrail rules, fixed replies, classifier policy,
 privacy settings, knowledge base, the tools it can use (tools.yaml) and which agent
-may call each one. The pipeline code is shared, so a new use case is a new folder,
-not new code.
+may call each one, and how its records database becomes records (records.yaml). The
+pipeline code is shared, so a new use case is a new folder, not new code.
 
 The active profile comes from the PROFILE environment variable (default:
 adhd-assistant). A profile that is incomplete or inconsistent fails at startup
@@ -18,6 +18,9 @@ from functools import lru_cache
 from pathlib import Path
 
 import yaml
+
+from profiles.records_map import MappingError, RecordsMap
+from profiles.records_map import parse as parse_records_map
 
 PROFILES_DIR = Path(__file__).resolve().parent
 DEFAULT_PROFILE = "adhd-assistant"
@@ -130,6 +133,7 @@ class Profile:
     classifier_exemptions: tuple[Rule, ...]     # narrow cases where an input classifier flag is overridden
     source_id_pattern: re.Pattern | None        # what a cited source ID looks like (grounding check)
     actions: dict[str, Action] = field(default_factory=dict)   # changes the assistant may propose (need approval)
+    records_map: RecordsMap | None = None       # how records_db becomes records (records.yaml)
 
     def response(self, category: str, role: str | None = None) -> str:
         """The fixed reply for a category, worded for the role if the role has its own."""
@@ -631,6 +635,22 @@ def load_profile_from(path: Path) -> Profile:
 
     _check_tools(tools, agents, routing, roles, actions, f"{path.name}/{tools_file}")
 
+    # records.yaml: how the records database becomes records. Its data classes must be
+    # the ones roles.yaml knows, so role filtering covers every record.
+    records_map = None
+    if bool(p.get("records_db")) != bool(p.get("records_map")):
+        raise ProfileError(f"{where}: records_db and records_map go together "
+                           "(the database, and how it becomes records)")
+    if p.get("records_map"):
+        if not roles:
+            raise ProfileError(f"{where}: records_map needs roles (who may see which data class)")
+        rm_where = f"{path.name}/{p['records_map']}"
+        try:
+            records_map = parse_records_map(_yaml(_file(path, p["records_map"], where)), rm_where,
+                                            set(data_classes))
+        except MappingError as e:
+            raise ProfileError(str(e)) from e
+
     privacy = p.get("privacy") or {}
     return Profile(
         name=name,
@@ -658,6 +678,7 @@ def load_profile_from(path: Path) -> Profile:
         classifier_exemptions=exemptions,
         source_id_pattern=source_id_pattern,
         actions=actions,
+        records_map=records_map,
     )
 
 

@@ -276,5 +276,6 @@ def test_records_show_the_new_time(db):
     pid = sqlite3.connect(db).execute("SELECT patient_id FROM appointments WHERE id = ?", (aid,)).fetchone()[0]
     name = sqlite3.connect(db).execute("SELECT name FROM patients WHERE id = ?", (pid,)).fetchone()[0]
     server.reschedule(db, aid, "2026-11-13T10:00", "ap-1")
-    found = records.search(db, f"When is {name}'s appointment?", ["patient_details", "appointments"])["results"]
+    found = records.search(db, f"When is {name}'s appointment?", ["patient_details", "appointments"],
+                           P.records_map)["results"]
     assert any(r["id"] == aid and "2026-11-13 at 10:00" in r["text"] for r in found)

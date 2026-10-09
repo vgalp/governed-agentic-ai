@@ -172,6 +172,8 @@ profiles/adhd-assistant/
   data/                   approved knowledge base
 ```
 
+Profiles that work with records add `roles.yaml` (who may see which data), `records.yaml` (how the records database becomes records) and `actions.yaml` (changes a person must approve). See `profiles/clinic-assistant/`.
+
 ```bash
 uv run python -m profiles.loader                 # validate every profile
 PROFILE=adhd-assistant ./scripts/dev.sh start    # run a profile (this one is the default)
@@ -180,7 +182,10 @@ PROFILE=adhd-assistant ./scripts/dev.sh start    # run a profile (this one is th
 Each profile also says which models it may use and when. OPA (`policies/routing.rego`) decides per request whether the local or an external model answers, from facts only (the kinds of personal information found, never the values). External models only ever receive masked text, a profile can forbid them entirely, and every decision is audited. The ADHD profile is local only. See [ADR 004](docs/decisions/004-model-routing.md).
 
 A profile is checked at startup and the service refuses to start if it is incomplete. Tool permissions in `profile.yaml` are enforced by OPA, which denies anything a profile does not grant. See [ADR 003](docs/decisions/003-deployment-profiles.md).
+
 Adding a tool is a profile change, not a code change: an entry in `tools.yaml` and a grant. The loader refuses unsafe combinations, such as giving the planner (the agent that talks to the model) a tool that changes something, or a change tool with no approval step. OPA enforces the same rule independently. See [ADR 010](docs/decisions/010-tool-registry.md).
+
+Connecting an organization's records is also a profile change. `records.yaml` names the tables and columns, which data class each record belongs to, and how it reads; the records server builds every query itself, so the file holds no SQL. A role's query reads only the columns it may see, and every name is checked against the database at startup. See [ADR 011](docs/decisions/011-records-mapping.md).
 
 ## Project structure
 
@@ -193,7 +198,7 @@ llm/             Model providers (Ollama, OpenAI, Gemini, Claude, OpenAI-compati
 privacy/         Personal-information masking (Presidio)
 gateway/         MCP gateway: policy check, tool call, audit
 policies/        OPA policies: tool permissions, model routing, and their tests
-mcp_servers/     MCP servers (knowledge base)
+mcp_servers/     MCP servers: knowledge base, records (follows records.yaml), appointments
 guardrails/      Layer 1 rules and layer 2 safety classifier
 audit/           Hash-chained, signed audit events and the verifier
 ui/              Chat page and live dashboard

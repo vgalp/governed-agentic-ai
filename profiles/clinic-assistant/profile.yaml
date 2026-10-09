@@ -50,6 +50,7 @@ routing:
 
 tools: tools.yaml                          # each tool: server, kind, data label
 records_db: data/clinic.db                 # built locally: see data/README.md
+records_map: records.yaml                  # how the database becomes records (no SQL)
 roles: roles.yaml                          # who may see which record data
 actions: actions.yaml                      # changes the assistant may propose; a person approves
 cite_sources: true                         # the model sees source IDs so it can cite them

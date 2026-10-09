@@ -1,0 +1,75 @@
+# How the clinic's database (data/clinic.db) becomes records the assistant can cite.
+# The records server is general-purpose: it follows this file. Another organization
+# connects its own data by writing its own version, not code. Checked at startup.
+#
+# No SQL here: only table and column names. The server builds each query itself,
+# read-only. Each record belongs to one data class (roles.yaml): a role gets only the
+# records, and reads only the columns, of the classes it may see.
+#
+# Texts use {column}, {column|filter} and, in records, {subject} (the person's name).
+#   filters: datetime (2026-11-09 at 09:30) · date (2026-11-09) · money (778.78)
+#   optional: text added at the end only when the column has a value
+#   source_id: the ID an answer cites. prefix is added in front; keep_last keeps the
+#              last N characters of a long stored ID.
+
+subject:
+  noun: patient
+  table: patients
+  id: id
+  name: name                         # matched against the question: full name, or a unique last name
+  record:
+    source_id: {prefix: pt-, keep_last: 8}
+    data_class: patient_details
+    title: "Patient: {name}"
+    text: "{name}, born {birth_date}, sex {sex}, lives in {city}."
+
+records:
+  appointments:
+    table: appointments
+    link: patient_id
+    source_id: {}                    # stored IDs are already citable (apt-0001)
+    data_class: appointments
+    order_by: [starts_at]
+    title: Upcoming appointment
+    text: "{subject}: {type} on {starts_at|datetime} ({status})."
+
+  medications:
+    table: medications
+    link: patient_id
+    source_id: {prefix: med-}
+    data_class: medications
+    only_where: {stop: null}         # still taking it
+    order_by: [start desc]
+    title: Current medication
+    text: "{subject}: {description}, on the list since {start}."
+    optional: {reason: " Reason recorded: {reason}."}
+
+  visits:
+    table: encounters
+    link: patient_id
+    source_id: {prefix: enc-, keep_last: 8}
+    data_class: visit_dates          # when and what kind of visit
+    order_by: [start desc]
+    limit: 3
+    title: Past visit
+    text: "{subject}: {type} visit on {start|date}."
+    more_detail:                     # what the visit was for: only roles that may see visit_clinical
+      data_class: visit_clinical
+      text: "{subject}: {type} visit on {start|date}, {description}."
+      optional: {reason: " Reason recorded: {reason}."}
+
+  claims:
+    table: claims
+    link: patient_id
+    source_id: {prefix: clm-, keep_last: 8}
+    data_class: claims
+    order_by: [patient_outstanding desc, service_date desc]
+    limit: 3
+    title: Claim
+    text: >-
+      {subject}: visit on {service_date}, amount {amount|money}, insurance paid
+      {insurance_paid|money}, patient status {patient_status}, patient still owes
+      {patient_outstanding|money}.
+
+max_results: 15
+status: synthetic record             # added to every record: this data is synthetic (Synthea)
