@@ -82,7 +82,8 @@ Details: [`eval/results/redteam_v1_notes.md`](eval/results/redteam_v1_notes.md),
 ## Demonstrations
 
 - **Healthcare:** an assistant that helps adults with ADHD plan their day, build routines and get tasks done, and sends medication, diagnosis and crisis topics to fixed, reviewable responses. Knowledge base entries are samples pending clinician review.
-- **Government:** a public-service case-processing workflow (planned).
+- **Healthcare, with records:** a staff assistant for a primary-care clinic (`clinic-assistant`): role-based access to synthetic patient records, cited answers, and appointment changes that a person must approve.
+- **Government:** a caseworker assistant for a fictional county benefits office (`county-benefits`): case status, missing documents, reported income and payments by role, and fixed replies instead of eligibility decisions or judgments of honesty. It was built from configuration files only, with no code ([write-up](docs/progress/2026-10-08-second-profile.md)).
 
 ## Quick start
 
@@ -222,11 +223,13 @@ docs/            Architecture notes and decision records
 - [x] Deployment profiles: plug-and-play use cases with no code change
 - [x] Policy-based model routing (local vs external model, decided by OPA and audited)
 - [x] Human approval before changes (propose, policy, approve, execute once; all audited)
+- [x] Tool registry and records mapping in the profile; a second use case (county benefits) from configuration only
 - [ ] Signed audit checkpoints (truncation detection)
 - [ ] Fine-tuned safety classifier and grounding check (layer 3)
 - [ ] Clinician-reviewed knowledge base and fixed responses
 - [ ] Tracing, failure recovery (Saga pattern) and chaos tests
-- [ ] Government case-processing demonstration
+- [ ] Changes from configuration (generic change tool), so profiles such as county benefits can propose approved changes
+- [ ] Redesigned chat page and dashboard, and a basic login so the role comes from sign-in (demo accounts only)
 - [ ] Technical report
 
 ## Important
