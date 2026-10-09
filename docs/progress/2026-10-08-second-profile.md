@@ -60,3 +60,13 @@ policy wording ("when an applicant qualifies for expedited service") was.
    behaviour with this profile's policy were not tested with Presidio and Llama Guard here.
    If the classifier flags plain lookups, a narrow exemption in `rules.yaml` (configuration)
    fixes it, as it did for the clinic.
+
+## Update 2026-10-09: gap 1 closed
+Changes are now configuration too ([ADR 012](../decisions/012-generic-change-tool.md)). One
+change server makes every approved change, as each profile's `actions.yaml` describes it.
+The county profile gained `release_payment`: an eligibility worker or a supervisor asks, a
+different supervisor approves, and only a payment that is still `held` becomes `issued`.
+Added to the profile: `actions.yaml` (31 lines), a tool entry, the executor agent, the
+supervisor's grant, a request pattern, three replies and an example. Still no code in the
+profile. The executor and the web pages now show the server's own summary, and the policy
+reasons no longer mention a clinic.
