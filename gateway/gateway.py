@@ -1,8 +1,10 @@
 """MCP gateway: checks policy, calls the tool, and audits every decision.
 
-Which tools each agent may call comes from the active profile (agents section of
-profiles/<name>/profile.yaml). The gateway loads that into OPA under
-data.profiles.<name>; the policy (policies/mcp_authz.rego) denies everything else.
+Which tools exist, and where each one's MCP server runs, comes from the active
+profile's tools.yaml; which tools each agent may call comes from its profile.yaml
+(agents). The gateway loads both into OPA under data.profiles.<name>; the policy
+(policies/mcp_authz.rego) denies everything else, including any tool that changes
+something unless the caller is the agent that carries out approved changes.
 
 In a profile with roles, the requesting role must also be allowed to use the tool,
 and for role-filtered tools the gateway asks OPA which data classes the role may see
@@ -19,13 +21,6 @@ from mcp.client.streamable_http import streamablehttp_client
 from audit.chain import get_audit_chain
 from gateway.opa import decide
 from profiles.loader import Profile, load_profile
-
-# Tools this deployment can reach. A profile can only grant tools listed here.
-TOOL_SERVERS = {
-    "search_knowledge": "http://127.0.0.1:8100/mcp",
-    "search_records": "http://127.0.0.1:8101/mcp",
-    "reschedule_appointment": "http://127.0.0.1:8102/mcp",   # changes; executor agent only
-}
 
 
 class ToolCallDenied(Exception):
@@ -82,7 +77,7 @@ def call_tool(agent: str, tool: str, args: dict, request_id: str,
         "tool": tool,
         "args": dict(audit_args if audit_args is not None else args),   # masked text only
     }
-    allowed = tool in TOOL_SERVERS and _is_allowed(profile, agent, tool, role)
+    allowed = tool in profile.tools and _is_allowed(profile, agent, tool, role)
     if not allowed:
         _audit({**event, "decision": "deny"})
         raise ToolCallDenied(f"Role '{role}' / agent '{agent}' may not call tool '{tool}' "
@@ -94,7 +89,7 @@ def call_tool(agent: str, tool: str, args: dict, request_id: str,
         args = {**args, "allowed_classes": classes}
         event["args"]["allowed_classes"] = classes
     try:
-        result = asyncio.run(_call(TOOL_SERVERS[tool], tool, args))
+        result = asyncio.run(_call(profile.tools[tool].server, tool, args))
     except Exception as e:
         _audit({**event, "decision": "allow", "error": type(e).__name__})
         raise

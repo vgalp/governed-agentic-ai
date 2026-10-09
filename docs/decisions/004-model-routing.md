@@ -15,8 +15,9 @@ impossible to get wrong by a configuration mistake.
   masked or original text. API keys are never in a profile: only the name of an environment variable.
 - `policies/routing.rego` decides `local` or `external` from **facts only**: the kinds of personal
   information that were masked (e.g. `PERSON`, never the values), the labels of the data tools
-  returned (`tool_data_labels`), and whether an external model has its credentials. Every reason
-  to stay local is listed; the request goes external only if there are none.
+  returned (`tool_data_labels`; since ADR 010, each tool's `data_label` in `tools.yaml`), and
+  whether an external model has its credentials. Every reason to stay local is listed; the
+  request goes external only if there are none.
 - The router (`router/router.py`) also enforces, in code and whatever OPA returns:
   1. an external model only ever receives masked text;
   2. a profile with `external_allowed: false` never uses an external model;

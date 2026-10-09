@@ -69,8 +69,13 @@ def clinic_copy(tmp_path):
 
 
 def test_the_planner_may_never_hold_the_change_tool(clinic_copy):
-    with pytest.raises(ProfileError, match="only 'executor' may hold"):
+    with pytest.raises(ProfileError, match="talks to the model, so it may not hold"):
         clinic_copy("profile.yaml", lambda d: d["agents"]["planner"]["tools"].append("reschedule_appointment"))
+
+
+def test_only_the_action_agent_may_hold_the_change_tool(clinic_copy):
+    with pytest.raises(ProfileError, match="only 'executor' may hold"):
+        clinic_copy("profile.yaml", lambda d: d["agents"].update(reporter={"tools": ["reschedule_appointment"]}))
 
 
 def test_approvers_need_the_tool(clinic_copy):

@@ -4,8 +4,9 @@ import json
 
 import pytest
 
-from agents.trace import TRACE_TOPIC, Trace, ids_text, masking_summary, tool_agent
+from agents.trace import AGENTS, TRACE_TOPIC, Trace, ids_text, masking_summary
 from api.events import EVENT_TOPICS
+from profiles.loader import available_profiles, load_profile
 
 
 class FakeProducer:
@@ -70,9 +71,13 @@ def test_masking_summary_when_nothing_was_masked():
     assert masking_summary({}) == "No personal details found"
 
 
-def test_tools_map_to_agents():
-    assert tool_agent("search_records") == "records"
-    assert tool_agent("search_knowledge") == "knowledge"
+def test_tool_lanes_come_from_the_profile():
+    clinic = load_profile("clinic-assistant")
+    assert clinic.tools["search_records"].lane == "records"
+    assert clinic.tools["search_knowledge"].lane == "knowledge"
+    assert clinic.tools["reschedule_appointment"].lane == "action"
+    for name in available_profiles():          # every lane is one the dashboard shows
+        assert all(t.lane in AGENTS for t in load_profile(name).tools.values())
 
 
 def test_long_id_lists_are_shortened():

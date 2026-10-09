@@ -1,0 +1,9 @@
+# Tools this profile can use, one entry each. Which agent may call a tool is in
+# profile.yaml (agents). The fields are explained in profiles/clinic-assistant/tools.yaml.
+
+search_knowledge:
+  description: Approved planning tips and ADHD resources
+  server: http://127.0.0.1:8100/mcp
+  kind: read
+  data_label: approved_content
+  lane: knowledge

@@ -34,13 +34,10 @@ routing:
   external_allowed: false     # this profile never sends anything off the machine
   send_external_when: no_personal_info   # or: masked (masked text may go out)
   never_external_entities: [US_SSN, CREDIT_CARD]   # never sent out, even masked
-  never_external_labels: []   # data labels (see tool_data_labels) that never go out
+  never_external_labels: []   # data labels (see tools.yaml) that never go out
   local_input: masked         # what the local model sees: masked or original
 
-# Label for the data each tool returns, used by routing.
-tool_data_labels:
-  search_knowledge: approved_content
-
+tools: tools.yaml             # each tool: server, kind, data label
 prompt: prompt.md             # system prompt
 responses: responses.yaml     # fixed replies used when a guardrail blocks
 rules: rules.yaml             # layer 1 guardrails

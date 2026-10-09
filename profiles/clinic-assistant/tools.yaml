@@ -1,0 +1,36 @@
+# Tools this profile can use, one entry each. Everything the platform needs to know
+# about a tool lives here; which agent may call it is in profile.yaml (agents), and
+# which role may use it is in roles.yaml. Checked by profiles/loader.py at startup.
+#
+#   server                where the tool's MCP server listens
+#   kind                  read: returns data · change: changes something. A change tool runs
+#                         only after a person approves (actions.yaml), only from the agent that
+#                         carries out approved changes, never from the agent that talks to the model
+#   data_label            what kind of data it returns; routing decides by it (profile.yaml routing)
+#   lane                  where its steps show in the decision trace: knowledge or records
+#                         (change tools always show under action)
+#   receives_identifiers  gets the real question, e.g. a patient name to look up. Only for tools
+#                         whose data never leaves the machine; the audit still holds masked text
+#   role_filtered         results are filtered by the data classes the role may see (roles.yaml)
+
+search_knowledge:
+  description: Approved clinic policies
+  server: http://127.0.0.1:8100/mcp
+  kind: read
+  data_label: approved_content
+  lane: knowledge
+
+search_records:
+  description: Patient records, built only from the data classes the role may see
+  server: http://127.0.0.1:8101/mcp
+  kind: read
+  data_label: patient_record               # never leaves the clinic (routing.never_external_labels)
+  lane: records
+  receives_identifiers: true               # looks patients up by name
+  role_filtered: true
+
+reschedule_appointment:
+  description: Moves an appointment, after a person approves (actions.yaml)
+  server: http://127.0.0.1:8102/mcp
+  kind: change
+  data_label: patient_record

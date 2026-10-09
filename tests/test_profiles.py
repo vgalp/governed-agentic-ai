@@ -128,9 +128,9 @@ def test_ollama_cannot_be_external(copy_of_adhd):
         load_profile_from(copy_of_adhd)
 
 
-def test_every_granted_tool_needs_a_data_label(copy_of_adhd):
-    _edit_yaml(copy_of_adhd / "profile.yaml", lambda d: d.update(tool_data_labels={}))
-    with pytest.raises(ProfileError, match="no label for search_knowledge"):
+def test_every_tool_needs_a_data_label(copy_of_adhd):
+    _edit_yaml(copy_of_adhd / "tools.yaml", lambda d: d["search_knowledge"].pop("data_label"))
+    with pytest.raises(ProfileError, match="missing 'data_label'"):
         load_profile_from(copy_of_adhd)
 
 

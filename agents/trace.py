@@ -26,8 +26,8 @@ TRACE_TOPIC = "agent.trace"
 # Which agent owns each step. Today the planner runs the first five; in the multi-agent
 # pipeline each becomes its own agent, and the trace keeps these names. "action" holds a
 # proposed change, its approval and its execution (planner, then the executor agent).
+# A tool's steps show under the lane set for it in the profile's tools.yaml.
 AGENTS = ("intake", "knowledge", "records", "router", "answer", "action")
-TOOL_AGENTS = {"search_knowledge": "knowledge", "search_records": "records"}
 
 # running: a slow step has started (classifier, tool call, model)
 # pass / block: a check allowed or stopped the request
@@ -37,10 +37,6 @@ TOOL_AGENTS = {"search_knowledge": "knowledge", "search_records": "records"}
 OUTCOMES = ("running", "pass", "block", "override", "info", "error")
 
 TOKEN_RE = re.compile(r"^\[([A-Z_]+)_\d+\]$")
-
-
-def tool_agent(tool: str) -> str:
-    return TOOL_AGENTS.get(tool, tool)
 
 
 def masking_summary(mapping: dict[str, str]) -> str:

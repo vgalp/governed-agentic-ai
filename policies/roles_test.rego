@@ -7,13 +7,17 @@ import data.roles
 
 clinic := {"clinic": {
 	"agents": {"planner": {"tools": ["search_knowledge", "search_records"]}},
+	"tools": {"search_knowledge": {"kind": "read"}, "search_records": {"kind": "read"}},
 	"roles": {
 		"nurse": {"tools": ["search_knowledge", "search_records"], "data_classes": ["patient_details", "medications"]},
 		"compliance": {"tools": ["search_knowledge"], "data_classes": []},
 	},
 }}
 
-no_roles := {"adhd": {"agents": {"planner": {"tools": ["search_knowledge"]}}}}
+no_roles := {"adhd": {
+	"agents": {"planner": {"tools": ["search_knowledge"]}},
+	"tools": {"search_knowledge": {"kind": "read"}},
+}}
 
 call(profile, role, tool) := {"profile": profile, "agent": "planner", "role": role, "tool": tool}
 

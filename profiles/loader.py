@@ -2,8 +2,9 @@
 
 A profile is a folder under profiles/ that holds everything specific to one use
 case: the model, system prompt, guardrail rules, fixed replies, classifier policy,
-privacy settings, knowledge base and which tools each agent may call. The pipeline
-code is shared, so a new use case is a new folder, not new code.
+privacy settings, knowledge base, the tools it can use (tools.yaml) and which agent
+may call each one. The pipeline code is shared, so a new use case is a new folder,
+not new code.
 
 The active profile comes from the PROFILE environment variable (default:
 adhd-assistant). A profile that is incomplete or inconsistent fails at startup
@@ -29,6 +30,11 @@ SEND_EXTERNAL_WHEN = {"no_personal_info", "masked"}
 LOCAL_INPUT = {"masked", "original"}
 FIELD_TYPES = {"source", "datetime", "text"}
 ACTION_RESPONSES = ("action_pending", "action_denied", "action_unclear")
+TOOL_NAME_RE = re.compile(r"^[a-z][a-z0-9_]*$")
+TOOL_KINDS = {"read", "change"}
+READ_LANES = {"knowledge", "records"}   # decision-trace lanes for read tools (agents/trace.py)
+CHANGE_LANE = "action"                  # change tools always show under the action lane
+MODEL_AGENT = "planner"                 # the agent that talks to the model: never holds a change tool
 
 
 class ProfileError(Exception):
@@ -69,6 +75,19 @@ class Role:
 
 
 @dataclass(frozen=True)
+class Tool:
+    """One tool the profile can use (tools.yaml)."""
+    name: str
+    description: str
+    server: str                      # MCP server URL
+    kind: str                        # read: returns data · change: changes something (after approval)
+    data_label: str                  # what kind of data it returns; routing decides by it
+    lane: str                        # where its steps show in the decision trace
+    receives_identifiers: bool       # gets the real question (local-only data); audit stays masked
+    role_filtered: bool              # results filtered by the data classes the role may see
+
+
+@dataclass(frozen=True)
 class Action:
     """A change the assistant may PROPOSE. A person must approve it before it is made."""
     name: str
@@ -93,7 +112,7 @@ class Profile:
     path: Path
     models: dict[str, dict]                     # key -> provider, name, location, ...
     routing: dict
-    tool_data_labels: dict[str, str]            # tool -> label of the data it returns
+    tools: dict[str, Tool]                      # every tool the profile can use (tools.yaml)
     system_prompt: str
     responses: dict[str, str]
     input_rules: tuple[Rule, ...]
@@ -103,12 +122,10 @@ class Profile:
     privacy_allow_list: tuple[str, ...]
     knowledge_base: Path
     records_db: Path | None                     # SQLite records database, if the profile has one
-    identifier_tools: tuple[str, ...]           # tools that may receive real names (local only)
     cite_sources: bool                          # show source IDs to the model so it can cite them
     agents: dict[str, tuple[str, ...]]          # agent -> tools it may call
     roles: dict[str, Role]                      # empty: the profile has no roles
     data_classes: dict[str, str]                # data class -> description
-    role_filtered_tools: tuple[str, ...]        # tools whose results are filtered by role
     examples: tuple[str, ...]                   # example questions for the chat page
     classifier_exemptions: tuple[Rule, ...]     # narrow cases where an input classifier flag is overridden
     source_id_pattern: re.Pattern | None        # what a cited source ID looks like (grounding check)
@@ -120,6 +137,25 @@ class Profile:
         if r and category in r.responses:
             return r.responses[category]
         return self.responses[category]
+
+    @property
+    def tool_data_labels(self) -> dict[str, str]:
+        """tool -> label of the data it returns (used by routing)."""
+        return {n: t.data_label for n, t in self.tools.items()}
+
+    @property
+    def identifier_tools(self) -> tuple[str, ...]:
+        """Tools that receive real identifiers, e.g. a name to look up (local data only)."""
+        return tuple(n for n, t in self.tools.items() if t.receives_identifiers)
+
+    @property
+    def role_filtered_tools(self) -> tuple[str, ...]:
+        """Tools whose results are filtered by the data classes the role may see."""
+        return tuple(n for n, t in self.tools.items() if t.role_filtered)
+
+    def tool_owner(self, tool: str) -> str | None:
+        """For a change tool: the one agent that may run it (after approval)."""
+        return next((a.agent for a in self.actions.values() if a.tool == tool), None)
 
     @property
     def local_model(self) -> dict:
@@ -135,6 +171,10 @@ class Profile:
         r = self.routing
         data = {
             "agents": {a: {"tools": list(t)} for a, t in self.agents.items()},
+            # The kind of each tool, and for a change tool the one agent that may run it.
+            # policies/mcp_authz.rego denies any tool not listed here.
+            "tools": {n: {"kind": t.kind, **({"agent": self.tool_owner(n)} if t.kind == "change" else {})}
+                      for n, t in self.tools.items()},
             "routing": {
                 "external_allowed": r["external_allowed"],
                 "send_external_when": r["send_external_when"],
@@ -321,8 +361,76 @@ def select_external_model(profile: Profile, key: str) -> Profile:
     return replace(profile, routing=routing)
 
 
+def _tools(raw: dict, where: str) -> dict[str, Tool]:
+    """tools.yaml: every tool the profile can use, with where it runs and what it does."""
+    if not raw:
+        raise ProfileError(f"{where}: list at least one tool")
+    tools = {}
+    for name, t in raw.items():
+        w = f"{where}: tool '{name}'"
+        if not TOOL_NAME_RE.match(str(name)):
+            raise ProfileError(f"{w}: use lowercase letters, digits and '_' (the MCP tool name)")
+        if not isinstance(t, dict):
+            raise ProfileError(f"{w}: must be a mapping")
+        server = str(_require(t, "server", w))
+        if not re.match(r"^https?://\S+$", server):
+            raise ProfileError(f"{w}: server must be an http:// or https:// URL")
+        kind = _require(t, "kind", w)
+        if kind not in TOOL_KINDS:
+            raise ProfileError(f"{w}: kind must be read or change")
+        label = str(_require(t, "data_label", w))
+        flags = {}
+        for f in ("receives_identifiers", "role_filtered"):
+            flags[f] = t.get(f, False)
+            if not isinstance(flags[f], bool):
+                raise ProfileError(f"{w}: {f} must be true or false")
+        if kind == "change":
+            if t.get("lane", CHANGE_LANE) != CHANGE_LANE:
+                raise ProfileError(f"{w}: a change tool always shows under the '{CHANGE_LANE}' lane")
+            if any(flags.values()):
+                raise ProfileError(f"{w}: receives_identifiers and role_filtered are for read tools "
+                                   "(a change tool gets validated IDs only)")
+            lane = CHANGE_LANE
+        else:
+            lane = t.get("lane", "knowledge")
+            if lane not in READ_LANES:
+                raise ProfileError(f"{w}: lane must be one of {sorted(READ_LANES)}")
+        tools[name] = Tool(name, str(t.get("description", "")), server, kind, label, lane,
+                           flags["receives_identifiers"], flags["role_filtered"])
+    return tools
+
+
+def _check_grants(tools: dict[str, Tool], agents: dict[str, tuple[str, ...]], where: str) -> None:
+    """Agents may only be granted registered tools, and the agent that talks to the model
+    never a tool that changes something."""
+    for agent, granted in agents.items():
+        for t in granted:
+            if t not in tools:
+                raise ProfileError(f"{where}: agent '{agent}': tool '{t}' is not in tools.yaml")
+            if tools[t].kind == "change" and agent == MODEL_AGENT:
+                raise ProfileError(f"{where}: agent '{MODEL_AGENT}' talks to the model, so it may not "
+                                   f"hold '{t}', which changes things (give it to the executor agent)")
+
+
+def _check_tools(tools: dict[str, Tool], agents: dict[str, tuple[str, ...]], routing: dict,
+                 roles: dict, actions: dict, where: str) -> None:
+    """Rules that tie tools to routing, roles and actions."""
+    granted = {t for ts in agents.values() for t in ts}
+    for t in tools.values():
+        # Real identifiers only go to tools whose data never leaves the machine.
+        if t.receives_identifiers and t.data_label not in routing["never_external_labels"]:
+            raise ProfileError(f"{where}: '{t.name}' receives identifiers, so its data label "
+                               f"'{t.data_label}' must be in routing.never_external_labels")
+        if t.role_filtered and not roles:
+            raise ProfileError(f"{where}: '{t.name}' is role_filtered, but the profile has no roles")
+        # Every change needs a person's approval: a change tool must belong to an action.
+        if t.kind == "change" and t.name in granted and not any(a.tool == t.name for a in actions.values()):
+            raise ProfileError(f"{where}: '{t.name}' changes things but no action in actions.yaml uses it, "
+                               "so nothing would ask a person first")
+
+
 def _roles(raw: dict, granted: set[str], where: str, response_keys: set[str]):
-    """roles.yaml: data classes, roles (title, tools, data classes, replies), filtered tools."""
+    """roles.yaml: data classes and roles (title, tools, data classes, replies)."""
     classes = raw.get("data_classes") or {}
     if not isinstance(classes, dict) or not classes:
         raise ProfileError(f"{where}: 'data_classes' must list at least one class")
@@ -348,15 +456,13 @@ def _roles(raw: dict, granted: set[str], where: str, response_keys: set[str]):
         roles[key] = Role((r or {}).get("title", key), tools, seen, replies)
     if not roles:
         raise ProfileError(f"{where}: 'roles' must define at least one role")
-    filtered = tuple(raw.get("filtered_tools") or [])
-    for t in filtered:
-        if t not in granted:
-            raise ProfileError(f"{where}: filtered_tools: '{t}' is not granted to any agent")
-    return roles, dict(classes), filtered
+    if "filtered_tools" in raw:
+        raise ProfileError(f"{where}: 'filtered_tools' moved to tools.yaml (role_filtered: true)")
+    return roles, dict(classes)
 
 
 def _actions(raw: dict, where: str, patterns: dict[str, re.Pattern], agents: dict[str, tuple[str, ...]],
-             roles: dict[str, Role]) -> dict[str, Action]:
+             roles: dict[str, Role], tools: dict[str, Tool]) -> dict[str, Action]:
     """actions.yaml: changes the assistant may propose. Every action needs a person's
     approval; the tool that makes the change belongs to one agent only, which runs it
     after approval, so the agent that talks to the model can never make a change itself."""
@@ -371,10 +477,14 @@ def _actions(raw: dict, where: str, patterns: dict[str, re.Pattern], agents: dic
         if intent not in patterns:
             raise ProfileError(f"{w}: intent '{intent}' is not a pattern in rules.yaml")
         tool = _require(a, "tool", w)
+        if tool not in tools or tools[tool].kind != "change":
+            raise ProfileError(f"{w}: tool '{tool}' must be a change tool in tools.yaml")
         agent = a.get("agent", "executor")
+        if agent == MODEL_AGENT:
+            raise ProfileError(f"{w}: agent '{MODEL_AGENT}' talks to the model and may never make a change")
         if tool not in agents.get(agent, ()):
             raise ProfileError(f"{w}: tool '{tool}' must be granted to agent '{agent}'")
-        others = sorted(n for n, tools in agents.items() if n != agent and tool in tools)
+        others = sorted(n for n, ts in agents.items() if n != agent and tool in ts)
         if others:
             raise ProfileError(f"{w}: only '{agent}' may hold '{tool}'; also granted to {', '.join(others)}")
         fields = a.get("fields") or {}
@@ -431,6 +541,9 @@ def load_profile_from(path: Path) -> Profile:
     if "model" in p or "data_policy" in p:
         raise ProfileError(f"{where}: 'model' and 'data_policy' were replaced by 'models' and "
                            "'routing' (see profiles/adhd-assistant/profile.yaml)")
+    if "tool_data_labels" in p or "tools_receiving_identifiers" in p:
+        raise ProfileError(f"{where}: 'tool_data_labels' and 'tools_receiving_identifiers' moved to "
+                           "tools.yaml (data_label, receives_identifiers)")
     models = _models(p.get("models"), where)
     routing = _routing(p.get("routing"), models, where)
 
@@ -484,23 +597,12 @@ def load_profile_from(path: Path) -> Profile:
     if not all(isinstance(v, str) and v.strip() for v in responses.values()):
         raise ProfileError(f"{path.name}/responses.yaml: every response must be non-empty text")
 
+    tools_file = _require(p, "tools", where)
+    tools = _tools(_yaml(_file(path, tools_file, where)), f"{path.name}/{tools_file}")
     agents_raw = _require(p, "agents", where)
     agents = {a: tuple((cfg or {}).get("tools", [])) for a, cfg in agents_raw.items()}
-    tool_data_labels = dict(p.get("tool_data_labels") or {})
-    granted = {t for tools in agents.values() for t in tools}
-    unlabeled = sorted(granted - tool_data_labels.keys())
-    if unlabeled:
-        raise ProfileError(f"{where}: tool_data_labels has no label for {', '.join(unlabeled)}")
-
-    # Tools that receive real identifiers (e.g. a patient name to look up) must be granted,
-    # and the data they return must be labelled as never leaving the machine.
-    identifier_tools = tuple(p.get("tools_receiving_identifiers") or [])
-    for t in identifier_tools:
-        if t not in granted:
-            raise ProfileError(f"{where}: tools_receiving_identifiers: '{t}' is not granted to any agent")
-        if tool_data_labels.get(t) not in routing["never_external_labels"]:
-            raise ProfileError(f"{where}: '{t}' receives identifiers, so its data label "
-                               f"'{tool_data_labels.get(t)}' must be in routing.never_external_labels")
+    _check_grants(tools, agents, where)
+    granted = {t for ts in agents.values() for t in ts}
 
     records_db = None
     if p.get("records_db"):
@@ -509,9 +611,9 @@ def load_profile_from(path: Path) -> Profile:
             raise ProfileError(f"{where}: records_db points outside the profile folder")
         # Not required to exist: it is built locally (see the profile's data/README.md).
 
-    roles, data_classes, role_filtered_tools = {}, {}, ()
+    roles, data_classes = {}, {}
     if p.get("roles"):
-        roles, data_classes, role_filtered_tools = _roles(
+        roles, data_classes = _roles(
             _yaml(_file(path, p["roles"], where)), granted, f"{path.name}/{p['roles']}",
             set(responses))
         if "role_required" not in responses:
@@ -521,11 +623,13 @@ def load_profile_from(path: Path) -> Profile:
     actions = {}
     if p.get("actions"):
         actions = _actions(_yaml(_file(path, p["actions"], where)), f"{path.name}/{p['actions']}",
-                           patterns, agents, roles)
+                           patterns, agents, roles, tools)
         missing = [r for r in ACTION_RESPONSES if r not in responses]
         if missing:
             raise ProfileError(f"{path.name}/responses.yaml: no response for {', '.join(missing)} "
                                "(needed because the profile has actions)")
+
+    _check_tools(tools, agents, routing, roles, actions, f"{path.name}/{tools_file}")
 
     privacy = p.get("privacy") or {}
     return Profile(
@@ -536,7 +640,7 @@ def load_profile_from(path: Path) -> Profile:
         path=path,
         models=models,
         routing=routing,
-        tool_data_labels=tool_data_labels,
+        tools=tools,
         system_prompt=read_prompt(_file(path, _require(p, "prompt", where), where)),
         responses={k: v.strip() for k, v in responses.items()},
         input_rules=input_rules,
@@ -546,12 +650,10 @@ def load_profile_from(path: Path) -> Profile:
         privacy_allow_list=tuple(privacy.get("allow_list", [])),
         knowledge_base=_file(path, _require(p, "knowledge_base", where), where),
         records_db=records_db,
-        identifier_tools=identifier_tools,
         cite_sources=bool(p.get("cite_sources", False)),
         agents=agents,
         roles=roles,
         data_classes=data_classes,
-        role_filtered_tools=role_filtered_tools,
         examples=tuple(p.get("examples") or []),
         classifier_exemptions=exemptions,
         source_id_pattern=source_id_pattern,
@@ -591,7 +693,7 @@ if __name__ == "__main__":
             r = pr.routing
             ext = (" -> ".join([r["external_model"], *r["fallback"]]) if r["external_allowed"] else "none")
             print(f"ok   {n}: {len(pr.input_rules)} input rules, {len(pr.output_rules)} output rules, "
-                  f"{len(pr.responses)} responses, agents {list(pr.agents)}, "
+                  f"{len(pr.responses)} responses, {len(pr.tools)} tools, agents {list(pr.agents)}, "
                   f"local model {pr.local_model['name']}, external model {ext}")
         except ProfileError as e:
             failed = True

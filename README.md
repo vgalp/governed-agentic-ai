@@ -163,7 +163,8 @@ Everything specific to a use case lives in a profile folder; the governed pipeli
 
 ```
 profiles/adhd-assistant/
-  profile.yaml            model, data policy, classifier, privacy, knowledge base, agents and tools
+  profile.yaml            models, routing, classifier, privacy, knowledge base, which agent may call which tool
+  tools.yaml              every tool the profile can use: server, read or change, data label
   prompt.md               system prompt
   rules.yaml              layer 1 guardrails (named patterns, input and output rules)
   responses.yaml          fixed replies when a guardrail blocks
@@ -179,6 +180,7 @@ PROFILE=adhd-assistant ./scripts/dev.sh start    # run a profile (this one is th
 Each profile also says which models it may use and when. OPA (`policies/routing.rego`) decides per request whether the local or an external model answers, from facts only (the kinds of personal information found, never the values). External models only ever receive masked text, a profile can forbid them entirely, and every decision is audited. The ADHD profile is local only. See [ADR 004](docs/decisions/004-model-routing.md).
 
 A profile is checked at startup and the service refuses to start if it is incomplete. Tool permissions in `profile.yaml` are enforced by OPA, which denies anything a profile does not grant. See [ADR 003](docs/decisions/003-deployment-profiles.md).
+Adding a tool is a profile change, not a code change: an entry in `tools.yaml` and a grant. The loader refuses unsafe combinations, such as giving the planner (the agent that talks to the model) a tool that changes something, or a change tool with no approval step. OPA enforces the same rule independently. See [ADR 010](docs/decisions/010-tool-registry.md).
 
 ## Project structure
 

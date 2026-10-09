@@ -48,16 +48,7 @@ routing:
   never_external_labels: [patient_record]  # record data never leaves the clinic
   local_input: original                    # staff look patients up by name; the local model may see it
 
-tool_data_labels:
-  search_knowledge: approved_content       # clinic policies
-  search_records: patient_record           # patient records: never leave the machine
-  reschedule_appointment: patient_record   # changes a patient's appointment (after approval)
-
-# search_records looks patients up by name, so it gets the real question. It runs
-# locally, and the gateway audits the masked question. Only tools whose data label
-# is in never_external_labels may be listed here (the loader checks).
-tools_receiving_identifiers: [search_records]
-
+tools: tools.yaml                          # each tool: server, kind, data label
 records_db: data/clinic.db                 # built locally: see data/README.md
 roles: roles.yaml                          # who may see which record data
 actions: actions.yaml                      # changes the assistant may propose; a person approves

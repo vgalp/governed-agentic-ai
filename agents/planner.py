@@ -27,7 +27,7 @@ import requests
 from confluent_kafka import Consumer, Producer
 
 from agents import actions
-from agents.trace import Trace, ids_text, masking_summary, tool_agent
+from agents.trace import Trace, ids_text, masking_summary
 from audit.chain import get_audit_chain
 from gateway.gateway import ToolCallDenied, call_tool
 from gateway.opa import decide
@@ -293,7 +293,7 @@ while True:
     notes, tools_used = [], []
     for tool in PROFILE.agents.get(AGENT_NAME, ()):
         receives_ids = tool in PROFILE.identifier_tools
-        agent = tool_agent(tool)
+        agent = PROFILE.tools[tool].lane         # where its steps show in the trace (tools.yaml)
         trace.start(agent, tool, f"{tool} through the gateway (policy check)")
         try:
             result = call_tool(AGENT_NAME, tool, {"query": req["message"] if receives_ids else masked_message},
