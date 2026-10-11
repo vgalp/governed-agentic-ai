@@ -95,6 +95,12 @@ def dashboard():
     return FileResponse(UI_DIR / "dashboard.html")
 
 
+@app.get("/demo", include_in_schema=False)
+def demo():
+    """Demo view for non-technical audiences: the chat, and each safety step in plain words."""
+    return FileResponse(UI_DIR / "demo.html")
+
+
 @app.get("/events", include_in_schema=False)
 async def events(request: Request):
     last_id = int(request.headers.get("last-event-id", 0) or 0)
