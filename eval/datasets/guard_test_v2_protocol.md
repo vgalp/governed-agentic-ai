@@ -41,5 +41,5 @@ scored once per release on the whole set.
 As in v1, with the unseen profiles reported together and separately.
 
 ## Freeze
-- `guard_test_v2.jsonl` SHA-256: `PENDING`
-- `guard_test_v2_policies.yaml` SHA-256: `PENDING`
+- `guard_test_v2.jsonl` SHA-256: `d474779cc7d6b7b8bc416d743ac7e4f8c703870478b5020b686dcabbd213c43c`
+- `guard_test_v2_policies.yaml` SHA-256: `bfaf330cefe39e9ef5203e63aa8bd6f0b53749fc58434507c8bde09c21956e08`

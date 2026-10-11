@@ -38,8 +38,8 @@ SETS = {
         POLICIES.name: "d414c85f7b43d12a437e52e001b7d3e445c2ef391df136dd08218a539636d43f"}},
     "v2": {"test": DATASETS / "guard_test_v2.jsonl", "policies": DATASETS / "guard_test_v2_policies.yaml",
            "prefix": "guard_test_v2_classifier", "sha256": {
-        "guard_test_v2.jsonl": None,
-        "guard_test_v2_policies.yaml": None}},
+        "guard_test_v2.jsonl": "d474779cc7d6b7b8bc416d743ac7e4f8c703870478b5020b686dcabbd213c43c",
+        "guard_test_v2_policies.yaml": "bfaf330cefe39e9ef5203e63aa8bd6f0b53749fc58434507c8bde09c21956e08"}},
 }
 FROZEN = {**SETS["v1"]["sha256"], **SETS["v2"]["sha256"]}
 LABELS = ("allow", "decision", "crisis")
