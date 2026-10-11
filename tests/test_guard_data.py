@@ -134,7 +134,7 @@ def test_split_keeps_every_cell_in_dev():
 
 
 def test_review_corrections_are_applied(tmp_path, monkeypatch):
-    for name in ("TRAIN", "DEV", "REVIEW"):
+    for name in ("TRAIN", "DEV", "REVIEW", "REVIEWED"):
         monkeypatch.setattr(clean, name, tmp_path / getattr(clean, name).name)
     rows = [{**row(f"msg {i}"), "id": f"g{i}"} for i in range(4)]
     clean.write_jsonl(clean.TRAIN, rows[:3])
@@ -144,10 +144,13 @@ def test_review_corrections_are_applied(tmp_path, monkeypatch):
                             "g1,clinic-assistant,x,allow,msg 1,crisis,\n"
                             "g3,clinic-assistant,x,allow,msg 3,drop,\n")
     (tmp_path / "review_progress.json").write_text('{"done": 3, "total": 3}')
-    clean.apply_review()
+    clean.apply_review("Claude; checked by a person")
     train = {r["id"]: r for r in clean.read_jsonl(clean.TRAIN)}
     assert train["g0"]["checked"] == "confirmed" and train["g1"]["label"] == "crisis"
     assert "checked" not in train["g2"] and clean.read_jsonl(clean.DEV) == []
+    recorded = clean.read_reviewed()
+    assert recorded["g1"]["your_label"] == "crisis" and recorded["g3"]["your_label"] == "drop"
+    assert recorded["g0"]["your_label"] == "" and recorded["g0"]["reviewer"] == "Claude; checked by a person"
 
 
 def test_bad_review_labels_are_refused(tmp_path, monkeypatch):
@@ -155,7 +158,9 @@ def test_bad_review_labels_are_refused(tmp_path, monkeypatch):
     clean.REVIEW.write_text("id,profile,angle,label,text,your_label,note\ng0,c,x,allow,t,maybe,\n")
     (tmp_path / "review_progress.json").write_text('{"done": 1, "total": 1}')
     with pytest.raises(SystemExit, match="maybe"):
-        clean.apply_review()
+        clean.apply_review("someone")
+    with pytest.raises(SystemExit, match="who reviewed"):
+        clean.apply_review(" ")
 
 
 @pytest.mark.parametrize("reply", [
@@ -200,16 +205,17 @@ def test_every_rescued_message_is_in_the_review(tmp_path, monkeypatch):
     with clean.REVIEW.open() as f:
         ids = [r["id"] for r in csv.DictReader(f)]
     assert all(f"r{i}" in ids for i in range(30)) and len(ids) == 30 + clean.REVIEW_PER_CELL
+    assert json.loads((tmp_path / "review_progress.json").read_text()) == {"done": 0, "total": len(ids)}
 
 
 def test_an_unfinished_review_cannot_be_applied(tmp_path, monkeypatch):
     monkeypatch.setattr(clean, "REVIEW", tmp_path / "review.csv")
     clean.REVIEW.write_text("id,profile,angle,label,text,your_label,note\ng0,c,x,allow,t,,\n")
     with pytest.raises(SystemExit, match="not finished"):
-        clean.apply_review()                                  # never opened in the review tool
+        clean.apply_review("someone")                         # never opened in the review tool
     (tmp_path / "review_progress.json").write_text('{"done": 0, "total": 1}')
     with pytest.raises(SystemExit, match="not finished"):
-        clean.apply_review()                                  # opened, not finished
+        clean.apply_review("someone")                         # opened, not finished
 
 
 def test_the_review_tool_records_answers_and_resumes(tmp_path, monkeypatch):
@@ -234,3 +240,56 @@ def test_choosing_the_given_label_counts_as_confirming():
     assert review.answer(row, "c") and row["your_label"] == ""
     assert review.answer(row, "D") and row["your_label"] == "decision"
     assert not review.answer(row, "z")
+
+
+def test_enter_keeps_an_answer_that_is_already_there():
+    from classifier import review
+    row = {"label": "crisis", "your_label": "allow"}           # filled in earlier, or by a first pass
+    assert review.answer(row, "") and row["your_label"] == "allow"
+    assert review.answer(row, "c") and row["your_label"] == ""  # back to the given label
+
+
+def test_the_same_message_with_another_name_is_dropped():
+    rows = [row("Can we deny Kimura Yuki's benefits?", "decision", "county-benefits"),
+            row("Can we deny Jameson Kai benefits?", "decision", "county-benefits"),
+            row("Mr. Rodriguez said he's tired of being a burden.", "crisis"),
+            row("Luisa said she's tired of being a burden.", "crisis"),
+            row("Can we approve Kimura Yuki's benefits?", "decision", "county-benefits"),
+            row("What meds are listed for Aisha Patel?"),
+            row("What meds are listed for Aisha Patel?", "decision")]   # other label: kept for the review
+    kept, dropped = clean.clean(rows, [], set())
+    assert [r["text"] for r in kept] == [rows[0]["text"], rows[2]["text"], rows[4]["text"], rows[5]["text"]]
+    assert dropped == {"same template": 2, "duplicate": 1}
+
+
+def test_reviews_are_kept_when_the_data_is_cleaned_again(tmp_path, monkeypatch):
+    monkeypatch.setattr(clean, "REVIEWED", tmp_path / "reviewed.csv")
+    clean.REVIEWED.write_text("id,profile,label,your_label,reviewer,note\n"
+                              "g1,c,allow,crisis,someone,\ng2,c,allow,drop,someone,\ng3,c,allow,,someone,\n")
+    rows = [{**row(f"msg {i}"), "id": f"g{i}"} for i in range(4)]
+    out, dropped = clean.apply_decisions(rows, clean.read_reviewed())
+    assert dropped == 1 and [r["id"] for r in out] == ["g0", "g1", "g3"]
+    assert "checked" not in out[0] and out[1]["label"] == "crisis" and out[1]["checked"] == "corrected"
+    assert out[2]["checked"] == "confirmed"
+
+
+def test_only_kinds_of_message_never_reviewed_are_sampled(tmp_path, monkeypatch):
+    import csv
+    monkeypatch.setattr(clean, "REVIEW", tmp_path / "review.csv")
+    old = [{**row(f"old message {i}"), "angle": "lookup", "id": f"o{i}"} for i in range(40)]
+    for r in old[:5]:
+        r["checked"] = "confirmed"
+    new = [{**row(f"new message {i}"), "angle": "wordplay", "id": f"n{i}"} for i in range(40)]
+    done = [{**row(f"rescued {i} lethal", "crisis"), "id": f"r{i}", "rescued": True, "checked": "confirmed"}
+            for i in range(5)]
+    assert clean.write_review(old + new + done, seed=1) == clean.REVIEW_PER_CELL
+    with clean.REVIEW.open() as f:
+        assert all(r["id"].startswith("n") for r in csv.DictReader(f))
+
+
+def test_the_wordplay_angle_covers_every_profile_with_its_own_words():
+    angle = next(a for a in generate.ANGLES if a[1] == "wordplay")
+    assert angle[0] == "allow" and angle[4] is None
+    for profile in generate.POLICIES:
+        text = generate.instruction(profile, angle[3])
+        assert "burden" in text and "bridge" in text and "fatal" in text

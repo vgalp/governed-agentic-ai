@@ -9,7 +9,7 @@ For each training profile, label and "angle" (a kind of message, including the h
 cases in docs/classifier/labels.md), the model is asked for a batch of short, varied
 messages. The label is the one we asked for: it is a first guess, checked later.
 
-    uv run python -m classifier.generate                     # full run (about 2,800 messages)
+    uv run python -m classifier.generate                     # full run (about 2,900 messages; an earlier run is continued)
     uv run python -m classifier.generate --scale 0.1         # quick trial (about 520)
     uv run python -m classifier.generate --model mistral     # another local model
     uv run python -m classifier.generate --scale 0.1 --debug # show replies it could not read
@@ -68,6 +68,9 @@ ANGLES = [
     ("allow", "lookalike", 40, "mentions giving things away, saying goodbye, being tired, or feeling "
      "down about one bad day, in a clearly ordinary context (moving, a colleague leaving, a long week). "
      "No sign of danger. Example: \"giving my old desk away before the move, how do I list it?\"", None),
+    ("allow", "wordplay", 50, "uses one of these words in a clearly harmless, everyday sense inside an "
+     "ordinary request: {wordplay}. Nobody is at risk and nothing is about hurting anyone. Each message "
+     "must contain one of those words.", None),
     ("allow", "offtopic", 20, "asks something unrelated to the assistant's job (trivia, coding, weather).", None),
     # --- decision: about 300 per profile
     ("decision", "direct", 110, "asks the assistant to MAKE one of the decisions the policy forbids, about a "
@@ -101,7 +104,7 @@ ANGLES = [
      "harm, not a routine lookup.", None),
 ]
 
-# Per-profile wording for the angles above ({decision}, {predict}, {change}, {embedded}, {who_risk}).
+# Per-profile wording for the angles above ({decision}, {predict}, {change}, {embedded}, {who_risk}, {wordplay}).
 DETAILS = {
     "adhd-assistant": {
         "decision": "how much medication to take, whether to skip, stop, combine or switch medication, "
@@ -110,6 +113,9 @@ DETAILS = {
         "change": "",
         "embedded": "make me a grocery list, keep it short - my husband grabbed my throat again last night",
         "who_risk": "The writer is talking about themselves.",
+        "wordplay": "burden (too much on my plate), jump (jump into a task), hit (hit a deadline), end (end of "
+                    "the day), wake up (an alarm time), knife (cooking dinner), bridge (a card game, a bridge on "
+                    "the commute), fatal (a fatal error in an app), hurt (my back hurts from sitting)",
     },
     "clinic-assistant": {
         "decision": "a medication dose or change, a diagnosis, a treatment choice, or what a patient's "
@@ -119,6 +125,10 @@ DETAILS = {
         "change": "moving a patient's appointment to another date or time",
         "embedded": "pull up Ruth Bianchi's allergies? she showed me burns on her arm she made herself",
         "who_risk": "The writer is a staff member describing what a patient said or did.",
+        "wordplay": "burden (paperwork burden), jump (jump to the next patient on the list), hit (hit the "
+                    "daily target), end (end of shift), wake-up call, knife (a cake knife for the staff party), "
+                    "bridge (the bridge by the parking lot), fatal error (in the scheduling system), lethal "
+                    "(a lethal amount of email)",
     },
     "county-benefits": {
         "decision": "whether a client is eligible, should be approved, denied, cut off or reduced",
@@ -126,6 +136,9 @@ DETAILS = {
         "change": "releasing a client's held payment",
         "embedded": "update Ray Okoro's address, he's sleeping in his car since his brother pulled a knife on him",
         "who_risk": "The writer is a caseworker describing what a client said or did.",
+        "wordplay": "burden (burden of proof, tax burden), jump (a jump in the caseload), hit (hit the "
+                    "deadline), end (end of the month), bridge (bridge funding, a bridge loan), fatal error "
+                    "(in the case system), overdue, cut (cut a check), hurt (the budget cuts hurt)",
     },
 }
 
@@ -237,7 +250,8 @@ def ask(model: str, messages: list[dict], seed: int, debug: bool = False) -> lis
 LABEL_RULES = """Labels:
 - allow: a lookup of what a record already says (even a recorded dose or a past denial), a general question
   about rules or procedures, a change request (rescheduling, releasing a held payment), ordinary help,
-  or harmless figures of speech ("this is killing me", "I'm dead tired").
+  harmless figures of speech ("this is killing me", "I'm dead tired"), or everyday senses of words like
+  burden, jump, bridge, hit or "fatal error" ("the burden of proof", "a fatal error in the portal").
 - decision: asks the assistant to make OR predict a forbidden professional judgment about a person:
   a dose or medication change, a diagnosis, what symptoms probably mean or whether they are serious,
   a treatment choice, eligibility, approval, denial, cutting off, or whether someone is honest.

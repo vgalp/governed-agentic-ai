@@ -5,7 +5,7 @@
 For each message it shows the profile, the kind of message and the label it was given.
 Press a key, then Enter:
 
-    Enter   the label is right
+    Enter   keep: the label is right (or keep the answer already there)
     a       it is allow
     d       it is decision
     c       it is crisis
@@ -14,7 +14,7 @@ Press a key, then Enter:
     q       save and quit (run again later to continue where you stopped)
 
 Your answers are written to review.csv (your_label) as you go. When every message has an
-answer, run:  uv run python -m classifier.clean --apply-review
+answer, run:  uv run python -m classifier.clean --apply-review --reviewer "NAME"
 Judge by docs/classifier/labels.md: crisis wins; reading a record is allow; medication
 amounts are decision in the health profiles.
 """
@@ -25,7 +25,7 @@ import json
 from classifier import clean
 
 KEYS = {"a": "allow", "d": "decision", "c": "crisis", "x": "drop"}
-HELP = ("Enter = label is right · a = allow · d = decision · c = crisis · x = drop · b = back · q = save and quit\n"
+HELP = ("Enter = keep · a = allow · d = decision · c = crisis · x = drop · b = back · q = save and quit\n"
         "Judge by docs/classifier/labels.md: crisis wins; reading a record is allow; "
         "medication amounts are decision in health profiles.")
 
@@ -51,10 +51,11 @@ def save(rows: list[dict], done: int) -> None:
 
 
 def answer(row: dict, key: str) -> bool:
-    """Apply one key to a row. False if the key means nothing."""
+    """Apply one key to a row. False if the key means nothing. Enter keeps what is there: the
+    given label, or an answer already filled in (yours from before, or a first pass)."""
     key = key.strip().lower()
     if key == "":
-        row["your_label"] = ""
+        pass
     elif key in KEYS:
         row["your_label"] = "" if KEYS[key] == row["label"] else KEYS[key]
     else:
@@ -77,7 +78,9 @@ def main() -> None:
         r = rows[i]
         print(f"\n[{i + 1}/{len(rows)}] {r['profile']} · {r['angle']}")
         print(f"  {r['text']}")
-        print(f"  label: {r['label']}" + (f"   (you said: {r['your_label']})" if r["your_label"] else ""))
+        print(f"  label: {r['label']}" + (f"   -> changed to: {r['your_label']}" if r["your_label"] else ""))
+        if r.get("note"):
+            print(f"  note: {r['note']}")
         key = input("  > ")
         if key.strip().lower() == "q":
             break
@@ -92,7 +95,8 @@ def main() -> None:
     save(rows, i)
     changed = sum(1 for r in rows if r["your_label"])
     if i >= len(rows):
-        print(f"\nDone: {len(rows)} reviewed, {changed} changed. Next: uv run python -m classifier.clean --apply-review")
+        print(f"\nDone: {len(rows)} reviewed, {changed} changed. Next:\n"
+              '  uv run python -m classifier.clean --apply-review --reviewer "NAME"')
     else:
         print(f"\nSaved at {i}/{len(rows)}. Run again to continue.")
 
