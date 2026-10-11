@@ -1,6 +1,7 @@
 """Training data for the guard classifier: the unseen profile and the frozen test set stay
 out of it (classifier/generate.py, classifier/clean.py). No model is called here."""
 
+import builtins
 import json
 import random
 import sys
@@ -142,6 +143,7 @@ def test_review_corrections_are_applied(tmp_path, monkeypatch):
                             "g0,clinic-assistant,x,allow,msg 0,,\n"
                             "g1,clinic-assistant,x,allow,msg 1,crisis,\n"
                             "g3,clinic-assistant,x,allow,msg 3,drop,\n")
+    (tmp_path / "review_progress.json").write_text('{"done": 3, "total": 3}')
     clean.apply_review()
     train = {r["id"]: r for r in clean.read_jsonl(clean.TRAIN)}
     assert train["g0"]["checked"] == "confirmed" and train["g1"]["label"] == "crisis"
@@ -151,6 +153,7 @@ def test_review_corrections_are_applied(tmp_path, monkeypatch):
 def test_bad_review_labels_are_refused(tmp_path, monkeypatch):
     monkeypatch.setattr(clean, "REVIEW", tmp_path / "review.csv")
     clean.REVIEW.write_text("id,profile,angle,label,text,your_label,note\ng0,c,x,allow,t,maybe,\n")
+    (tmp_path / "review_progress.json").write_text('{"done": 1, "total": 1}')
     with pytest.raises(SystemExit, match="maybe"):
         clean.apply_review()
 
@@ -171,3 +174,63 @@ def test_messages_are_read_from_any_reply_shape(reply):
 @pytest.mark.parametrize("reply", ["", "not json at all", '{"error": "no"}', '{"messages": ["hi", 3]}'])
 def test_unreadable_replies_give_nothing(reply):
     assert generate.extract(reply) == []
+
+
+def test_only_explicit_crisis_messages_are_rescued():
+    rejected = [
+        {"profile": "clinic-assistant", "label": "crisis", "angle": "means", "text": "is 50 zoloft lethal", "judge": "decision"},
+        {"profile": "county-benefits", "label": "crisis", "angle": "indirect", "text": "says she's a burden to everyone",
+         "judge": "allow"},
+        {"profile": "adhd-assistant", "label": "crisis", "angle": "embedded", "text": "make a budget, money is tight",
+         "judge": "allow"},
+        {"profile": "clinic-assistant", "label": "decision", "angle": "direct", "text": "is this dose deadly or fine",
+         "judge": "allow"},
+    ]
+    got = clean.rescue(rejected)
+    assert [r["text"] for r in got] == [rejected[0]["text"], rejected[1]["text"]]
+    assert all(r["rescued"] and "judge" not in r and r["label"] == "crisis" for r in got)
+
+
+def test_every_rescued_message_is_in_the_review(tmp_path, monkeypatch):
+    import csv
+    monkeypatch.setattr(clean, "REVIEW", tmp_path / "review.csv")
+    rows = [{**row(f"plain message number {i}"), "id": f"g{i}"} for i in range(50)]
+    rows += [{**row(f"rescued message {i} lethal", "crisis"), "id": f"r{i}", "rescued": True} for i in range(30)]
+    clean.write_review(rows, seed=1)
+    with clean.REVIEW.open() as f:
+        ids = [r["id"] for r in csv.DictReader(f)]
+    assert all(f"r{i}" in ids for i in range(30)) and len(ids) == 30 + clean.REVIEW_PER_CELL
+
+
+def test_an_unfinished_review_cannot_be_applied(tmp_path, monkeypatch):
+    monkeypatch.setattr(clean, "REVIEW", tmp_path / "review.csv")
+    clean.REVIEW.write_text("id,profile,angle,label,text,your_label,note\ng0,c,x,allow,t,,\n")
+    with pytest.raises(SystemExit, match="not finished"):
+        clean.apply_review()                                  # never opened in the review tool
+    (tmp_path / "review_progress.json").write_text('{"done": 0, "total": 1}')
+    with pytest.raises(SystemExit, match="not finished"):
+        clean.apply_review()                                  # opened, not finished
+
+
+def test_the_review_tool_records_answers_and_resumes(tmp_path, monkeypatch):
+    from classifier import review
+    monkeypatch.setattr(clean, "REVIEW", tmp_path / "review.csv")
+    clean.REVIEW.write_text("id,profile,angle,label,text,your_label,note\n"
+                            "g0,c,x,allow,one,,\ng1,c,x,crisis,two,,\ng2,c,x,decision,three,,\n")
+    keys = iter(["", "a", "q"])                               # keep, change to allow, quit
+    monkeypatch.setattr(builtins, "input", lambda _: next(keys))
+    review.main()
+    rows, done = review.load()
+    assert done == 2 and [r["your_label"] for r in rows] == ["", "allow", ""] and not review.finished()
+    keys = iter(["x"])                                        # continue: drop the last one
+    review.main()
+    rows, done = review.load()
+    assert done == 3 and rows[2]["your_label"] == "drop" and review.finished()
+
+
+def test_choosing_the_given_label_counts_as_confirming():
+    from classifier import review
+    row = {"label": "crisis", "your_label": ""}
+    assert review.answer(row, "c") and row["your_label"] == ""
+    assert review.answer(row, "D") and row["your_label"] == "decision"
+    assert not review.answer(row, "z")
