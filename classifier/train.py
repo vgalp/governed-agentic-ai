@@ -1,7 +1,7 @@
 """Fine-tune ModernBERT-base as the guard classifier (allow / decision / crisis).
 
-    uv run --group train python -m classifier.train                 # about 5-10 minutes on an M3 Pro
-    uv run --group train python -m classifier.train --epochs 4 --lr 2e-5
+    uv run --group train python -m classifier.train                       # v2: label smoothing, own folder
+    uv run --group train python -m classifier.train --out guard-modernbert --label-smoothing 0   # as v1
 
 Input to the model: the profile's guard policy and the message, as a pair, so one model serves
 every profile and a new profile only needs a new policy (docs/classifier/labels.md).
@@ -10,8 +10,12 @@ Trains on classifier/data/train.jsonl. After each epoch it scores classifier/dat
 keeps the best epoch (macro F1, then crisis recall). The frozen test set is NOT used here: it is
 scored once, by a separate script, after training is finished.
 
-Output: models/guard-modernbert/ (not in git): the model, its tokenizer, and training_info.json
-(base model, data hashes, settings, dev scores) for the model card.
+Label smoothing (v2): the model is trained towards 90% sure instead of 100%, so its probabilities
+stay meaningful and the thresholds chosen on dev can do their job. v1 (no smoothing) was nearly
+always 0% or 100% sure, even when wrong.
+
+Output: models/<--out>/ (not in git, default guard-modernbert-v2; v1 is in guard-modernbert): the
+model, its tokenizer, and training_info.json (base model, data hashes, settings, dev scores).
 """
 
 import argparse
@@ -27,7 +31,8 @@ from classifier.clean import DEV, LABELS, TRAIN, read_jsonl
 from classifier.generate import POLICIES
 
 BASE = "answerdotai/ModernBERT-base"
-OUT = Path(__file__).resolve().parent.parent / "models" / "guard-modernbert"
+MODELS = Path(__file__).resolve().parent.parent / "models"
+OUT = MODELS / "guard-modernbert"                   # v1, the default for loading
 LABEL_ID = {label: i for i, label in enumerate(LABELS)}
 
 
@@ -79,7 +84,10 @@ def main() -> None:
     ap.add_argument("--batch", type=int, default=16)
     ap.add_argument("--max-len", type=int, default=256)
     ap.add_argument("--seed", type=int, default=7)
+    ap.add_argument("--label-smoothing", type=float, default=0.1)
+    ap.add_argument("--out", default="guard-modernbert-v2", help="folder name under models/")
     args = ap.parse_args()
+    out_dir = MODELS / args.out
 
     import torch
     from transformers import AutoModelForSequenceClassification, AutoTokenizer, get_linear_schedule_with_warmup
@@ -119,12 +127,13 @@ def main() -> None:
     steps = args.epochs * ((len(train) + args.batch - 1) // args.batch)
     opt = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=0.01)
     sched = get_linear_schedule_with_warmup(opt, int(0.1 * steps), steps)
+    loss_fn = torch.nn.CrossEntropyLoss(label_smoothing=args.label_smoothing)
     best, history = None, []
     for epoch in range(1, args.epochs + 1):
         model.train()
         t0, total, n = time.time(), 0.0, 0
         for enc, labels in batches(train, shuffle=True):
-            loss = model(**enc, labels=labels).loss
+            loss = loss_fn(model(**enc).logits, labels)
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
             opt.step()
@@ -137,10 +146,10 @@ def main() -> None:
               f"crisis recall {scores['crisis']['recall']:.3f}  ({time.time() - t0:.0f}s)")
         if better(scores, best):
             best = scores
-            OUT.mkdir(parents=True, exist_ok=True)
-            model.save_pretrained(OUT)
-            tok.save_pretrained(OUT)
-            print(f"  saved to {OUT}")
+            out_dir.mkdir(parents=True, exist_ok=True)
+            model.save_pretrained(out_dir)
+            tok.save_pretrained(out_dir)
+            print(f"  saved to {out_dir}")
 
     info = {
         "base_model": BASE, "labels": list(LABELS), "trained": date.today().isoformat(),
@@ -150,7 +159,7 @@ def main() -> None:
         "best_dev": best, "history": history,
         "note": "Dev only. The frozen test set is scored separately, once, after training.",
     }
-    (OUT / "training_info.json").write_text(json.dumps(info, indent=2))
+    (out_dir / "training_info.json").write_text(json.dumps(info, indent=2))
     print(f"Best dev: macro F1 {best['macro_f1']:.3f}, crisis recall {best['crisis']['recall']:.3f}")
     print("Confusion (gold->predicted):", best["confusion"])
 

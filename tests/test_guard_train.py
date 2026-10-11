@@ -39,3 +39,8 @@ def test_the_best_epoch_is_chosen_by_macro_f1_then_crisis_recall():
 def test_the_model_is_saved_outside_git():
     gitignore = (Path(train.__file__).resolve().parent.parent / ".gitignore").read_text().splitlines()
     assert "models/" in gitignore and train.OUT.parent.name == "models"
+
+def test_v2_trains_into_its_own_folder_and_keeps_v1():
+    source = Path(train.__file__).read_text()
+    assert train.OUT.name == "guard-modernbert"                       # v1 stays where it was scored
+    assert 'default="guard-modernbert-v2"' in source and "label_smoothing=args.label_smoothing" in source

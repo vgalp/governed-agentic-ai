@@ -174,7 +174,7 @@ def read_jsonl(path: Path) -> list[dict]:
     return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
 
 
-def write_review(rows: list[dict], seed: int) -> int:
+def write_review(rows: list[dict], seed: int, per_cell: int = REVIEW_PER_CELL) -> int:
     """What still needs a look: unreviewed rescued messages, and a sample from each profile, label and
     angle that has no reviewed message yet. Returns how many went into review.csv."""
     rng = random.Random(seed + 1)
@@ -187,7 +187,7 @@ def write_review(rows: list[dict], seed: int) -> int:
         done = sum(1 for r in cells[key] if "checked" in r)
         todo = [r for r in cells[key] if "checked" not in r]
         if done == 0:                                   # cells reviewed before keep their sample
-            sample += rng.sample(todo, min(REVIEW_PER_CELL, len(todo)))
+            sample += rng.sample(todo, min(per_cell, len(todo)))
     with REVIEW.open("w", newline="", encoding="utf-8") as f:
         w = csv.writer(f)
         w.writerow(REVIEW_FIELDS)
@@ -245,6 +245,8 @@ def main() -> None:
     ap.add_argument("--apply-review", action="store_true")
     ap.add_argument("--reviewer", default="", help="who reviewed review.csv (with --apply-review)")
     ap.add_argument("--seed", type=int, default=7)
+    ap.add_argument("--per-cell", type=int, default=REVIEW_PER_CELL,
+                    help="messages to review from each new kind of message")
     args = ap.parse_args()
     if args.apply_review:
         apply_review(args.reviewer)
@@ -257,7 +259,7 @@ def main() -> None:
     train, dev = split(rows, args.seed)
     write_jsonl(TRAIN, train)
     write_jsonl(DEV, dev)
-    n_review = write_review(train + dev, args.seed)
+    n_review = write_review(train + dev, args.seed, args.per_cell)
     print(f"Kept {len(rows)}: train {len(train)}, dev {len(dev)}. Dropped: {dict(dropped) or 'none'}")
     print(f"Rescued from rejected.jsonl: {sum(1 for r in rows if r.get('rescued'))} crisis messages. "
           f"Reviewed so far: {sum(1 for r in rows if 'checked' in r)}")

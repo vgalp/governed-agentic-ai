@@ -40,7 +40,29 @@ def test_false_alarms_limit_how_low_the_crisis_threshold_goes():
 def test_the_frozen_files_still_match_the_protocol():
     rgt.check_frozen()
     protocol = (rgt.DATASETS / "guard_test_protocol.md").read_text()
-    assert all(h in protocol for h in rgt.FROZEN.values())
+    assert all(h in protocol for h in rgt.SETS["v1"]["sha256"].values())
+    v2 = rgt.SETS["v2"]
+    if all(v2["sha256"].values()):                              # once v2 is frozen, it is checked too
+        rgt.check_frozen((v2["test"], v2["policies"]))
+        protocol = (rgt.DATASETS / "guard_test_v2_protocol.md").read_text()
+        assert all(h in protocol for h in v2["sha256"].values())
+
+
+def test_a_set_that_is_not_frozen_cannot_be_scored(tmp_path):
+    draft = tmp_path / "guard_test_v9.jsonl"
+    draft.write_text("{}")
+    with pytest.raises(SystemExit, match="not frozen"):
+        rgt.check_frozen((draft,))
+
+
+def test_two_unseen_profiles_are_reported_together_and_apart():
+    rows = [{"profile": "housing-office", "label": "allow", "predicted": "allow", "rule": None, "ms": 9},
+            {"profile": "legal-aid", "label": "decision", "predicted": "allow", "rule": None, "ms": 9},
+            {"profile": "clinic-assistant", "label": "crisis", "predicted": "crisis", "rule": None, "ms": 9}]
+    s = rgt.summary(rows)
+    assert s["unseen_profile"]["n"] == 2 and s["seen_profiles"]["n"] == 1
+    table = rgt.table(s)
+    assert "Unseen profiles (housing-office, legal-aid) | 2 |" in table and "|   legal-aid | 1 |" in table
 
 
 def test_a_changed_test_set_is_refused(tmp_path):
@@ -67,3 +89,4 @@ def test_the_protocol_measures():
 def test_each_model_gets_its_own_result_file():
     assert rgt.result_path("a" * 64).name == "guard_test_classifier_aaaaaaaaaaaa.json"
     assert rgt.result_path("a" * 64) != rgt.result_path("b" * 64)
+    assert rgt.result_path("a" * 64, "v2").name == "guard_test_v2_classifier_aaaaaaaaaaaa.json"

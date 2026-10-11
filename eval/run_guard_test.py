@@ -1,19 +1,21 @@
-"""Score the guard classifier ONCE on the frozen test set (eval/datasets/guard_test_protocol.md).
+"""Score a guard classifier ONCE on a frozen test set (eval/datasets/guard_test_protocol.md).
 
-    uv run --group train python -m eval.run_guard_test
+    uv run --group train python -m eval.run_guard_test --set v2 --model guard-modernbert-v2
+    uv run --group train python -m eval.run_guard_test --set v1 --model guard-modernbert     # done
 
 Before running it checks that guard_test.jsonl and guard_test_policies.yaml still have the SHA-256
 recorded in the protocol, and that this exact model (by the hash of its weights) has not been
 scored before: rule 4, each system is run once per release, no reruns until the result looks better.
 
 The policies come from guard_test_policies.yaml (frozen with the set), including housing-office,
-the profile the classifier never saw in training. Messages are labelled one at a time, as in use,
-so the timing is per message.
+the profile the classifier never saw in training (v2 adds legal-aid). Messages are labelled one at
+a time, as in use, so the timing is per message.
 
-Output, in eval/results/ (commit it): guard_test_classifier_<model>.json with every prediction and
-the summary, and a .md table to paste into the write-up.
+Output, in eval/results/ (commit it): guard_test[_v2]_classifier_<model>.json with every prediction
+and the summary, and a .md table to paste into the write-up.
 """
 
+import argparse
 import hashlib
 import json
 import statistics
@@ -29,12 +31,19 @@ DATASETS = Path(__file__).resolve().parent / "datasets"
 RESULTS = Path(__file__).resolve().parent / "results"
 TEST = DATASETS / "guard_test.jsonl"
 POLICIES = DATASETS / "guard_test_policies.yaml"
-FROZEN = {   # from guard_test_protocol.md, "Freeze"
-    TEST.name: "4ec0a05b9e7594c5b61cb479f33b36a7e263b8518b8bd5e16272a5ef9d53359a",
-    POLICIES.name: "d414c85f7b43d12a437e52e001b7d3e445c2ef391df136dd08218a539636d43f",
+# Each set: its files and their SHA-256 from its protocol's "Freeze" section. None = not frozen yet.
+SETS = {
+    "v1": {"test": TEST, "policies": POLICIES, "prefix": "guard_test_classifier", "sha256": {
+        TEST.name: "4ec0a05b9e7594c5b61cb479f33b36a7e263b8518b8bd5e16272a5ef9d53359a",
+        POLICIES.name: "d414c85f7b43d12a437e52e001b7d3e445c2ef391df136dd08218a539636d43f"}},
+    "v2": {"test": DATASETS / "guard_test_v2.jsonl", "policies": DATASETS / "guard_test_v2_policies.yaml",
+           "prefix": "guard_test_v2_classifier", "sha256": {
+        "guard_test_v2.jsonl": None,
+        "guard_test_v2_policies.yaml": None}},
 }
+FROZEN = {**SETS["v1"]["sha256"], **SETS["v2"]["sha256"]}
 LABELS = ("allow", "decision", "crisis")
-UNSEEN = "housing-office"
+UNSEEN = ("housing-office", "legal-aid")
 
 
 def sha256(path: Path) -> str:
@@ -43,6 +52,8 @@ def sha256(path: Path) -> str:
 
 def check_frozen(files: tuple[Path, ...] = (TEST, POLICIES)) -> None:
     for path in files:
+        if FROZEN.get(path.name) is None:
+            raise SystemExit(f"{path.name} is not frozen yet: record its SHA-256 in the protocol and in SETS first.")
         if sha256(path) != FROZEN[path.name]:
             raise SystemExit(f"{path.name} has changed since it was frozen. The protocol does not allow "
                              "scoring on a changed test set.")
@@ -72,8 +83,10 @@ def summary(rows: list[dict]) -> dict:
     ms = [r["ms"] for r in rows]
     return {
         "all": scores(rows),
-        "seen_profiles": scores([r for r in rows if r["profile"] != UNSEEN]),
-        "unseen_profile": scores(by_profile[UNSEEN]) if by_profile[UNSEEN] else None,
+        "seen_profiles": scores([r for r in rows if r["profile"] not in UNSEEN]),
+        "unseen_profile": scores([r for r in rows if r["profile"] in UNSEEN]) if any(by_profile[u] for u in UNSEEN)
+        else None,
+        "unseen_names": [u for u in UNSEEN if by_profile[u]],
         "by_profile": {p: scores(v) for p, v in sorted(by_profile.items())},
         "by_rule": {k: {"n": len(v), "right": sum(r["label"] == r["predicted"] for r in v)}
                     for k, v in sorted(by_rule.items())},
@@ -85,9 +98,12 @@ def summary(rows: list[dict]) -> dict:
 def table(s: dict) -> str:
     lines = ["| Set | Messages | Crisis missed | Decisions let through | Wrong blocks | Macro F1 |",
              "|---|---|---|---|---|---|"]
-    for name, key in (("All", "all"), ("Seen profiles", "seen_profiles"), ("Unseen profile (housing-office)",
-                                                                           "unseen_profile")):
-        x = s[key]
+    unseen = s.get("unseen_names") or ["housing-office"]
+    label = f"Unseen profile{'s' if len(unseen) > 1 else ''} ({', '.join(unseen)})"
+    rows = [("All", s["all"]), ("Seen profiles", s["seen_profiles"]), (label, s["unseen_profile"])]
+    if len(unseen) > 1:
+        rows += [(f"  {u}", s["by_profile"][u]) for u in unseen]
+    for name, x in rows:
         if x:
             lines.append(f"| {name} | {x['n']} | {x['crisis_missed']}/{x['crisis_total']} | "
                          f"{x['decisions_let_through']}/{x['decision_total']} | "
@@ -98,26 +114,32 @@ def table(s: dict) -> str:
     return "\n".join(lines)
 
 
-def result_path(model_hash: str) -> Path:
-    return RESULTS / f"guard_test_classifier_{model_hash[:12]}.json"
+def result_path(model_hash: str, test_set: str = "v1") -> Path:
+    return RESULTS / f"{SETS[test_set]['prefix']}_{model_hash[:12]}.json"
 
 
 def main() -> None:
-    check_frozen()
+    ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    ap.add_argument("--set", choices=list(SETS), default="v2")
+    ap.add_argument("--model", default="guard-modernbert-v2", help="folder name under models/")
+    args = ap.parse_args()
+    spec = SETS[args.set]
+    check_frozen((spec["test"], spec["policies"]))
     from classifier.model import GuardModel
+    from classifier.train import MODELS
 
-    guard = GuardModel()
+    guard = GuardModel(MODELS / args.model)
     weights = guard.path / "model.safetensors"
     model_hash = sha256(weights)
-    out = result_path(model_hash)
+    out = result_path(model_hash, args.set)
     if out.exists():
         raise SystemExit(f"This model was already scored on the test set ({out.name}). Rule 4: one run per "
                          "release. Train a new release to score again.")
     if guard.thresholds is None:
         sys.exit("No thresholds.json: choose them on dev first: uv run --group train python -m classifier.calibrate")
 
-    policies = yaml.safe_load(POLICIES.read_text(encoding="utf-8"))
-    items = [json.loads(line) for line in TEST.read_text(encoding="utf-8").splitlines() if line.strip()]
+    policies = yaml.safe_load(spec["policies"].read_text(encoding="utf-8"))
+    items = [json.loads(line) for line in spec["test"].read_text(encoding="utf-8").splitlines() if line.strip()]
     for _ in range(5):                                    # warm up the GPU so the first messages are timed fairly
         guard.label(policies["adhd-assistant"], "Help me plan my morning.")
 
@@ -132,12 +154,13 @@ def main() -> None:
 
     s = summary(rows)
     RESULTS.mkdir(parents=True, exist_ok=True)
-    run = {"system": "guard classifier (ModernBERT-base, fine-tuned)", "model_sha256": model_hash,
-           "thresholds": guard.thresholds, "device": guard.device,
-           "test_sha256": FROZEN, "run_at": datetime.now().isoformat(timespec="seconds"),
+    run = {"system": f"guard classifier (ModernBERT-base, fine-tuned), {args.model}", "model_sha256": model_hash,
+           "thresholds": guard.thresholds, "device": guard.device, "test_set": args.set,
+           "test_sha256": spec["sha256"], "run_at": datetime.now().isoformat(timespec="seconds"),
            "summary": s, "rows": rows}
     out.write_text(json.dumps(run, indent=2, ensure_ascii=False))
-    out.with_suffix(".md").write_text(f"# Guard classifier on the frozen test set\n\nModel `{model_hash[:12]}`, "
+    out.with_suffix(".md").write_text(f"# Guard classifier on frozen test set {args.set}\n\n"
+                                      f"Model {args.model} `{model_hash[:12]}`, "
                                       f"thresholds {guard.thresholds}, run {run['run_at']}.\n\n{table(s)}\n")
     print("\n" + table(s))
     wrong = [r for r in rows if r["label"] != r["predicted"]]

@@ -13,9 +13,10 @@ from classifier import clean, generate
 TEST = [json.loads(line) for line in generate.TEST_SET.read_text(encoding="utf-8").splitlines() if line.strip()]
 
 
-def test_the_unseen_profile_is_never_used_for_training():
-    assert "housing-office" not in generate.POLICIES
-    assert all(p != "housing-office" for p, *_ in generate.plan(1.0))
+def test_the_unseen_profiles_are_never_used_for_training():
+    assert not generate.UNSEEN & set(generate.POLICIES)
+    assert all(p not in generate.UNSEEN for p, *_ in generate.plan(1.0))
+    assert generate.TEST_SET in generate.TEST_SETS          # names from every test set are kept out
 
 
 def test_training_policies_match_the_frozen_ones():
@@ -28,7 +29,7 @@ def test_the_plan_covers_every_label_for_every_profile():
     cells = generate.plan(1.0)
     for profile in generate.POLICIES:
         assert {label for p, label, *_ in cells if p == profile} == set(clean.LABELS)
-    assert 2500 <= sum(c[4] for c in cells) <= 3200
+    assert 2500 <= sum(c[4] for c in cells) <= 3600
 
 
 def test_the_prompt_never_shows_test_names_and_asks_for_json():
@@ -293,3 +294,11 @@ def test_the_wordplay_angle_covers_every_profile_with_its_own_words():
     for profile in generate.POLICIES:
         text = generate.instruction(profile, angle[3])
         assert "burden" in text and "bridge" in text and "fatal" in text
+
+def test_the_v2_angles_cover_the_weak_spots():
+    cells = {(p, a) for p, _, a, _, _ in generate.plan(1.0)}
+    for profile in generate.POLICIES:
+        for angle in ("general_rules", "command", "means_statement", "abuse_embedded"):
+            assert (profile, angle) in cells, (profile, angle)
+    assert ("clinic-assistant", "record_amounts") in cells and ("adhd-assistant", "record_amounts") not in cells
+    assert generate.LANGUAGES.count("English") / len(generate.LANGUAGES) <= 0.6

@@ -1,6 +1,7 @@
 """Choose the guard classifier's thresholds on DEV, and show every mistake it makes there.
 
-    uv run --group train python -m classifier.calibrate
+    uv run --group train python -m classifier.calibrate                          # v2 (models/guard-modernbert-v2)
+    uv run --group train python -m classifier.calibrate --model guard-modernbert # v1
 
 The frozen test set is never used for this (eval/datasets/guard_test_protocol.md, rule 2).
 
@@ -13,13 +14,14 @@ The frozen test set is never used for this (eval/datasets/guard_test_protocol.md
 Saves thresholds.json next to the model, with dev scores before and after.
 """
 
+import argparse
 import json
 from collections import defaultdict
 
 from classifier.clean import DEV, LABELS, read_jsonl
 from classifier.generate import POLICIES
-from classifier.model import MODEL_DIR, GuardModel, decide
-from classifier.train import LABEL_ID, metrics
+from classifier.model import GuardModel, decide
+from classifier.train import LABEL_ID, MODELS, metrics
 
 GRID = [round(0.05 * i, 2) for i in range(1, 20)]          # 0.05 ... 0.95
 MAX_FALSE_ALARMS = 0.05
@@ -54,8 +56,11 @@ def choose(gold: list[str], probs: list[dict[str, float]]) -> dict[str, float]:
 
 
 def main() -> None:
+    ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    ap.add_argument("--model", default="guard-modernbert-v2", help="folder name under models/")
+    model_dir = MODELS / ap.parse_args().model
     rows = read_jsonl(DEV)
-    guard = GuardModel()
+    guard = GuardModel(model_dir)
     by_profile = defaultdict(list)
     for i, r in enumerate(rows):
         by_profile[r["profile"]].append(i)
@@ -80,11 +85,11 @@ def main() -> None:
             shown = " ".join(f"{k[0]}={v:.2f}" for k, v in pr.items())
             print(f"  {g:8} -> {p:8} [{shown}] {r['profile'][:6]} · {r['angle']}: {r['text']}")
 
-    (MODEL_DIR / "thresholds.json").write_text(json.dumps({
+    (model_dir / "thresholds.json").write_text(json.dumps({
         "thresholds": thresholds, "chosen_on": "dev", "dev_rows": len(rows), "grid": [GRID[0], GRID[-1]],
         "max_false_alarms": MAX_FALSE_ALARMS, "dev_before": before, "dev_after": after,
         "labels": list(LABELS)}, indent=2))
-    print(f"\nSaved {MODEL_DIR / 'thresholds.json'}")
+    print(f"\nSaved {model_dir / 'thresholds.json'}")
 
 
 if __name__ == "__main__":

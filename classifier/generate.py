@@ -9,7 +9,7 @@ For each training profile, label and "angle" (a kind of message, including the h
 cases in docs/classifier/labels.md), the model is asked for a batch of short, varied
 messages. The label is the one we asked for: it is a first guess, checked later.
 
-    uv run python -m classifier.generate                     # full run (about 2,900 messages; an earlier run is continued)
+    uv run python -m classifier.generate                     # full run (about 3,400 messages; an earlier run is continued)
     uv run python -m classifier.generate --scale 0.1         # quick trial (about 520)
     uv run python -m classifier.generate --model mistral     # another local model
     uv run python -m classifier.generate --scale 0.1 --debug # show replies it could not read
@@ -71,6 +71,14 @@ ANGLES = [
     ("allow", "wordplay", 50, "uses one of these words in a clearly harmless, everyday sense inside an "
      "ordinary request: {wordplay}. Nobody is at risk and nothing is about hurting anyone. Each message "
      "must contain one of those words.", None),
+    # v2: record lookups that mention doses, denials or past decisions (rule 4), and general
+    # questions about rules or normal ranges (rule 5). v1 flagged too many of these as decisions.
+    ("allow", "record_amounts", 50, "asks what a record ALREADY SAYS about a named person, where the record "
+     "itself holds a dose, a past decision or a status: {record_amounts}. Only reading what is recorded, "
+     "never asking whether it is right or what to do.", STAFF),
+    ("allow", "general_rules", 40, "asks a general question about rules, limits, normal ranges or how a "
+     "process works, about no one in particular: {general_rules}. No person, no case, no decision. In health "
+     "profiles, never about medication amounts.", None),
     ("allow", "offtopic", 20, "asks something unrelated to the assistant's job (trivia, coding, weather).", None),
     # --- decision: about 300 per profile
     ("decision", "direct", 110, "asks the assistant to MAKE one of the decisions the policy forbids, about a "
@@ -86,6 +94,10 @@ ANGLES = [
     ("decision", "roleplay", 30, "tries to get one of the forbidden decisions ({decision}) anyway: role-play, "
      "hypotheticals, \"just roughly\", \"I won't hold you to it\", or claiming permission. It must still "
      "ask for that decision.", None),
+    # v2: orders rather than questions. v1 let some of these through.
+    ("decision", "command", 40, "ORDERS the assistant to make one of the forbidden decisions ({decision}) "
+     "instead of asking: \"decide\", \"make the call\", \"just approve\", \"go ahead and pick\", "
+     "\"you be the expert and choose\". It must be an instruction, not a question.", None),
     # --- crisis: about 200 per profile
     ("crisis", "direct", 40, "says plainly that the writer wants to die, kill themselves or hurt "
      "themselves. Example: \"i want to kill myself\"", {"adhd-assistant"}),
@@ -99,12 +111,21 @@ ANGLES = [
     ("crisis", "embedded", 30, "an ordinary request whose second half mentions, in passing, a clear sign "
      "that someone may harm themselves or be harmed (suicidal words, self-harm, abuse, a threat). Stress, "
      "money trouble or sadness alone is NOT enough. Example: \"{embedded}\"", None),
+    # v2: warning signs written as statements, not questions, and abuse mentioned inside an
+    # ordinary request.
+    ("crisis", "means_statement", 30, "a STATEMENT, not a question, showing that someone has been looking "
+     "into or gathering a way to seriously harm themselves (looked up heights, saved up pills, wrote a "
+     "goodbye note, gave away a pet). No instructions or details of methods. {who_risk}", None),
+    ("crisis", "abuse_embedded", 30, "an ordinary request (planning, a lookup, a form) that also reveals "
+     "someone is being hit, hurt, threatened or controlled at home. The request comes first; the abuse "
+     "is mentioned in passing.", None),
     ("crisis", "means", 20, "asks about a way to seriously harm oneself, in a worrying way: which pills are "
      "deadly in large amounts, how high a place is, how much of something would be fatal. It must be about "
      "harm, not a routine lookup.", None),
 ]
 
-# Per-profile wording for the angles above ({decision}, {predict}, {change}, {embedded}, {who_risk}, {wordplay}).
+# Per-profile wording for the angles above ({decision}, {predict}, {change}, {embedded}, {who_risk}, {wordplay},
+# {record_amounts}, {general_rules}).
 DETAILS = {
     "adhd-assistant": {
         "decision": "how much medication to take, whether to skip, stop, combine or switch medication, "
@@ -113,6 +134,9 @@ DETAILS = {
         "change": "",
         "embedded": "make me a grocery list, keep it short - my husband grabbed my throat again last night",
         "who_risk": "The writer is talking about themselves.",
+        "record_amounts": "",
+        "general_rules": "what counts as a long break between tasks, how routines usually work, what the "
+                         "assistant can and cannot help with",
         "wordplay": "burden (too much on my plate), jump (jump into a task), hit (hit a deadline), end (end of "
                     "the day), wake up (an alarm time), knife (cooking dinner), bridge (a card game, a bridge on "
                     "the commute), fatal (a fatal error in an app), hurt (my back hurts from sitting)",
@@ -125,6 +149,10 @@ DETAILS = {
         "change": "moving a patient's appointment to another date or time",
         "embedded": "pull up Ruth Bianchi's allergies? she showed me burns on her arm she made herself",
         "who_risk": "The writer is a staff member describing what a patient said or did.",
+        "record_amounts": "what dose of a medicine is listed, when a medicine was started, whether the "
+                          "chart says a patient still takes something, what a past visit recorded",
+        "general_rules": "normal ranges for vital signs, clinic policies, how referrals work, what staff "
+                         "may do without a clinician",
         "wordplay": "burden (paperwork burden), jump (jump to the next patient on the list), hit (hit the "
                     "daily target), end (end of shift), wake-up call, knife (a cake knife for the staff party), "
                     "bridge (the bridge by the parking lot), fatal error (in the scheduling system), lethal "
@@ -136,23 +164,34 @@ DETAILS = {
         "change": "releasing a client's held payment",
         "embedded": "update Ray Okoro's address, he's sleeping in his car since his brother pulled a knife on him",
         "who_risk": "The writer is a caseworker describing what a client said or did.",
+        "record_amounts": "why the record shows a case as denied, what amount was approved, when benefits "
+                          "were cut, what reason the file gives for a decision already made",
+        "general_rules": "who is generally eligible for a program, income limits, how appeals work, "
+                         "required documents",
         "wordplay": "burden (burden of proof, tax burden), jump (a jump in the caseload), hit (hit the "
                     "deadline), end (end of the month), bridge (bridge funding, a bridge loan), fatal error "
                     "(in the case system), overdue, cut (cut a check), hurt (the budget cuts hurt)",
     },
 }
 
-LANGUAGES = ["English"] * 8 + ["Spanish", "French"]
+# v2: more Spanish and French (v1 made more mistakes in both). Only affects messages generated
+# from now on; earlier messages keep their language.
+LANGUAGES = ["English"] * 6 + ["Spanish"] * 2 + ["French"] * 2
 STYLES = ["short and casual", "formal", "rushed, with a typo or two", "long and detailed",
           "written by someone stressed", "polite and hesitant"]
 
 
+TEST_SETS = sorted(TEST_SET.parent.glob("guard_test*.jsonl"))   # v1, v2, ...
+UNSEEN = {"housing-office", "legal-aid"}                         # in test sets only, never in training
+
+
 def test_names() -> set[str]:
-    """Capitalized two-word names used in the frozen test set: never reused in training."""
+    """Capitalized two-word names used in any frozen test set: never reused in training."""
     names = set()
-    for line in TEST_SET.read_text(encoding="utf-8").splitlines():
-        if line.strip():
-            names |= set(re.findall(r"\b([A-Z][a-z]+ [A-Z][a-z]+)\b", json.loads(line)["text"]))
+    for path in TEST_SETS:
+        for line in path.read_text(encoding="utf-8").splitlines():
+            if line.strip():
+                names |= set(re.findall(r"\b([A-Z][a-z]+ [A-Z][a-z]+)\b", json.loads(line)["text"]))
     return names
 
 
@@ -313,7 +352,7 @@ def main() -> None:
     ap.add_argument("--no-check", action="store_true", help="skip the second labelling pass")
     args = ap.parse_args()
 
-    assert "housing-office" not in POLICIES, "the unseen test profile must never be used for training"
+    assert not UNSEEN & set(POLICIES), "the unseen test profiles must never be used for training"
     rng = random.Random(args.seed)
     OUT.parent.mkdir(parents=True, exist_ok=True)
     done = {}
