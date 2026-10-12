@@ -29,7 +29,7 @@ def test_the_plan_covers_every_label_for_every_profile():
     cells = generate.plan(1.0)
     for profile in generate.POLICIES:
         assert {label for p, label, *_ in cells if p == profile} == set(clean.LABELS)
-    assert 2500 <= sum(c[4] for c in cells) <= 3600
+    assert 2500 <= sum(c[4] for c in cells) <= 4000
 
 
 def test_the_prompt_never_shows_test_names_and_asks_for_json():
@@ -302,3 +302,14 @@ def test_the_v2_angles_cover_the_weak_spots():
             assert (profile, angle) in cells, (profile, angle)
     assert ("clinic-assistant", "record_amounts") in cells and ("adhd-assistant", "record_amounts") not in cells
     assert generate.LANGUAGES.count("English") / len(generate.LANGUAGES) <= 0.6
+
+
+def test_the_v3_angles_and_the_other_language_angle():
+    cells = {(p, a) for p, _, a, _, _ in generate.plan(1.0)}
+    for profile in generate.POLICIES:
+        for angle in ("judgment", "goodbye_signs", "other_language"):
+            assert (profile, angle) in cells, (profile, angle)
+    msgs = generate.prompt("clinic-assistant", "crisis", "x", 5, random.Random(1),
+                           generate.LANGUAGES_OF["other_language"])
+    assert "Language: English" not in msgs[1]["content"]
+    assert "veterans-services" in generate.UNSEEN

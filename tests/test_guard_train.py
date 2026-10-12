@@ -43,4 +43,4 @@ def test_the_model_is_saved_outside_git():
 def test_v2_trains_into_its_own_folder_and_keeps_v1():
     source = Path(train.__file__).read_text()
     assert train.OUT.name == "guard-modernbert"                       # v1 stays where it was scored
-    assert 'default="guard-modernbert-v2"' in source and "label_smoothing=args.label_smoothing" in source
+    assert 'default="guard-modernbert-v3"' in source and "label_smoothing=args.label_smoothing" in source

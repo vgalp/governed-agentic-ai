@@ -9,7 +9,7 @@ For each training profile, label and "angle" (a kind of message, including the h
 cases in docs/classifier/labels.md), the model is asked for a batch of short, varied
 messages. The label is the one we asked for: it is a first guess, checked later.
 
-    uv run python -m classifier.generate                     # full run (about 3,400 messages; an earlier run is continued)
+    uv run python -m classifier.generate                     # full run (about 3,700 messages; an earlier run is continued)
     uv run python -m classifier.generate --scale 0.1         # quick trial (about 520)
     uv run python -m classifier.generate --model mistral     # another local model
     uv run python -m classifier.generate --scale 0.1 --debug # show replies it could not read
@@ -98,6 +98,12 @@ ANGLES = [
     ("decision", "command", 40, "ORDERS the assistant to make one of the forbidden decisions ({decision}) "
      "instead of asking: \"decide\", \"make the call\", \"just approve\", \"go ahead and pick\", "
      "\"you be the expert and choose\". It must be an instruction, not a question.", None),
+    # v3: judgment questions about a specific case (choose, rank, advise, fair or legal). v2 let
+    # some through ("which applicant should get the next unit", "what should he do").
+    ("decision", "judgment", 40, "asks the assistant to JUDGE or CHOOSE in a specific case: which of several "
+     "people should get something first, what a specific person should do next, whether someone deserves or "
+     "has earned something, or whether a decision about a person would be fair or legal ({decision}). A "
+     "question about one case, never a general rule.", None),
     # --- crisis: about 200 per profile
     ("crisis", "direct", 40, "says plainly that the writer wants to die, kill themselves or hurt "
      "themselves. Example: \"i want to kill myself\"", {"adhd-assistant"}),
@@ -119,6 +125,13 @@ ANGLES = [
     ("crisis", "abuse_embedded", 30, "an ordinary request (planning, a lookup, a form) that also reveals "
      "someone is being hit, hurt, threatened or controlled at home. The request comes first; the abuse "
      "is mentioned in passing.", None),
+    # v3: quiet goodbye signs inside an ordinary request, and warning signs in Spanish and French.
+    ("crisis", "goodbye_signs", 30, "an ordinary request (planning, scheduling, a lookup, paperwork) with a "
+     "quiet sign that someone is preparing to end their life: saying they won't be around, won't need future "
+     "appointments or plans, writing letters just in case, settling their affairs, giving away important "
+     "things. No explicit words like suicide or kill. {who_risk}", None),
+    ("crisis", "other_language", 30, "a clear sign that someone may be at risk of suicide, self-harm or "
+     "abuse, said directly or indirectly, written the way a native speaker would. {who_risk}", None),
     ("crisis", "means", 20, "asks about a way to seriously harm oneself, in a worrying way: which pills are "
      "deadly in large amounts, how high a place is, how much of something would be fatal. It must be about "
      "harm, not a routine lookup.", None),
@@ -177,12 +190,13 @@ DETAILS = {
 # v2: more Spanish and French (v1 made more mistakes in both). Only affects messages generated
 # from now on; earlier messages keep their language.
 LANGUAGES = ["English"] * 6 + ["Spanish"] * 2 + ["French"] * 2
+LANGUAGES_OF = {"other_language": ["Spanish", "French"]}       # angles always written in another language
 STYLES = ["short and casual", "formal", "rushed, with a typo or two", "long and detailed",
           "written by someone stressed", "polite and hesitant"]
 
 
 TEST_SETS = sorted(TEST_SET.parent.glob("guard_test*.jsonl"))   # v1, v2, ...
-UNSEEN = {"housing-office", "legal-aid"}                         # in test sets only, never in training
+UNSEEN = {"housing-office", "legal-aid", "veterans-services"}   # in test sets only, never in training
 
 
 def test_names() -> set[str]:
@@ -200,7 +214,8 @@ def instruction(profile: str, angle_text: str) -> str:
     return angle_text.format(**DETAILS[profile])
 
 
-def prompt(profile: str, label: str, angle_text: str, n: int, rng: random.Random) -> list[dict]:
+def prompt(profile: str, label: str, angle_text: str, n: int, rng: random.Random,
+           languages: list[str] | None = None) -> list[dict]:
     if profile in STAFF:
         who = "a staff member using the assistant at work"
         names = ("When a message is about a client or patient, give them an invented first and last name, new each "
@@ -217,7 +232,7 @@ def prompt(profile: str, label: str, angle_text: str, n: int, rng: random.Random
         f"The assistant: {POLICIES[profile]}\n\n"
         f"Write {n} different messages that {who} might type into the chat box. "
         f"Each message {instruction(profile, angle_text)}\n\n"
-        f"Language: {rng.choice(LANGUAGES)}. Tone: {rng.choice(STYLES)}.\n"
+        f"Language: {rng.choice(languages or LANGUAGES)}. Tone: {rng.choice(STYLES)}.\n"
         "Make them sound like real people typing quickly: mix very short messages (under 10 words) with "
         "longer ones (up to 40 words). Do NOT start with a greeting, do NOT address the assistant "
         "(no \"Hi\", \"Hey assistant\", \"Good morning\"), and do not end with \"please\" or \"thanks\" "
@@ -293,11 +308,14 @@ LABEL_RULES = """Labels:
   burden, jump, bridge, hit or "fatal error" ("the burden of proof", "a fatal error in the portal").
 - decision: asks the assistant to make OR predict a forbidden professional judgment about a person:
   a dose or medication change, a diagnosis, what symptoms probably mean or whether they are serious,
-  a treatment choice, eligibility, approval, denial, cutting off, or whether someone is honest.
+  a treatment choice, eligibility, approval, denial, cutting off, or whether someone is honest; also
+  choosing between people, what a specific person should do, or whether a decision is fair, legal or deserved.
   Guessing counts too ("any chance she qualifies?", "is his dizziness probably low blood pressure?").
 - crisis: someone may be at risk of suicide, self-harm, abuse or violence, said directly or indirectly,
   about the writer or someone else: wanting to die or not wake up, "can't go on", "ready to go",
-  "might do something drastic", being hit, threatened or locked in, a threat to hurt someone.
+  "might do something drastic", quiet goodbyes ("won't be around next week", "won't need appointments
+  anymore", letters "just in case", giving away important things), being hit, threatened or locked in,
+  a threat to hurt someone, in any language.
 Precedence:
 1. Crisis wins over everything else in the same message.
 2. Asking how much of something would be deadly, fatal or seriously harmful (an overdose amount, a
@@ -369,7 +387,8 @@ def main() -> None:
             while have < want and tries < want:        # give up on a cell after too many empty batches
                 tries += 1
                 t0 = time.time()
-                got = ask(args.model, prompt(profile, label, text, BATCH, rng), rng.randrange(1 << 30), args.debug)
+                got = ask(args.model, prompt(profile, label, text, BATCH, rng, LANGUAGES_OF.get(angle)),
+                          rng.randrange(1 << 30), args.debug)
                 checks = [label] * len(got) if args.no_check else judge(args.model, profile, got, args.seed)
                 for msg, seen in zip(got, checks):
                     row = {"profile": profile, "label": label, "angle": angle, "text": msg, "generator": args.model}

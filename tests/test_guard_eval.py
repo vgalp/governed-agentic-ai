@@ -19,16 +19,19 @@ def test_crisis_is_checked_first_then_decision():
     assert decide(p(0.5, 0.2, 0.3), None) == "allow"            # no thresholds: most likely label
 
 
-def test_thresholds_catch_more_crisis_without_too_many_false_alarms():
-    gold = ["crisis"] * 4 + ["allow"] * 30 + ["decision"] * 10
+def test_the_crisis_threshold_is_the_lowest_within_the_false_alarm_budget():
+    gold = ["crisis"] * 4 + ["allow"] * 60 + ["decision"] * 40
     probs = ([p(0.1, 0.0, 0.9)] * 3 + [p(0.6, 0.0, 0.4)]          # one crisis message the model is unsure of
-             + [p(0.95, 0.0, 0.05)] * 29 + [p(0.5, 0.0, 0.5)]    # one allow message that looks like crisis
-             + [p(0.2, 0.8, 0.0)] * 10)
+             + [p(0.95, 0.0, 0.05)] * 59 + [p(0.75, 0.0, 0.25)]  # one allow message that looks a bit like crisis
+             + [p(0.2, 0.8, 0.0)] * 40)
     t = calibrate.choose(gold, probs)
-    assert t["crisis"] == 0.4                                   # catches all 4, highest threshold that does
+    assert t["crisis"] == 0.1                                   # lowest with false alarms within 2% (1 of 100)
     pred = [decide(x, t) for x in probs]
     assert calibrate.crisis_recall(gold, pred) == 1.0
     assert calibrate.false_alarms(gold, pred) <= calibrate.MAX_FALSE_ALARMS
+    gold2 = ["crisis"] + ["allow"] * 100                        # v2's case: everything ties up to 0.8
+    probs2 = [p(0.1, 0.0, 0.9)] + [p(0.98, 0.0, 0.02)] * 100
+    assert calibrate.choose(gold2, probs2)["crisis"] == 0.05    # v2's rule would have chosen 0.85
 
 
 def test_false_alarms_limit_how_low_the_crisis_threshold_goes():
@@ -41,11 +44,12 @@ def test_the_frozen_files_still_match_the_protocol():
     rgt.check_frozen()
     protocol = (rgt.DATASETS / "guard_test_protocol.md").read_text()
     assert all(h in protocol for h in rgt.SETS["v1"]["sha256"].values())
-    v2 = rgt.SETS["v2"]
-    if all(v2["sha256"].values()):                              # once v2 is frozen, it is checked too
-        rgt.check_frozen((v2["test"], v2["policies"]))
-        protocol = (rgt.DATASETS / "guard_test_v2_protocol.md").read_text()
-        assert all(h in protocol for h in v2["sha256"].values())
+    for name in ("v2", "v3"):
+        s = rgt.SETS[name]
+        if all(s["sha256"].values()):                           # once a set is frozen, it is checked too
+            rgt.check_frozen((s["test"], s["policies"]))
+            protocol = (rgt.DATASETS / f"guard_test_{name}_protocol.md").read_text()
+            assert all(h in protocol for h in s["sha256"].values())
 
 
 def test_a_set_that_is_not_frozen_cannot_be_scored(tmp_path):

@@ -1,7 +1,7 @@
 """Score a guard classifier ONCE on a frozen test set (eval/datasets/guard_test_protocol.md).
 
-    uv run --group train python -m eval.run_guard_test --set v2 --model guard-modernbert-v2
-    uv run --group train python -m eval.run_guard_test --set v1 --model guard-modernbert     # done
+    uv run --group train python -m eval.run_guard_test --set v3 --model guard-modernbert-v3
+    uv run --group train python -m eval.run_guard_test --set v3 --model guard-modernbert-v2   # like-for-like
 
 Before running it checks that guard_test.jsonl and guard_test_policies.yaml still have the SHA-256
 recorded in the protocol, and that this exact model (by the hash of its weights) has not been
@@ -40,10 +40,14 @@ SETS = {
            "prefix": "guard_test_v2_classifier", "sha256": {
         "guard_test_v2.jsonl": "d474779cc7d6b7b8bc416d743ac7e4f8c703870478b5020b686dcabbd213c43c",
         "guard_test_v2_policies.yaml": "bfaf330cefe39e9ef5203e63aa8bd6f0b53749fc58434507c8bde09c21956e08"}},
+    "v3": {"test": DATASETS / "guard_test_v3.jsonl", "policies": DATASETS / "guard_test_v3_policies.yaml",
+           "prefix": "guard_test_v3_classifier", "sha256": {
+        "guard_test_v3.jsonl": None,
+        "guard_test_v3_policies.yaml": None}},
 }
-FROZEN = {**SETS["v1"]["sha256"], **SETS["v2"]["sha256"]}
+FROZEN = {k: v for s in SETS.values() for k, v in s["sha256"].items()}
 LABELS = ("allow", "decision", "crisis")
-UNSEEN = ("housing-office", "legal-aid")
+UNSEEN = ("housing-office", "legal-aid", "veterans-services")
 
 
 def sha256(path: Path) -> str:
@@ -120,8 +124,8 @@ def result_path(model_hash: str, test_set: str = "v1") -> Path:
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("--set", choices=list(SETS), default="v2")
-    ap.add_argument("--model", default="guard-modernbert-v2", help="folder name under models/")
+    ap.add_argument("--set", choices=list(SETS), default="v3")
+    ap.add_argument("--model", default="guard-modernbert-v3", help="folder name under models/")
     args = ap.parse_args()
     spec = SETS[args.set]
     check_frozen((spec["test"], spec["policies"]))

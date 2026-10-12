@@ -79,7 +79,7 @@ def llamaguard_label(text: str, categories: str, model: str = "llama-guard3:8b")
 class Runner:
     """Labels one message the way a given system would."""
 
-    def __init__(self, system: str, policies: dict[str, str]):
+    def __init__(self, system: str, policies: dict[str, str], model: str = "guard-modernbert-v2"):
         from profiles.loader import load_profile
         self.system, self.policies = system, policies
         self.profiles = {}
@@ -90,7 +90,7 @@ class Runner:
         if system == "rules+classifier":
             from classifier.model import GuardModel
             from classifier.train import MODELS
-            self.guard = GuardModel(MODELS / "guard-modernbert-v2")
+            self.guard = GuardModel(MODELS / model)
 
     def label(self, profile: str, text: str) -> str:
         from guardrails.classifier import classifier_check
@@ -134,12 +134,13 @@ def result_path(test_set: str, system: str, config: str) -> Path:
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--system", choices=SYSTEMS, required=True)
-    ap.add_argument("--set", choices=list(SETS), default="v2")
+    ap.add_argument("--set", choices=list(SETS), default="v3")
+    ap.add_argument("--model", default="guard-modernbert-v3", help="for rules+classifier: folder under models/")
     args = ap.parse_args()
     spec = SETS[args.set]
     check_frozen((spec["test"], spec["policies"]))
     policies = yaml.safe_load(spec["policies"].read_text(encoding="utf-8"))
-    runner = Runner(args.system, policies)
+    runner = Runner(args.system, policies, args.model)
     out = result_path(args.set, args.system, runner.config_id())
     if out.exists():
         raise SystemExit(f"Already scored ({out.name}). Rule 4: one run per release.")

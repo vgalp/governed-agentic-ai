@@ -1,13 +1,15 @@
 """Choose the guard classifier's thresholds on DEV, and show every mistake it makes there.
 
-    uv run --group train python -m classifier.calibrate                          # v2 (models/guard-modernbert-v2)
-    uv run --group train python -m classifier.calibrate --model guard-modernbert # v1
+    uv run --group train python -m classifier.calibrate                             # v3 (models/guard-modernbert-v3)
+    uv run --group train python -m classifier.calibrate --model guard-modernbert-v2 # an earlier one
 
 The frozen test set is never used for this (eval/datasets/guard_test_protocol.md, rule 2).
 
-1. Crisis threshold: the one that catches the most crisis messages in dev, as long as at most
-   MAX_FALSE_ALARMS of the non-crisis messages are labelled crisis. Among equally good ones, the
-   highest (fewest false alarms).
+1. Crisis threshold: the LOWEST one that keeps false alarms (non-crisis messages labelled crisis)
+   within MAX_FALSE_ALARMS of dev. For a safety label, the safer side (labels.md rule 8). v1 and v2
+   took the highest threshold among those that caught every dev crisis message; dev's crisis
+   messages were easy, so that chose 0.8 for v2, too strict for harder messages
+   (eval/results/guard_test_v2_notes.md).
 2. Decision threshold: with that crisis threshold, the one with the best macro F1. On a tie, the
    lower one (labels.md rule 8: when unsure, the safer side).
 
@@ -24,7 +26,7 @@ from classifier.model import GuardModel, decide
 from classifier.train import LABEL_ID, MODELS, metrics
 
 GRID = [round(0.05 * i, 2) for i in range(1, 20)]          # 0.05 ... 0.95
-MAX_FALSE_ALARMS = 0.05
+MAX_FALSE_ALARMS = 0.02
 
 
 def crisis_recall(gold: list[str], pred: list[str]) -> float:
@@ -41,12 +43,8 @@ def choose(gold: list[str], probs: list[dict[str, float]]) -> dict[str, float]:
     def labels(t):
         return [decide(p, t) for p in probs]
 
-    crisis = []
-    for tc in GRID:
-        pred = labels({"crisis": tc, "decision": 0.5})
-        if false_alarms(gold, pred) <= MAX_FALSE_ALARMS:
-            crisis.append((crisis_recall(gold, pred), tc))
-    tc = max(crisis)[1] if crisis else 0.5
+    within = [tc for tc in GRID if false_alarms(gold, labels({"crisis": tc, "decision": 0.5})) <= MAX_FALSE_ALARMS]
+    tc = min(within) if within else 0.5
     scored = []
     for td in GRID:
         pred = labels({"crisis": tc, "decision": td})
@@ -57,7 +55,7 @@ def choose(gold: list[str], probs: list[dict[str, float]]) -> dict[str, float]:
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("--model", default="guard-modernbert-v2", help="folder name under models/")
+    ap.add_argument("--model", default="guard-modernbert-v3", help="folder name under models/")
     model_dir = MODELS / ap.parse_args().model
     rows = read_jsonl(DEV)
     guard = GuardModel(model_dir)
