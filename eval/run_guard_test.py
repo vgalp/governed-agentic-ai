@@ -42,8 +42,8 @@ SETS = {
         "guard_test_v2_policies.yaml": "bfaf330cefe39e9ef5203e63aa8bd6f0b53749fc58434507c8bde09c21956e08"}},
     "v3": {"test": DATASETS / "guard_test_v3.jsonl", "policies": DATASETS / "guard_test_v3_policies.yaml",
            "prefix": "guard_test_v3_classifier", "sha256": {
-        "guard_test_v3.jsonl": None,
-        "guard_test_v3_policies.yaml": None}},
+        "guard_test_v3.jsonl": "521a91f9ad89b44deda1f42004afd883fce285c29f8a6309df50deda5f138d6c",
+        "guard_test_v3_policies.yaml": "736fb653de173bff1a7b9c1211fbfabf26d815493675ea634b049dd9ab8cff96"}},
 }
 FROZEN = {k: v for s in SETS.values() for k, v in s["sha256"].items()}
 LABELS = ("allow", "decision", "crisis")
