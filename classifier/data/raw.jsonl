@@ -3736,3 +3736,465 @@
 {"profile": "county-benefits", "label": "crisis", "angle": "other_language", "text": "Luis me envió un mensaje extraño: 'No quiero vivir más.'", "generator": "qwen2.5:7b"}
 {"profile": "county-benefits", "label": "crisis", "angle": "other_language", "text": "Eduardo se queja de golpes frecuentes de su esposa.", "generator": "qwen2.5:7b"}
 {"profile": "county-benefits", "label": "crisis", "angle": "other_language", "text": "Carlos habló de cortarse las muñecas.", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "misplacing", "text": "Can't find my keys anywhere.", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "misplacing", "text": "Lost my wallet again, what's wrong with me?", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "misplacing", "text": "Always forget where I put my phone. Any tips?", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "misplacing", "text": "Just realized I have no charger on me today.", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "misplacing", "text": "Why can't I find my glasses in a rush?", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "misplacing", "text": "Misplaced my badge again, where do I always lose it?", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "misplacing", "text": "Forgot to save an important document. Help!", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "misplacing", "text": "Can't remember my password to log in. Ugh!", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "misplacing", "text": "Where did I put the paperwork I needed today?", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "misplacing", "text": "Why do I always misplace my notes?", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "misplacing", "text": "Where are my keys again?", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "misplacing", "text": "Forgot my wallet. What to do?", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "misplacing", "text": "Can't find my phone. Any tips?", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "misplacing", "text": "Wore contacts but no glasses. Panic!", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "misplacing", "text": "Glasses missing. Help!", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "misplacing", "text": "Where’s my charger? Always losing it.", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "misplacing", "text": "Lost paperwork. Any storage ideas?", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "misplacing", "text": "Forgot password for work. Help!", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "misplacing", "text": "Badge misplaced. Any tag tracking?", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "misplacing", "text": "Where are my keys? I know I put them in the kitchen.", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "misplacing", "text": "Ugh, where did I put my phone last?", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "misplacing", "text": "Can I set up reminders for important stuff?", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "misplacing", "text": "Forgot my glasses, how do I stay organized without them?", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "misplacing", "text": "Always lose my charger, any ideas?", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "misplacing", "text": "Ran out of battery, how do I avoid this?", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "misplacing", "text": "Forgot to pay bills, need a better system.", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "misplacing", "text": "Lost my badge at work, any tips?", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "misplacing", "text": "Can't find my paperwork, any good filing system?", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "misplacing", "text": "Passwords everywhere, any way to keep track?", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "misplacing", "text": "A toujours la clef de la maison?", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "misplacing", "text": "Où est passée ma carte d'identité?", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "misplacing", "text": "Je ne trouve pas mon téléphone!", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "misplacing", "text": "Pourquoi ma montre ne marche pas?", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "misplacing", "text": "Oublié mes lunettes de soleil à la plage.", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "misplacing", "text": "Combien de fois ai-je perdu mon passeport?", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "misplacing", "text": "J'ai besoin d'un système de sauvegarde de mes clés.", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "misplacing", "text": "Méthode pour ne plus oublier mon sac à main?", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "misplacing", "text": "Comment organiser mes charges de travail?", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "misplacing", "text": "Avez-vous une astuce pour retenir mes appareils électroménagers?", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "misplacing", "text": "Lost my keys again. Any tips to avoid this?", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "overwhelm", "text": "Need to get through this backlog", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "overwhelm", "text": "Can't seem to start anything", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "overwhelm", "text": "Stuck on this report, need a break", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "overwhelm", "text": "Tasks feel endless, any tips?", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "overwhelm", "text": "Just can't focus, any ideas?", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "overwhelm", "text": "Another week, when does this end?", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "overwhelm", "text": "Feeling overwhelmed, can you help?", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "overwhelm", "text": "Can't find my keys, where are they?", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "overwhelm", "text": "To-do list looks scary", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "overwhelm", "text": "Got to finish this, but I can't", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "overwhelm", "text": "Je ne peux plus, je suis complètement coincé avec cette tâche.", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "overwhelm", "text": "Je sens que je vais exploser, j'ai tellement de trucs à faire.", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "overwhelm", "text": "Je suis tellement débordé, je ne sais plus où donner de la tête.", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "overwhelm", "text": "Je suis complètement perdu, je ne peux pas gérer tout ça.", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "overwhelm", "text": "Je ne veux plus jamais faire de shopping, c'est une éternité.", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "overwhelm", "text": "Je suis au bord du burn-out, j'ai tellement de choses à faire et de dossiers à terminer.", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "overwhelm", "text": "Je suis coincé, je ne peux pas me décider sur quoi faire en premier.", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "overwhelm", "text": "J'ai un peu l'impression d'être dans une matrice de tâches, je ne vois pas le bout.", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "overwhelm", "text": "Je ne peux plus, j'ai une montagne de documents à remplir et à envoyer.", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "overwhelm", "text": "Je suis dépassé, j'ai une longue journée de travail devant moi et je ne sais pas comment y arriver.", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "overwhelm", "text": "Je suis bloqué, aide-moi.", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "overwhelm", "text": "J'en ai marre de ces tâches.", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "overwhelm", "text": "Je ne veux plus y penser.", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "overwhelm", "text": "C'est trop, je ne peux plus.", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "overwhelm", "text": "Je suis complètement débordé.", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "overwhelm", "text": "Faut qu'on trouve une solution.", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "overwhelm", "text": "Je n'arrive pas à me motiver.", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "overwhelm", "text": "C'est insurmontable, aide-moi.", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "overwhelm", "text": "Je suis perdu dans toutes ces tâches.", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "overwhelm", "text": "Je n'en peux plus de cette semaine.", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "overwhelm", "text": "J'en peux plus des courses.", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "overwhelm", "text": "Sérieusement, j'ai rien fait aujourd'hui.", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "overwhelm", "text": "Faut vraiment que j'aille au boulot.", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "overwhelm", "text": "Tous ces emails, c'est du gâchis.", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "overwhelm", "text": "Plus de café, j'en peux plus.", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "overwhelm", "text": "J'ai 100 choses à faire et 0 énergie.", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "overwhelm", "text": "C'est trop, faut que je respire un peu.", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "overwhelm", "text": "Tout le monde a le droit à un jour de pause, non?", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "overwhelm", "text": "Faut que je termine ce rapport, mais comment?", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "overwhelm", "text": "Need help getting started, feeling so stuck.", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "possessions", "text": "Aurais-je besoin de garder ces vieux livres?", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "possessions", "text": "Peut-être vaut-il mieux vendre ces étagères?", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "possessions", "text": "Je devrais peut-être donner mes vieilles chaussures à une personne en besoin.", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "possessions", "text": "Combien pourrais-je économiser en rangeant ce bureau?", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "possessions", "text": "Est-ce que je dois conserver mes anciens papiers?", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "possessions", "text": "Peut-on vendre ces vieux meubles à un garage de vente?", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "possessions", "text": "Faut-il que j'emballasse mes vêtements d'été?", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "possessions", "text": "Je devrais peut-être donner ces vieux magazines à la bibliothèque.", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "possessions", "text": "Pourquoi ne pas vendre ces vieilles valises?", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "possessions", "text": "Dois-je conserver ces souvenirs?", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "possessions", "text": "Necesito vender estos libros en la venta del viernes.", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "possessions", "text": "Tengo que organizar mis pertenencias en almacén.", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "possessions", "text": "Leo que se pueden donar ropa usada en caridad, ¿dónde puedo hacerlo?", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "possessions", "text": "Debo devolverle el cepillo de dientes a Ana antes del traslado.", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "possessions", "text": "Voy a limpiar la habitación y poner cosas en almacén.", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "possessions", "text": "No puedo creer que tenga tantos cables electrónicos sin usar.", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "possessions", "text": "Vendí los libros de texto y ahorré para la universidad.", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "possessions", "text": "Alguien podría interesarle mi antiguo teléfono, ¿verdad?", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "possessions", "text": "Es hora de ordenar mis documentos en cajas.", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "possessions", "text": "J'vais à la vente aux puces, faut que j'vende ces chaussures usées.", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "possessions", "text": "J'ai trop de livres, j'suis ptite, faut que je mette tout dans la cave.", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "possessions", "text": "J'veux pas garder tout ça, donne à Élisa mes anciens vêtements.", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "possessions", "text": "J'me débarrasse des trucs d'papa, faut que j'trouve un bon endroit.", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "possessions", "text": "Faudrait que j'donnes ces trucs à la banque alimentaire.", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "possessions", "text": "J'veux pas garder les papiers de ma copine, on a pas besoin de tout.", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "possessions", "text": "Faut que j'tappe vite, suis en retard pour mon cours de yoga.", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "possessions", "text": "Mouv'ments ! On remet tout en place dans l'appart.', sinon y'a plus d'espace.", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "possessions", "text": "J'veux pas garder les affaires de ma sœur, faut que j'donnes à quelqu'un.", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "possessions", "text": "Faut que j'me calme, j'trouve ça trop compliqué, j'veux pas ça.", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "possessions", "text": "Got to clean out my old drawer; so many old t-shirts.", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "medication_routine", "text": "Need to refill meds before the week ends.", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "medication_routine", "text": "Morning meds with coffee, right?", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "medication_routine", "text": "Should I pack my pills for the weekend?", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "medication_routine", "text": "Got any tips on remembering to take meds?", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "medication_routine", "text": "Plan to call doc next week for refills.", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "medication_routine", "text": "Any advice on explaining ADHD to new boss?", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "medication_routine", "text": "Questions to ask doc about side effects?", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "medication_routine", "text": "Remind me to take meds after lunch.", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "medication_routine", "text": "Any good apps for tracking ADHD meds?", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "medication_routine", "text": "Next visit, ask about exercise impact on meds", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "medication_routine", "text": "J'oublie toujours mes pilules en partant. Comment me rappeler ?", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "medication_routine", "text": "Pense à prendre mes pilules avec le café ce matin.", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "medication_routine", "text": "J'ai rendez-vous avec le psychologue. Faut-il poser la question sur les pilules ?", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "medication_routine", "text": "Rappele-moi de prendre les pilules ce soir après le dîner.", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "medication_routine", "text": "Packing for Paris? Ne pas oublier les pilules.", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "medication_routine", "text": "Marie dit qu'elle en prend pas tous les jours. Est-ce pareil ?", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "medication_routine", "text": "Pilules à prendre le matin. Pas oubliées!", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "medication_routine", "text": "Papier pour le médecin. Faut-il parler des pilules?", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "medication_routine", "text": "Debo recordarme tomar mis medicamentos con el desayuno.", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "medication_routine", "text": "¿Puedes ayudarme a preparar una lista de preguntas para mi psiquiatra?", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "medication_routine", "text": "¿Cuándo debo llevar mis medicamentos de viaje?", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "medication_routine", "text": "Recuerdo que debo pedir una receta más cuando vaya a la farmacia.", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "medication_routine", "text": "¿Tendré suficiente medicamento para la próxima semana?", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "medication_routine", "text": "Eh, ¿hay alguna manera de recordar mejor mis horarios de medicamentos?", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "medication_routine", "text": "¿Qué hago si me olvido de tomar mis medicamentos?", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "medication_routine", "text": "¿Podrías hacer una lista de lo que debo llevar a mi cita?", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "medication_routine", "text": "Debo llevar mis medicamentos a la oficina mañana. ¿Tengo todo?", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "medication_routine", "text": "Picked up my ADHD meds today, should I add them to my morning routine?", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "medication_routine", "text": "Rushed to work, forgot to take my morning pill. Gotta make sure I have some with me now.", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "medication_routine", "text": "Need to plan for the weekend. Should I keep my meds with me or just take them on weekdays?", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "medication_routine", "text": "Today’s list: finish report, exercise, and prep for Monday. How do I fit all that with my ADHD meds?", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "medication_routine", "text": "Got a doctor's appointment next month. What questions should I ask about my current meds?", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "medication_routine", "text": "Going to a family gathering. What’s the best way to carry my meds without forgetting them?", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "medication_routine", "text": "Having trouble focusing. Did I skip my morning dose by accident?", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "medication_routine", "text": "Picked up my med today, gonna need refil for next month.", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "medication_routine", "text": "Ran out of meds, remind me to get some before trip.", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "medication_routine", "text": "Forgot to take med this morning, any way to set a reminder?", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "medication_routine", "text": "Can I pack med in luggage? It says to keep in orig container.", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "medication_routine", "text": "Got an appointment, can I write down q's about my anxiety?", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "allow", "angle": "medication_routine", "text": "Need to pick up my ADHD pill refill today.", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "crisis", "angle": "goodbye_signs", "text": "Wrote a letter, just in case.", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "crisis", "angle": "goodbye_signs", "text": "No estaré... en casa más.", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "crisis", "angle": "plan_end", "text": "Je ne serai plus là pour Noël, faut qu'on planifie tout.", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "crisis", "angle": "plan_end", "text": "Dernier plan de week-end, après je ne serai plus là.", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "crisis", "angle": "plan_end", "text": "Faudrait organiser mes dernières courses, après je pars.", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "crisis", "angle": "plan_end", "text": "Planifie-moi ma dernière semaine de travail, après je ne serai plus ici.", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "crisis", "angle": "plan_end", "text": "Faut qu'on planifie ma dernière sortie en ville, après je pars pour bon.", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "crisis", "angle": "plan_end", "text": "Plan for today but won't be around after this one.", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "crisis", "angle": "plan_end", "text": "Planifie pour moi, je ne serai plus là après la date.", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "crisis", "angle": "plan_end", "text": "Plan for today, then I'm off for good.", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "crisis", "angle": "plan_end", "text": "Je ne serai plus là pour le 1er avril.", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "crisis", "angle": "plan_end", "text": "Won't be around after this, need to plan everything now.", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "crisis", "angle": "plan_end", "text": "Je vais partir bientôt, dernier coup de main.", "generator": "qwen2.5:7b"}
+{"profile": "adhd-assistant", "label": "crisis", "angle": "plan_end", "text": "Mañana ya no estaré.", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "misplacing", "text": "Had to hunt for my keys all over again today. Any tips on keeping them in one place?", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "misplacing", "text": "Always lose my wallet! Any system to keep it from wandering off?", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "misplacing", "text": "Lost my glasses again. Tried everywhere. Any ideas on making these stick with me?", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "misplacing", "text": "Can't find my phone anywhere. Any tricks to stop losing stuff like this?", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "misplacing", "text": "Phone charger keeps vanishing. Any way to keep track of it better?", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "misplacing", "text": "Badge lost, again. Any storage ideas for small things like this?", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "misplacing", "text": "Paperwork all over the place. Any suggestions to keep these organized?", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "misplacing", "text": "Forgot my password. Any advice on remembering them all?", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "misplacing", "text": "Keys always in the strangest places. Any methods to make them easy to find?", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "misplacing", "text": "Phone charger keeps going missing. Any tips on keeping it in one spot?", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "misplacing", "text": "Had my client, Ms. Li's, keys but forgot where. Any tips?", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "misplacing", "text": "Found my own glasses but left a patient's in meeting. Should I text?", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "misplacing", "text": "Missed my own phone. Checked everywhere. What next?", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "misplacing", "text": "Patient Mr. Patel forgot his wallet. Should I call or text?", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "misplacing", "text": "Client Ms. Chen left her charger at home. Any ideas?", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "misplacing", "text": "Lost my badge. Do I need to go in or can I get another?", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "misplacing", "text": "Mr. Singh's paperwork vanished. Where do I start to find it?", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "misplacing", "text": "Forgot my password for the software. Can you help reset?", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "misplacing", "text": "Patient Ms. Ocampo can't find her phone. Should I send her a new number?", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "misplacing", "text": "Lost Ms. Rodriguez's keys again. Need a better system.", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "misplacing", "text": "Losing my keys every morning, any tips?", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "misplacing", "text": "Had my phone at the doctor's, can't find it. Help!", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "misplacing", "text": "How do I stop misplacing my glasses? It's driving me nuts.", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "misplacing", "text": "Forgetting to charge my phone, any good solutions?", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "misplacing", "text": "Patience, please. Just can't find my wallet. Any good organizing tricks?", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "misplacing", "text": "Always leaving my badge in the car. Any organizational tips?", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "misplacing", "text": "Had my paperwork at home, where should I keep it?", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "misplacing", "text": "Why can't I remember my passwords? Need help!", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "misplacing", "text": "Forgot my paperwork at home, any good storage ideas?", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "misplacing", "text": "Lost my glasses again. Any advice on keeping them handy?", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "misplacing", "text": "Luisa Mendez forgot her car keys. Can set reminders?", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "misplacing", "text": "Need a backup system for passwords, lots of them. Help?", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "misplacing", "text": "Phone battery always dies. Any charger tips?", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "misplacing", "text": "Raj Patel keeps misplacing glasses. Ideas?", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "misplacing", "text": "Lost my badge. Quick access to a spare?", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "misplacing", "text": "Went to get coffee, forgot to mail that. Reminder?", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "misplacing", "text": "Elena Garcia's paperwork everywhere. Organize it?", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "misplacing", "text": "Forgot my phone at home again. Any tricks?", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "misplacing", "text": "Doc's appointment tomorrow. Set up reminder, plz?", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "misplacing", "text": "Can't find my glasses. Any good holder?", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "overwhelm", "text": "Still dealing with 120 charts, anyone got a minute?", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "overwhelm", "text": "Feeling stuck on this chart, anyone have an idea?", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "overwhelm", "text": "Just need a moment to breathe, anyone?", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "overwhelm", "text": "Client Smith's paperwork, can someone help?", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "overwhelm", "text": "Fed up with all these emails, any faster way?", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "overwhelm", "text": "Patient Patel's case, got any advice?", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "overwhelm", "text": "Client Davis, I need a break, really.", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "overwhelm", "text": "Just 10 more charts, anyone want to join?", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "overwhelm", "text": "Client Wilson, I'm overwhelmed, any tips?", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "overwhelm", "text": "Need a coffee break, anyone got time?", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "overwhelm", "text": "J'ai plein de messages, aide-moi!", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "overwhelm", "text": "C'est insurmontable, faut que je fasse quoi d'abord?", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "overwhelm", "text": "Je ne sais plus où j'en suis avec ces dossiers!", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "overwhelm", "text": "Faudrait que j'appelle madame Dupont d'urgence...", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "overwhelm", "text": "Épuisée, j'en peux plus de ces dossiers.", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "overwhelm", "text": "M. Martin a trop de rendez-vous en retard, comment faire?", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "overwhelm", "text": "J'ai besoin d'une pause, je m'en veux!", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "overwhelm", "text": "Madame Garcia est en retard partout, quelqu'un doit m'aider!", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "overwhelm", "text": "Tout le monde a des soucis, j'explose!", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "overwhelm", "text": "J'ai trop de work à faire, aide-moi à prioriser!", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "overwhelm", "text": "J'en ai marre de ces appels d'urgence.", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "overwhelm", "text": "Qu'est-ce qu'il y a encore ?", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "overwhelm", "text": "Faudrait que j'aille chercher mon café.", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "overwhelm", "text": "Je suis surchargée, aidez-moi.", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "overwhelm", "text": "J'en peux plus de ces patients difficiles.", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "overwhelm", "text": "Est-ce que quelqu'un pourrait me faire le tour des dossiers ?", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "overwhelm", "text": "Je suis sur les nerfs, aide-moi s'il te plaît.", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "overwhelm", "text": "Je ne peux pas faire tout ça maintenant.", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "overwhelm", "text": "J'ai trop de courriels, j'en ai assez.", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "overwhelm", "text": "Faut que je termine ces formulaires, mais je suis bloquée.", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "overwhelm", "text": "Still sorting 20 new appointments, any way to batch this?", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "overwhelm", "text": "Can't keep up with these refills, anything to auto-approve?", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "overwhelm", "text": "Why are there 5 more charts to review?!", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "overwhelm", "text": "Need a break, 30 patient calls today, what's next?", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "overwhelm", "text": "This patient record is a mess, can you clean it up?", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "overwhelm", "text": "Too many reminders, can we cut back?", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "overwhelm", "text": "Why is this patient's file so complicated?", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "overwhelm", "text": "Can I delegate some of these calls to you?", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "overwhelm", "text": "How do I stay on top of 150 charts?", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "overwhelm", "text": "Is there a way to prioritize these tasks better?", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "possessions", "text": "Isabelle Mora's records, please.", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "possessions", "text": "Can I look up something for Alexei Petrov?", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "possessions", "text": "Garage sale this weekend, anything I should note?", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "possessions", "text": "Checking on last year's physical for Nour Ammar.", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "possessions", "text": "Wanted to know about John's allergies before moving.", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "possessions", "text": "Storage options for moving, anything to add to file?", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "possessions", "text": "Gave Sarah's jacket to a friend, any records of that?", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "possessions", "text": "Decluttering this weekend, need to check on patient's stuff.", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "possessions", "text": "Found Alexei's old claims, need to delete them.", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "possessions", "text": "Should I mention donating old bed to storage?", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "possessions", "text": "Lent Isabelle Mora's laptop to a friend, any record?", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "possessions", "text": "Need to sell grandma's old vase before move.", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "possessions", "text": "Can't fit her extra wardrobe in van.", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "possessions", "text": "Garage sale this weekend, anyone interested?", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "possessions", "text": "Storing John's box until spring.", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "possessions", "text": "Losing space, need to donate grandma's chest.", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "possessions", "text": "Moving out next month, anything to declutter?", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "possessions", "text": "Donating uncle's old recliner, too much space.", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "possessions", "text": "Garage sale, anyone needs an old vacuum?", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "possessions", "text": "Lending Lisa's books to friend, forgot about it.", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "possessions", "text": "Garage sale this weekend, need to clear out.", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "possessions", "text": "Vendiendo cosas para el mudanza.", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "possessions", "text": "Necesito guardar esto en almacén.", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "possessions", "text": "Leyendo anuncios para la venta de muebles viejos.", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "possessions", "text": "Limpieza en casa, ya casi termino.", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "possessions", "text": "Alguien le presta mi jardín que?", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "possessions", "text": "Voy a el mercadito de barrio.", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "possessions", "text": "Tengo que hacer un road trip, guardar ropa.", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "possessions", "text": "Papá tiene una venta benéfica.", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "allow", "angle": "possessions", "text": "Armario en buen estado, a vender.", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "crisis", "angle": "plan_end", "text": "Finn Olafson said this is his last thing. Check his recent visits.", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "crisis", "angle": "plan_end", "text": "Marisol dit elle est partie pour toujours.", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "crisis", "angle": "plan_end", "text": "Said it's a goodbye. Won't be needing any more clinics. Last one for her.", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "crisis", "angle": "plan_end", "text": "Last one for her. She's leaving for Australia next week. Need to clear everything up.", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "crisis", "angle": "plan_end", "text": "Said this was the end. No more clinic for him. Post-op appt. today.", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "crisis", "angle": "plan_end", "text": "Just called from airport. Says it's his final visit. Need his charts.", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "crisis", "angle": "plan_end", "text": "She says she's done. No more clinics. Final appointment today. Last one.", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "crisis", "angle": "plan_end", "text": "Mehrdad Samani said this is the last thing to sort out, no more plans after today.", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "crisis", "angle": "plan_end", "text": "Can't make any future plans after 25th, won't be here.", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "crisis", "angle": "short_report", "text": "Emergency call from Mr. Patel's wife: says he's threatening suicide.", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "crisis", "angle": "short_report", "text": "Client Chen witnessed domestic violence last night; husband allegedly hit her.", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "crisis", "angle": "short_report", "text": "Ms. Patel's husband says he's having heart attack, but no ECG.", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "crisis", "angle": "short_report", "text": "Client Wu: wife says husband is abusing her, need intervention.", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "crisis", "angle": "short_report", "text": "Patient Tran's brother says he witnessed domestic violence.", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "crisis", "angle": "short_report", "text": "Michael Wu just threatened to hurt himself.", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "crisis", "angle": "short_report", "text": "Called back, says they're feeling suicidal.", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "crisis", "angle": "short_report", "text": "398-56th St. incident, child abuse report.", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "crisis", "angle": "short_report", "text": "Someone just got stabbed in the park, check the cameras.", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "crisis", "angle": "short_report", "text": "Last night's rape case, follow up on report.", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "crisis", "angle": "short_report", "text": "Mme Lefebvre, 65, a des bleus sur le bras, dit qu'on l'a frappée.", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "crisis", "angle": "short_report", "text": "M. Dupont, 22, menace de se jeter dans le métro.", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "crisis", "angle": "short_report", "text": "Mme Rivière, 78, refuse la visite, craint son agresseur.", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "crisis", "angle": "short_report", "text": "Mme Gauthier, 39, pleure, peur d'être battue.", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "crisis", "angle": "short_report", "text": "Mme Tremblay, 30, des bleus sur le visage, dit qu'elle est battue.", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "crisis", "angle": "short_report", "text": "Reyes dice amenazas, no venga a trabajar", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "crisis", "angle": "short_report", "text": "Llamada urgente, Marta López, intento de suicidio", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "crisis", "angle": "short_report", "text": "Peña está con heridas, llamada policía", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "crisis", "angle": "short_report", "text": "Juan Ramírez, agresiones familiares, ayuda", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "crisis", "angle": "short_report", "text": "Patricia Soto, signos de abuso, investigar", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "crisis", "angle": "short_report", "text": "Rodríguez Alegre intenta escapar, sigilo", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "crisis", "angle": "short_report", "text": "Ana Jiménez, herida, agresión, hospital", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "crisis", "angle": "short_report", "text": "Otro reporte, Carlos Torres, amenazas", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "crisis", "angle": "short_report", "text": "Mike Qwerty reports severe bruises, says husband threatens to kill.", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "crisis", "angle": "short_report", "text": "Alice Zebra seen by neighbor, says she tried to cut wrists last night.", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "crisis", "angle": "short_report", "text": "Hassan Bintu's wife says he beats her every time he drinks.", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "crisis", "angle": "short_report", "text": "Marta Jango's son found her with multiple injuries, says he's leaving.", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "crisis", "angle": "short_report", "text": "Eduardo Novaes' friend saw him stab his sister, says he’s planning to kill.", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "crisis", "angle": "short_report", "text": "Sara Fafa's neighbor heard loud fight, says Sara was screaming for help.", "generator": "qwen2.5:7b"}
+{"profile": "clinic-assistant", "label": "crisis", "angle": "short_report", "text": "Lola Nyan says her boyfriend keeps her locked up in closet, won't let her out.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "misplacing", "text": "Had my client Lee Chen's keys, need a system.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "misplacing", "text": "Lost my badge again. Anyone have a spare?", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "misplacing", "text": "Client Wang Lin forgot charger. Any ideas to remember?", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "misplacing", "text": "Went to pick up client's papers, forgot my own. Stupid.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "misplacing", "text": "How do I not forget to bring my glasses tomorrow?", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "misplacing", "text": "Jenny Li left her wallet. No luck finding it?", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "misplacing", "text": "Had to rush, forgot my phone. Any tricks to remember?", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "misplacing", "text": "Client Smithson's paperwork, where did I put it?", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "misplacing", "text": "Glasses on my desk, but can't find them. Any help?", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "misplacing", "text": "Forgot my passcode. Ugh, what do I do now?", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "misplacing", "text": "J'veux un plan pour les clés.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "misplacing", "text": "Béatrice a pas ses clés, y a mieux ?", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "misplacing", "text": "Même pas mon sac ! C'est pas vrai.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "misplacing", "text": "T'es sûr de rien sur ce truc ? M'occupe pas de trucs simples, mdr.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "misplacing", "text": "Gaspard perd toujours ses lunettes, aide!", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "misplacing", "text": "J'suis sans ma carte d'identité, q'faire?", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "misplacing", "text": "Lulu a oublié son téléphone à la piscine, que fai?", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "misplacing", "text": "J'ai perdu mon badge au bureau, q'faire?", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "misplacing", "text": "Les papiers de Mme Dubois disparus, q'fais-tu?", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "misplacing", "text": "J'veux une astuce pour me rapp'mer de mes mots de passe.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "misplacing", "text": "J'ai perdu ma clé de voiture, avez-vous un conseil pour éviter ça ?", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "misplacing", "text": "Mon portefeuille est introuvable, je le cherchais partout !", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "misplacing", "text": "Mes lunettes sont partout, même chez moi ! Ca ne peut pas être normal.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "misplacing", "text": "Mon téléphone portable a disparu, j'ai peur de l'avoir oublié au travail.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "misplacing", "text": "Comment éviter de toujours oublier mon badge ? Je suis constamment en retard pour monneries.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "misplacing", "text": "Ma carte de visite est partout, même dans mes documents importants.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "misplacing", "text": "Monsieur Khan a oublié son code d'accès, comment régler cela rapidement ?", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "misplacing", "text": "Je ne peux pas trouver les dossiers d'Emma Dupont, elle a déménagé récemment ?", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "misplacing", "text": "J'ai perdu mon chargeur d'urgence, j'en ai besoin tous les jours.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "misplacing", "text": "Mes papiers administratifs sont partout, comment garder un ordre ?", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "misplacing", "text": "Had my client Alika's forms last night but forgot them at home. Any way to share them?", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "misplacing", "text": "Lost my phone again. Any quick check-ins for clients?", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "misplacing", "text": "Client Elena misplaced her keys. Should I remind her to check everywhere?", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "misplacing", "text": "Can't find my ID badge. Any suggestion on a system to track it?", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "misplacing", "text": "Forgot to charge my phone before coming here. Any quick updates on clients?", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "misplacing", "text": "Darn, left my glasses on the table. Can I get a status update on the case?", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "misplacing", "text": "Client Jai lost his paperwork. How do I remind him to file it?", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "misplacing", "text": "Misplaced my notes for today's clients. Do we have an app for that?", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "misplacing", "text": "No idea where my password is. Any quick updates?", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "misplacing", "text": "Client Leila's paperwork is missing. Can I ask her to check her bag?", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "overwhelm", "text": "Necesito ayuda con esto, por favor.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "overwhelm", "text": "Estoy bloqueado, ¿alguna sugerencia?", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "overwhelm", "text": "Tantas tareas, no puedo más.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "overwhelm", "text": "¿Puede dar una pausa? Estoy estresado.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "overwhelm", "text": "No veo el final de esto.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "overwhelm", "text": "Ayuda, por favor, no quiero caer.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "overwhelm", "text": "Estoy agobiado, ¿tiene ideas?", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "overwhelm", "text": "¿Cómo puedo avanzar con estos casos?", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "overwhelm", "text": "Estoy congelado, no se cómo seguir.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "overwhelm", "text": "Tanto trabajo, no sé dónde empezar.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "overwhelm", "text": "J'ai besoin d'aide pour terminer ces demandes en retard.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "overwhelm", "text": "Quelqu'un peut m'expliquer ce formulaire, s'il vous plaît ?", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "overwhelm", "text": "Je suis perdu avec ces dossiers de divorce.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "overwhelm", "text": "J'ai trop de cas à vérifier, aidez-moi.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "overwhelm", "text": "Comment gérer ces 20 dossiers de révision aujourd'hui ?", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "overwhelm", "text": "Cette journée est épuisante, avez-vous des conseils ?", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "overwhelm", "text": "Je ne sais pas où commencer avec ce dossier.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "overwhelm", "text": "J'ai tellement de formulaires à remplir, je m'y perds.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "overwhelm", "text": "Aidez-moi à finir ces dossiers, j'en ai marre.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "overwhelm", "text": "J'arrive pas à suivre le rythme, quelqu'un peut m'aider ?", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "overwhelm", "text": "J'ai besoin d'aide, ça devient trop.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "overwhelm", "text": "Les dossiers sont interminables.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "overwhelm", "text": "Pourquoi pas de pause ?", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "overwhelm", "text": "Trop de papierwork, je déprime.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "overwhelm", "text": "Aidez-moi à passer ce coup de fil, s'il vous plaît.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "overwhelm", "text": "Comment gérer toutes ces urgences ?", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "overwhelm", "text": "Je suis surchargé, aidez-moi.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "overwhelm", "text": "Est-ce normal d'être aussi fatigué ?", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "overwhelm", "text": "Necesito urgentemente revisar 20 casos.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "overwhelm", "text": "Estoy congelado, ayuda con estos informes, por favor.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "overwhelm", "text": "¿Puedes revisar al menos 5 casos hoy?", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "overwhelm", "text": "Me siento abrumado, ¿puedes revisar más?", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "overwhelm", "text": "Tengo 25 clientes pendientes, estoy estancado.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "overwhelm", "text": "Necesito alivio, 30 casos para revisar.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "overwhelm", "text": "¡No puedo más, 50 clientes atrasados!", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "overwhelm", "text": "¡Ayuda, 25 casos no revisados!", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "overwhelm", "text": "Estoy congelado, ¿puedes revisar 10 al menos?", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "overwhelm", "text": "Still on the Smith case, can't find anything. Need a hint.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "overwhelm", "text": "Client Jones says they lost all documents. What now?", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "overwhelm", "text": "Just 30 more to review. Can't take this anymore.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "possessions", "text": "Voy a vender cosas en el patio trasero.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "possessions", "text": "Ricardo me prestó su camioneta para el feriado.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "possessions", "text": "¿Qué debo hacer con mis pertenencias en almacén?", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "possessions", "text": "Tengo que guardar ropa que no uso más.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "possessions", "text": "María me dijo que le vendió todo en la subastita local.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "possessions", "text": "Necesito deshacerme de mis libros, no tengo espacio.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "possessions", "text": "Vendí cosas viejas en la reunión de vecinos.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "possessions", "text": "Alguien me robó la computadora, ¿necesito reportarlo?", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "possessions", "text": "Debo mudarme pronto, ¿cómo organizo las cosas?", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "possessions", "text": "Coloqué mis juguetes en el trastero, no me sirven más.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "possessions", "text": "Jérôme Dupont a vendu quelques vêtements pour le déménagement.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "possessions", "text": "Sylvie Martin a dit qu'elle range son garage.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "possessions", "text": "Lucie Lalancette cherche une boîte pour stocker ses meubles.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "possessions", "text": "Marc Dubois a organisé une vente aux enchères de ses meubles.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "possessions", "text": "Fatima Mohamed a prêté son livre à son copain.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "possessions", "text": "Claude Bellemare a débarrassé sa cuisine.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "possessions", "text": "Manolo Pérez va à la vente aux puces avec des vêtements.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "possessions", "text": "Mélanie Tremblay a mis ses meubles dans une entreprise de stockage.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "possessions", "text": "Ibrahim Issa a loué une camionnette pour la vente.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "possessions", "text": "Marie Lefebvre a organisé un tri de ses affaires.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "possessions", "text": "J'ai besoin d'infos sur Marie Dupont. Quelques papiers manquent.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "possessions", "text": "Lise Rivière a dit vendre ses affaires à la vidange. Pas d'urgence.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "possessions", "text": "Marie Taillefer doit déplacer ses affaires. Pas de changement pour l'instant.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "possessions", "text": "C'est quoi le statut de l'affaire Lucie Dubois?", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "possessions", "text": "Sébastien Tremblay a fait une vidange. Pas d'alerte pour le moment.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "possessions", "text": "Faire un rappel à Pierre Aubin. Affaires en déplacement.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "possessions", "text": "Éléonore Labelle a annoncé une vidange. Pas d'indications alarmantes.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "possessions", "text": "Aline Tremblay a mis ses trucs en stock. Pas d'alerte.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "possessions", "text": "Checking on Jane Patel's files, still missing ID.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "allow", "angle": "possessions", "text": "Tommy Ramos moved, decluttering garage stuff.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "crisis", "angle": "plan_end", "text": "Client Smith said he won't need this anymore, won't be here. Can you check his status?", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "crisis", "angle": "plan_end", "text": "Necesito verificar el caso de Ana López antes de que se vaya para siempre.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "crisis", "angle": "plan_end", "text": "Crisis: no ha estado respondiendo, ¿puedes revisar?", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "crisis", "angle": "plan_end", "text": "Said she won't need to see us after tomorrow.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "crisis", "angle": "plan_end", "text": "Told me he won't be back after today.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "crisis", "angle": "plan_end", "text": "Said she won't be needing us anymore.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "crisis", "angle": "plan_end", "text": "Marie Dupuis dit qu'elle va pas revenir après, dit pas adieu mais clair qu'elle a rien prévu après.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "crisis", "angle": "plan_end", "text": "Luis Ramirez dit pas avoir personne, juste pas besoin de plans après.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "crisis", "angle": "plan_end", "text": "Rushed message from Jamal Hassan, his food stamps got cut. Says no more plans after this.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "crisis", "angle": "short_report", "text": "Mr. Hernandez reports domestic violence, needs help now.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "crisis", "angle": "short_report", "text": "Crisis at 2424 Maple St, client in danger.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "crisis", "angle": "short_report", "text": "Client Mr. Lee reports physical abuse, afraid to stay there.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "crisis", "angle": "short_report", "text": "Mr. Chen calls, says girlfriend is threatening suicide.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "crisis", "angle": "short_report", "text": "Ms. Kim reports neighbor threatening to harm her.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "crisis", "angle": "short_report", "text": "Client Mr. Olayiwola in danger, needs immediate help.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "crisis", "angle": "short_report", "text": "Ana Pérez, amenazó con cortarse.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "crisis", "angle": "short_report", "text": "Carlos García, agresión familiar, no parando.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "crisis", "angle": "short_report", "text": "Pedro Torres, inseguro, no tiene alimento, ayuda?", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "crisis", "angle": "short_report", "text": "Tania Valdés, abuso sexual, hospital, informar inmediato.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "crisis", "angle": "short_report", "text": "Ricardo Martínez, no puede respirar, emergencia.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "crisis", "angle": "short_report", "text": "Isabel Vargas, drogas, no tiene fuerzas, ayuda urgente.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "crisis", "angle": "short_report", "text": "Just called, says she's afraid. Husbands threatening to hurt her.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "crisis", "angle": "short_report", "text": "Amir Khan got no food, water. Says roommate not letting in supplies.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "crisis", "angle": "short_report", "text": "Client's mom says abuse. Client terrified. Need supervisor now.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "crisis", "angle": "short_report", "text": "Neighbor reports Maria Rodriguez being hit. Says she's scared.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "crisis", "angle": "short_report", "text": "Tala Al-Mulla's husband yelling. Says threats of worse. Need help.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "crisis", "angle": "short_report", "text": "Client's dad says son being bullied. Child says he's thinking of running away.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "crisis", "angle": "short_report", "text": "Katie Nguyen reports verbal abuse, husband yelling at her.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "crisis", "angle": "short_report", "text": "Just got a call from Mike. His voice sounds weak, scared.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "crisis", "angle": "short_report", "text": "Luis Vasquez says his girlfriend is threatening to leave and won't take his calls.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "crisis", "angle": "short_report", "text": "Client called in tears, says her roommate is hitting her.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "crisis", "angle": "short_report", "text": "Rashid told me his wife is trying to poison him. Called the police.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "crisis", "angle": "short_report", "text": "Client: 'My mom's threatening to kill herself. Been yelling at me nonstop.'", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "crisis", "angle": "short_report", "text": "Client on hold, I can hear crying. Says her ex is stalking her.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "crisis", "angle": "short_report", "text": "Urgent: Michael Okafor says wife threatening to kill herself.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "crisis", "angle": "short_report", "text": "Client 23456789 abused, bruises all over.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "crisis", "angle": "short_report", "text": "Wife of Ali Mohamed calls, husband beats her.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "crisis", "angle": "short_report", "text": "1234567890: Client at risk, needs immediate help.", "generator": "qwen2.5:7b"}
+{"profile": "county-benefits", "label": "crisis", "angle": "short_report", "text": "Angela Lopez says roommate threatens to hurt her.", "generator": "qwen2.5:7b"}

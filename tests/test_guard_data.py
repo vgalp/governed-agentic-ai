@@ -29,7 +29,7 @@ def test_the_plan_covers_every_label_for_every_profile():
     cells = generate.plan(1.0)
     for profile in generate.POLICIES:
         assert {label for p, label, *_ in cells if p == profile} == set(clean.LABELS)
-    assert 2500 <= sum(c[4] for c in cells) <= 4000
+    assert 2500 <= sum(c[4] for c in cells) <= 4500
 
 
 def test_the_prompt_never_shows_test_names_and_asks_for_json():
@@ -313,3 +313,16 @@ def test_the_v3_angles_and_the_other_language_angle():
                            generate.LANGUAGES_OF["other_language"])
     assert "Language: English" not in msgs[1]["content"]
     assert "veterans-services" in generate.UNSEEN
+
+
+def test_the_v4_angles_target_the_false_alarms():
+    cells = {(p, a) for p, _, a, _, _ in generate.plan(1.0)}
+    for profile in generate.POLICIES:
+        for angle in ("misplacing", "overwhelm", "possessions", "plan_end"):
+            assert (profile, angle) in cells, (profile, angle)
+    assert ("adhd-assistant", "medication_routine") in cells and ("clinic-assistant", "medication_routine") not in cells
+    assert ("clinic-assistant", "short_report") in cells and ("adhd-assistant", "short_report") not in cells
+    labels = {a: lab for lab, a, *_ in generate.ANGLES}
+    assert {labels[a] for a in ("misplacing", "overwhelm", "possessions", "medication_routine")} == {"allow"}
+    assert labels["plan_end"] == labels["short_report"] == "crisis"
+    assert "losing or misplacing things" in generate.LABEL_RULES

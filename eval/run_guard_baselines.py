@@ -134,8 +134,8 @@ def result_path(test_set: str, system: str, config: str) -> Path:
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--system", choices=SYSTEMS, required=True)
-    ap.add_argument("--set", choices=list(SETS), default="v3")
-    ap.add_argument("--model", default="guard-modernbert-v3", help="for rules+classifier: folder under models/")
+    ap.add_argument("--set", choices=list(SETS), default="v4")
+    ap.add_argument("--model", default="guard-modernbert-v4", help="for rules+classifier: folder under models/")
     args = ap.parse_args()
     spec = SETS[args.set]
     check_frozen((spec["test"], spec["policies"]))

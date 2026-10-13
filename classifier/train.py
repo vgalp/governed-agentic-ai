@@ -1,6 +1,6 @@
 """Fine-tune ModernBERT-base as the guard classifier (allow / decision / crisis).
 
-    uv run --group train python -m classifier.train                       # v3: label smoothing, own folder
+    uv run --group train python -m classifier.train                       # v4: label smoothing, own folder
     uv run --group train python -m classifier.train --out guard-modernbert --label-smoothing 0   # as v1
 
 Input to the model: the profile's guard policy and the message, as a pair, so one model serves
@@ -14,7 +14,7 @@ Label smoothing (v2): the model is trained towards 90% sure instead of 100%, so 
 stay meaningful and the thresholds chosen on dev can do their job. v1 (no smoothing) was nearly
 always 0% or 100% sure, even when wrong.
 
-Output: models/<--out>/ (not in git, default guard-modernbert-v3; v1 and v2 keep their folders): the
+Output: models/<--out>/ (not in git, default guard-modernbert-v4; earlier versions keep their folders): the
 model, its tokenizer, and training_info.json (base model, data hashes, settings, dev scores).
 """
 
@@ -85,7 +85,7 @@ def main() -> None:
     ap.add_argument("--max-len", type=int, default=256)
     ap.add_argument("--seed", type=int, default=7)
     ap.add_argument("--label-smoothing", type=float, default=0.1)
-    ap.add_argument("--out", default="guard-modernbert-v3", help="folder name under models/")
+    ap.add_argument("--out", default="guard-modernbert-v4", help="folder name under models/")
     args = ap.parse_args()
     out_dir = MODELS / args.out
 

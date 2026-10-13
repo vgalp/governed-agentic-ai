@@ -1,6 +1,6 @@
 """Choose the guard classifier's thresholds on DEV, and show every mistake it makes there.
 
-    uv run --group train python -m classifier.calibrate                             # v3 (models/guard-modernbert-v3)
+    uv run --group train python -m classifier.calibrate                             # v4 (models/guard-modernbert-v4)
     uv run --group train python -m classifier.calibrate --model guard-modernbert-v2 # an earlier one
 
 The frozen test set is never used for this (eval/datasets/guard_test_protocol.md, rule 2).
@@ -55,7 +55,7 @@ def choose(gold: list[str], probs: list[dict[str, float]]) -> dict[str, float]:
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("--model", default="guard-modernbert-v3", help="folder name under models/")
+    ap.add_argument("--model", default="guard-modernbert-v4", help="folder name under models/")
     model_dir = MODELS / ap.parse_args().model
     rows = read_jsonl(DEV)
     guard = GuardModel(model_dir)

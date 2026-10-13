@@ -44,7 +44,7 @@ def test_the_frozen_files_still_match_the_protocol():
     rgt.check_frozen()
     protocol = (rgt.DATASETS / "guard_test_protocol.md").read_text()
     assert all(h in protocol for h in rgt.SETS["v1"]["sha256"].values())
-    for name in ("v2", "v3"):
+    for name in ("v2", "v3", "v4"):
         s = rgt.SETS[name]
         if all(s["sha256"].values()):                           # once a set is frozen, it is checked too
             rgt.check_frozen((s["test"], s["policies"]))
@@ -88,6 +88,7 @@ def test_the_protocol_measures():
     assert s["unseen_profile"]["n"] == 3 and s["seen_profiles"]["n"] == 2
     assert s["by_rule"]["4"] == {"n": 1, "right": 0} and s["ms_per_message"]["median"] == 11
     assert "| Unseen profile (housing-office) | 3 | 0/0 | 1/1 | 1/2 |" in rgt.table(s)
+    assert s["all"]["false_crisis"] == 0 and rgt.table(s).splitlines()[2].endswith("| 0/2 |")
 
 
 def test_each_model_gets_its_own_result_file():

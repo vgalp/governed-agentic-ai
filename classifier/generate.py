@@ -9,7 +9,7 @@ For each training profile, label and "angle" (a kind of message, including the h
 cases in docs/classifier/labels.md), the model is asked for a batch of short, varied
 messages. The label is the one we asked for: it is a first guess, checked later.
 
-    uv run python -m classifier.generate                     # full run (about 3,700 messages; an earlier run is continued)
+    uv run python -m classifier.generate                     # full run (about 4,300 messages; an earlier run is continued)
     uv run python -m classifier.generate --scale 0.1         # quick trial (about 520)
     uv run python -m classifier.generate --model mistral     # another local model
     uv run python -m classifier.generate --scale 0.1 --debug # show replies it could not read
@@ -79,6 +79,21 @@ ANGLES = [
     ("allow", "general_rules", 40, "asks a general question about rules, limits, normal ranges or how a "
      "process works, about no one in particular: {general_rules}. No person, no case, no decision. In health "
      "profiles, never about medication amounts.", None),
+    # v4: everyday messages v3 wrongly flagged as crisis or decision (eval/results/adhd_review_*):
+    # losing things, ordinary overwhelm, everyday possessions, medication mentioned only in a routine.
+    ("allow", "misplacing", 40, "is about losing, misplacing or forgetting everyday things (keys, wallet, phone, "
+     "glasses, a charger, a badge, paperwork, passwords) and asks for a practical system or tips. Nothing about "
+     "harm, goodbyes or giving things away.", None),
+    ("allow", "overwhelm", 40, "says the writer feels overwhelmed, stuck, frozen, fed up or done with a task, a "
+     "workload or a busy week, and asks for help getting through it. Ordinary stress only: no hopelessness about "
+     "life, no wish to die or disappear, no sign of danger.", None),
+    ("allow", "possessions", 30, "mentions possessions in a clearly ordinary way: decluttering, selling or donating "
+     "things before a move, lending something to a friend, a garage sale, putting things in storage. No sign of "
+     "preparing to die or of not needing things anymore.", None),
+    ("allow", "medication_routine", 40, "mentions the writer's medication only as part of an ordinary plan, routine "
+     "or reminder (taking it with breakfast, packing it for a trip, picking up a refill), or asks for help writing "
+     "questions to bring to their prescriber. It never asks whether to take, skip, change or combine anything.",
+     {"adhd-assistant"}),
     ("allow", "offtopic", 20, "asks something unrelated to the assistant's job (trivia, coding, weather).", None),
     # --- decision: about 300 per profile
     ("decision", "direct", 110, "asks the assistant to MAKE one of the decisions the policy forbids, about a "
@@ -132,6 +147,12 @@ ANGLES = [
      "things. No explicit words like suicide or kill. {who_risk}", None),
     ("crisis", "other_language", 30, "a clear sign that someone may be at risk of suicide, self-harm or "
      "abuse, said directly or indirectly, written the way a native speaker would. {who_risk}", None),
+    # v4: goodbye signs phrased as the end of a plan, and short report-style crisis notes from staff.
+    ("crisis", "plan_end", 30, "asks for help with a plan, schedule or task, and in passing says that after a near "
+     "date the person won't need plans anymore, won't be around, or that this is the last thing to sort out. No "
+     "explicit words like suicide or kill. {who_risk}", None),
+    ("crisis", "short_report", 30, "a short, report-style note typed in a hurry by a staff member: someone is in "
+     "danger right now, or is being abused, threatened or hurt (a few words, often without a full sentence).", STAFF),
     ("crisis", "means", 20, "asks about a way to seriously harm oneself, in a worrying way: which pills are "
      "deadly in large amounts, how high a place is, how much of something would be fatal. It must be about "
      "harm, not a routine lookup.", None),
@@ -304,6 +325,8 @@ def ask(model: str, messages: list[dict], seed: int, debug: bool = False) -> lis
 LABEL_RULES = """Labels:
 - allow: a lookup of what a record already says (even a recorded dose or a past denial), a general question
   about rules or procedures, a change request (rescheduling, releasing a held payment), ordinary help,
+  losing or misplacing things, feeling overwhelmed or stuck about tasks, ordinary decluttering or selling
+  things, a medication mentioned only as part of a routine or a reminder,
   harmless figures of speech ("this is killing me", "I'm dead tired"), or everyday senses of words like
   burden, jump, bridge, hit or "fatal error" ("the burden of proof", "a fatal error in the portal").
 - decision: asks the assistant to make OR predict a forbidden professional judgment about a person:
@@ -314,7 +337,8 @@ LABEL_RULES = """Labels:
 - crisis: someone may be at risk of suicide, self-harm, abuse or violence, said directly or indirectly,
   about the writer or someone else: wanting to die or not wake up, "can't go on", "ready to go",
   "might do something drastic", quiet goodbyes ("won't be around next week", "won't need appointments
-  anymore", letters "just in case", giving away important things), being hit, threatened or locked in,
+  anymore", letters "just in case", giving away important things, "this is the last thing I need to sort out"),
+  being hit, threatened or locked in,
   a threat to hurt someone, in any language.
 Precedence:
 1. Crisis wins over everything else in the same message.

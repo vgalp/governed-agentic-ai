@@ -1,7 +1,7 @@
 """Score a guard classifier ONCE on a frozen test set (eval/datasets/guard_test_protocol.md).
 
-    uv run --group train python -m eval.run_guard_test --set v3 --model guard-modernbert-v3
-    uv run --group train python -m eval.run_guard_test --set v3 --model guard-modernbert-v2   # like-for-like
+    uv run --group train python -m eval.run_guard_test --set v4 --model guard-modernbert-v4
+    uv run --group train python -m eval.run_guard_test --set v4 --model guard-modernbert-v3   # like-for-like
 
 Before running it checks that guard_test.jsonl and guard_test_policies.yaml still have the SHA-256
 recorded in the protocol, and that this exact model (by the hash of its weights) has not been
@@ -44,6 +44,10 @@ SETS = {
            "prefix": "guard_test_v3_classifier", "sha256": {
         "guard_test_v3.jsonl": "521a91f9ad89b44deda1f42004afd883fce285c29f8a6309df50deda5f138d6c",
         "guard_test_v3_policies.yaml": "736fb653de173bff1a7b9c1211fbfabf26d815493675ea634b049dd9ab8cff96"}},
+    "v4": {"test": DATASETS / "guard_test_v4.jsonl", "policies": DATASETS / "guard_test_v4_policies.yaml",
+           "prefix": "guard_test_v4_classifier", "sha256": {
+        "guard_test_v4.jsonl": "61f9a7d3996eedfaf8a22b1012090f6e7f735b587ab7fe7b8abed2b29f6d9635",
+        "guard_test_v4_policies.yaml": "d1bff202b7e9496d39eccec581912bc4be9b3b899657a8cd1165c7cfcdf6165c"}},
 }
 FROZEN = {k: v for s in SETS.values() for k, v in s["sha256"].items()}
 LABELS = ("allow", "decision", "crisis")
@@ -75,6 +79,7 @@ def scores(rows: list[dict]) -> dict:
         "decision_total": sum(r["label"] == "decision" for r in rows),
         "wrong_blocks": sum(r["label"] == "allow" and r["predicted"] != "allow" for r in rows),
         "allow_total": sum(r["label"] == "allow" for r in rows),
+        "false_crisis": sum(r["label"] == "allow" and r["predicted"] == "crisis" for r in rows),
         **m,
     }
 
@@ -100,8 +105,9 @@ def summary(rows: list[dict]) -> dict:
 
 
 def table(s: dict) -> str:
-    lines = ["| Set | Messages | Crisis missed | Decisions let through | Wrong blocks | Macro F1 |",
-             "|---|---|---|---|---|---|"]
+    lines = ["| Set | Messages | Crisis missed | Decisions let through | Wrong blocks | Macro F1 "
+             "| Everyday messages given the crisis reply |",
+             "|---|---|---|---|---|---|---|"]
     unseen = s.get("unseen_names") or ["housing-office"]
     label = f"Unseen profile{'s' if len(unseen) > 1 else ''} ({', '.join(unseen)})"
     rows = [("All", s["all"]), ("Seen profiles", s["seen_profiles"]), (label, s["unseen_profile"])]
@@ -111,7 +117,8 @@ def table(s: dict) -> str:
         if x:
             lines.append(f"| {name} | {x['n']} | {x['crisis_missed']}/{x['crisis_total']} | "
                          f"{x['decisions_let_through']}/{x['decision_total']} | "
-                         f"{x['wrong_blocks']}/{x['allow_total']} | {x['macro_f1']:.3f} |")
+                         f"{x['wrong_blocks']}/{x['allow_total']} | {x['macro_f1']:.3f} | "
+                         f"{x.get('false_crisis', 0)}/{x['allow_total']} |")
     if s["ms_per_message"]:
         lines.append(f"\nTime per message: median {s['ms_per_message']['median']} ms, "
                      f"95th percentile {s['ms_per_message']['p95']} ms.")
@@ -124,8 +131,8 @@ def result_path(model_hash: str, test_set: str = "v1") -> Path:
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("--set", choices=list(SETS), default="v3")
-    ap.add_argument("--model", default="guard-modernbert-v3", help="folder name under models/")
+    ap.add_argument("--set", choices=list(SETS), default="v4")
+    ap.add_argument("--model", default="guard-modernbert-v4", help="folder name under models/")
     args = ap.parse_args()
     spec = SETS[args.set]
     check_frozen((spec["test"], spec["policies"]))
