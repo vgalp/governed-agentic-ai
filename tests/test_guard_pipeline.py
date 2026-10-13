@@ -36,7 +36,7 @@ def test_the_training_profiles_check_questions_with_the_guard_classifier():
     for name, decision in (("adhd-assistant", "medical_advice"), ("clinic-assistant", "medical_advice"),
                            ("county-benefits", "eligibility_decision")):
         c = load_profile(name).classifier
-        assert (c.input_engine, c.guard_model, c.decision_category) == ("guard_model", "guard-modernbert-v3", decision)
+        assert (c.input_engine, c.guard_model, c.decision_category) == ("guard_model", "guard-modernbert-v4", decision)
         assert c.guard_policy == POLICIES[name]                  # the paragraph it was trained with
         assert c.model == "llama-guard3:8b"                       # answers still go to Llama Guard
 
@@ -72,7 +72,7 @@ def test_llamaguard_profiles_are_unchanged(adhd, monkeypatch):
     p = replace(adhd, classifier=replace(adhd.classifier, input_engine="llamaguard"))
     monkeypatch.setattr(gc, "classifier_check", lambda text, profile=None: GuardrailDecision(True, None, "llama"))
     assert gc.input_check("anything", p).reason == "llama"
-    assert gc.input_engine_name(p) == "llama-guard3:8b" and gc.input_engine_name(adhd) == "guard-modernbert-v3"
+    assert gc.input_engine_name(p) == "llama-guard3:8b" and gc.input_engine_name(adhd) == "guard-modernbert-v4"
 
 
 def test_a_crisis_wins_over_a_rule_block(adhd, monkeypatch):

@@ -1,8 +1,10 @@
 # Guard classifier test set v4: protocol
 
-Written and committed **before** the v4 training data is generated and before the v4 classifier
-is trained. Same rules as v1 (`guard_test_protocol.md`); this file records why a fourth set exists
-and what is different.
+The 150 messages were written before the v4 training data was generated and are unchanged since
+then (the frozen file differs from the first draft only by a missing final newline). The SHA-256
+below was recorded after the v4 classifier was trained, just before it was scored; the set was
+committed together with the v4 training data and results. Same rules as v1
+(`guard_test_protocol.md`); this file records why a fourth set exists and what is different.
 
 ## Why a fourth set
 The v3 classifier was scored once on test set v3 (`eval/results/guard_test_v3_notes.md`) and then
@@ -37,11 +39,12 @@ v3 and the baselines are scored on it too, so the comparison is like-for-like.
 Drafted with an AI assistant (Claude), which had also seen v3's mistakes and the review run, and
 helped write the training-data prompts. Drafts close to an earlier test or review message were
 reworded; the highest remaining similarity to any of them is 0.78. The v4 training data did not exist
-yet. After freezing, `classifier/clean.py` removes any training message too close to a test message
-(similarity 0.75 or more) or using a test-set name. Anyone reading the results should know that the
+yet. `classifier/clean.py` removed any training message too close to a test message (similarity 0.75
+or more) or using a test-set name; a check after training found no training or dev message at 0.75
+or above (highest 0.747) and no test-set name. Anyone reading the results should know that the
 test sets, the training prompts and the classifier share an author.
 
-Reviewed before freezing by: vgalperin
+Reviewed before freezing by: Wladimir Galperin (vgalperin)
 
 ## Rules
 As in v1: frozen by SHA-256 below; never used for training, tuning, threshold choice or prompt

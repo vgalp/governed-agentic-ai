@@ -56,7 +56,7 @@ classifier:
   # this profile's paragraph from classifier/policies.yaml. Answers stay with Llama Guard above.
   # Needs the train group (torch): uv sync --group train. input_engine: llamaguard to switch back.
   input_engine: guard_model
-  guard_model: guard-modernbert-v3
+  guard_model: guard-modernbert-v4
   decision_category: medical_advice           # the reply for a forbidden decision
 
 # Personal information masked before text reaches tools or the model.
