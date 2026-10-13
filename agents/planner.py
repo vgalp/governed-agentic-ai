@@ -2,8 +2,11 @@
 gateway, ask the model, output guardrails, restore details, publish.
 
 Guardrails run in layers: fast rules (layer 1), then a safety classifier (layer 2)
-for what the rules miss. On answers, profiles that cite sources also get a grounding
-check: an answer may only cite sources the model was given.
+for what the rules miss. Questions go to the profile's input engine (the fine-tuned guard
+classifier, or Llama Guard); answers always go to Llama Guard. If a rule blocks a question
+for another reason and the classifier sees a crisis, the crisis reply wins. On answers,
+profiles that cite sources also get a grounding check: an answer may only cite sources
+the model was given.
 
 Everything specific to the use case (model, prompt, rules, replies, classifier
 policy, privacy settings, knowledge base, tool permissions, roles) comes from the
@@ -31,7 +34,7 @@ from agents.trace import Trace, ids_text, masking_summary
 from audit.chain import get_audit_chain
 from gateway.gateway import ToolCallDenied, call_tool
 from gateway.opa import decide
-from guardrails.classifier import classifier_check
+from guardrails.classifier import classifier_check, crisis_over_rule, input_check, input_engine_name, load_guard
 from guardrails.grounding import check_citations
 from guardrails.rules import GuardrailDecision, check_input, check_output, classifier_exemption
 from llm.providers import ModelUnavailable, chat
@@ -56,9 +59,16 @@ audit = get_audit_chain(AGENT_NAME)   # tamper-evident audit, shared with the ga
 _ext = (" -> ".join(f"{PROFILE.models[k]['provider']}/{PROFILE.models[k]['name']}"
                     for k in [PROFILE.routing["external_model"], *PROFILE.routing["fallback"]])
         if PROFILE.routing["external_allowed"] else "none")
+if PROFILE.classifier.input_engine == "guard_model":
+    try:                                      # load it now, so a missing model stops startup, not a request
+        load_guard(PROFILE)
+    except (ImportError, SystemExit) as e:
+        raise SystemExit(f"Guard classifier {PROFILE.classifier.guard_model} could not be loaded ({e}). "
+                         "Install it with: uv sync --group train, train it, or set the profile's "
+                         "classifier input_engine to llamaguard.") from e
 print(f"Planner agent listening on chat.requests (profile {PROFILE.name}, "
       f"local model {PROFILE.local_model['name']}, external model {_ext}, "
-      f"guard {PROFILE.classifier.model})...")
+      f"question guard {input_engine_name(PROFILE)}, answer guard {PROFILE.classifier.model})...")
 
 
 def audit_guardrail(request_id: str, stage: str, layer: str, decision, role: str | None = None,
@@ -210,8 +220,8 @@ while True:
     override = None
     if in_check.allowed:
         trace.step("intake", "input_rules", "pass", "No input rule matched")
-        trace.start("intake", "input_classifier", f"Safety classifier ({PROFILE.classifier.model}) checking the question")
-        in_check = classifier_check(req["message"], profile=PROFILE)
+        trace.start("intake", "input_classifier", f"Safety classifier ({input_engine_name(PROFILE)}) checking the question")
+        in_check = input_check(req["message"], profile=PROFILE)
         in_layer = "classifier"
         # A narrow, profile-defined exemption (e.g. a pure record lookup flagged as
         # medical advice). Never for crisis. The answer is still fully checked.
@@ -230,6 +240,14 @@ while True:
     else:
         trace.step("intake", "input_rules", "block", f"Blocked by rule: {in_check.reason}",
                    category=in_check.category)
+        # A rule blocked it for another reason (e.g. a medication word): if the classifier sees a
+        # crisis, the crisis reply wins. A rule may make the guard stricter, never less safe.
+        crisis = crisis_over_rule(in_check, req["message"], PROFILE)
+        if crisis:
+            trace.step("intake", "input_classifier", "block",
+                       f"Classifier: crisis, which takes priority over the rule's {in_check.category}",
+                       category="crisis")
+            in_check, in_layer = crisis, "classifier"
     audit_guardrail(request_id, "input", in_layer, in_check, role, override)
     if not in_check.allowed:
         publish_response(request_id, reply(in_check, role), [],

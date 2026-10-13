@@ -69,6 +69,13 @@ class ClassifierConfig:
     policy: str
     categories: tuple[ClassifierCategory, ...]   # priority order
     default_category: str
+    # What checks the QUESTION: Llama Guard with the policy above (llamaguard), or the fine-tuned
+    # guard classifier (guard_model: models/<guard_model>, reading guard_policy). Answers are always
+    # checked by Llama Guard: the guard classifier is trained on questions only.
+    input_engine: str = "llamaguard"
+    guard_model: str | None = None
+    guard_policy: str | None = None
+    decision_category: str | None = None       # reply category for the guard's "decision" label
 
 
 @dataclass(frozen=True)
@@ -201,6 +208,30 @@ class Profile:
 
 
 # --- helpers ------------------------------------------------------------------
+
+GUARD_POLICIES = Path(__file__).resolve().parent.parent / "classifier" / "policies.yaml"
+INPUT_ENGINES = ("llamaguard", "guard_model")
+
+
+def _guard_settings(c: dict, name: str, where: str) -> dict:
+    """The input_engine settings of a profile's classifier block. With guard_model, the policy
+    paragraph is the profile's own guard_policy, or its entry in classifier/policies.yaml."""
+    engine = c.get("input_engine", "llamaguard")
+    if engine not in INPUT_ENGINES:
+        raise ProfileError(f"{where}: classifier input_engine must be one of {', '.join(INPUT_ENGINES)}")
+    if engine == "llamaguard":
+        return {"input_engine": engine}
+    policy = c.get("guard_policy")
+    if not policy and GUARD_POLICIES.exists():
+        policy = (yaml.safe_load(GUARD_POLICIES.read_text(encoding="utf-8")) or {}).get(name)
+    if not policy:
+        raise ProfileError(f"{where}: classifier input_engine guard_model needs a guard_policy paragraph "
+                           f"(in the classifier block, or under '{name}' in classifier/policies.yaml)")
+    return {"input_engine": engine,
+            "guard_model": _require(c, "guard_model", f"{where}: classifier"),
+            "guard_policy": str(policy).strip(),
+            "decision_category": _require(c, "decision_category", f"{where}: classifier")}
+
 
 def _require(d: dict, key: str, where: str):
     if key not in d or d[key] in (None, ""):
@@ -581,6 +612,7 @@ def load_profile_from(path: Path) -> Profile:
         policy=_file(path, _require(c, "policy", f"{where}: classifier"), where).read_text(encoding="utf-8").strip(),
         categories=cats,
         default_category=_require(c, "default_category", f"{where}: classifier"),
+        **_guard_settings(c, name, where),
     )
 
     # Narrow overrides of an input classifier flag (e.g. a pure record lookup flagged as
@@ -609,6 +641,8 @@ def load_profile_from(path: Path) -> Profile:
     # Every category that can block a message needs a fixed reply.
     used = {r.category for r in input_rules + output_rules}
     used |= {x.category for x in cats} | {classifier.default_category, "unavailable"}
+    if classifier.decision_category:
+        used |= {classifier.decision_category, "crisis"}
     missing = sorted(used - responses.keys())
     if missing:
         raise ProfileError(f"{path.name}/responses.yaml: no response for {', '.join(missing)}")

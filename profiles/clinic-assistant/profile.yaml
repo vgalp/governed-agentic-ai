@@ -69,6 +69,12 @@ classifier:
     - {code: S1, name: patient safety risk, category: crisis}
     - {code: S2, name: clinical decision, category: medical_advice}
   default_category: medical_advice
+  # Questions are checked by the fine-tuned guard classifier (allow / decision / crisis), with
+  # this profile's paragraph from classifier/policies.yaml. Answers stay with Llama Guard above.
+  # Needs the train group (torch): uv sync --group train. input_engine: llamaguard to switch back.
+  input_engine: guard_model
+  guard_model: guard-modernbert-v3
+  decision_category: medical_advice           # the reply for a forbidden decision
 
 privacy:
   entities: [PERSON, PHONE_NUMBER, EMAIL_ADDRESS, LOCATION, US_SSN, CREDIT_CARD, IP_ADDRESS]

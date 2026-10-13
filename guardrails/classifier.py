@@ -1,6 +1,11 @@
 """Layer 2 guardrails: a safety classifier (Llama Guard 3 8B via Ollama) with
 the active profile's own safety policy (profiles/<name>/classifier_policy.md).
 
+The QUESTION can instead be checked by the fine-tuned guard classifier (ModernBERT, models/<name>),
+when the profile sets classifier input_engine: guard_model. On frozen test set v3 it missed 1 of 30
+crisis messages, against 26 for rules then Llama Guard (eval/results/guard_test_v3_notes.md).
+Answers are always checked by Llama Guard: the guard classifier is trained on questions only.
+
 Layer 1 rules catch known words. This layer catches meaning the rules miss,
 such as indirect crisis language ("Everyone would be better off without me").
 
@@ -116,3 +121,57 @@ def classifier_check(user_text: str, assistant_text: str | None = None,
     except (requests.RequestException, KeyError, ValueError) as e:
         return GuardrailDecision(False, "guardrail_unavailable", f"classifier error: {e}",
                                  profile.response("unavailable"))
+
+
+_guards: dict = {}
+
+
+def load_guard(profile: Profile):
+    """The profile's guard classifier, loaded once per process (it needs the train group: torch)."""
+    name = profile.classifier.guard_model
+    if name not in _guards:
+        from classifier.model import GuardModel
+        from classifier.train import MODELS
+        _guards[name] = GuardModel(MODELS / name)
+    return _guards[name]
+
+
+def guard_check(user_text: str, profile: Profile) -> GuardrailDecision:
+    """The guard classifier on a question: allow, decision (the profile's decision_category) or crisis.
+    Fails closed, like Llama Guard: if the model cannot run, the question is blocked."""
+    try:
+        label, probs = load_guard(profile).label(profile.classifier.guard_policy, user_text)
+    except Exception as e:  # noqa: BLE001 - any failure to label must block, never allow
+        return GuardrailDecision(False, "guardrail_unavailable", f"guard classifier error: {e}",
+                                 profile.response("unavailable"))
+    reason = (f"guard classifier {profile.classifier.guard_model}: {label} "
+              f"(crisis {probs['crisis']:.2f}, decision {probs['decision']:.2f})")
+    if label == "allow":
+        return GuardrailDecision(True, None, reason)
+    category = "crisis" if label == "crisis" else profile.classifier.decision_category
+    return GuardrailDecision(False, category, reason, profile.response(category))
+
+
+def input_check(user_text: str, profile: Profile | None = None) -> GuardrailDecision:
+    """Layer 2 on a question, with the engine the profile chose."""
+    profile = profile or load_profile()
+    if profile.classifier.input_engine == "guard_model":
+        return guard_check(user_text, profile)
+    return classifier_check(user_text, profile=profile)
+
+
+def input_engine_name(profile: Profile) -> str:
+    """What checks questions, for logs and the trace."""
+    c = profile.classifier
+    return c.guard_model if c.input_engine == "guard_model" else c.model
+
+
+def crisis_over_rule(rule_check: GuardrailDecision, user_text: str,
+                     profile: Profile | None = None) -> GuardrailDecision | None:
+    """A rule blocked the question for a reason other than crisis (say, a medication word).
+    Ask the classifier too: if it sees a crisis, the crisis decision wins, so the person gets the
+    crisis reply. A rule may make the guard stricter, never less safe. None: keep the rule's block."""
+    if rule_check.allowed or rule_check.category == "crisis":
+        return None
+    second = input_check(user_text, profile)
+    return second if not second.allowed and second.category == "crisis" else None

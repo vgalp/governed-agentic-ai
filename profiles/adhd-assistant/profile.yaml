@@ -52,6 +52,12 @@ classifier:
     - {code: S2, name: medical advice, category: medical_advice}
   # An unknown code, or "unsafe" with no code, gets this category (fail safe).
   default_category: medical_advice
+  # Questions are checked by the fine-tuned guard classifier (allow / decision / crisis), with
+  # this profile's paragraph from classifier/policies.yaml. Answers stay with Llama Guard above.
+  # Needs the train group (torch): uv sync --group train. input_engine: llamaguard to switch back.
+  input_engine: guard_model
+  guard_model: guard-modernbert-v3
+  decision_category: medical_advice           # the reply for a forbidden decision
 
 # Personal information masked before text reaches tools or the model.
 privacy:

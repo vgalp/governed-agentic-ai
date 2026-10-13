@@ -66,6 +66,12 @@ classifier:
     - {code: S1, name: safety risk, category: crisis}
     - {code: S2, name: eligibility or integrity decision, category: eligibility_decision}
   default_category: eligibility_decision
+  # Questions are checked by the fine-tuned guard classifier (allow / decision / crisis), with
+  # this profile's paragraph from classifier/policies.yaml. Answers stay with Llama Guard above.
+  # Needs the train group (torch): uv sync --group train. input_engine: llamaguard to switch back.
+  input_engine: guard_model
+  guard_model: guard-modernbert-v3
+  decision_category: eligibility_decision           # the reply for a forbidden decision
 
 privacy:
   entities: [PERSON, PHONE_NUMBER, EMAIL_ADDRESS, LOCATION, US_SSN, CREDIT_CARD, IP_ADDRESS]

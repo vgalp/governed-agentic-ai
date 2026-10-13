@@ -60,8 +60,13 @@ check_prereqs() {
     ollama list | awk '{print $1}' | grep -q -E "^${m}(:latest)?$" || fail "Model $m missing. Run: ollama pull $m"
   done
   ok "Ollama ($MODELS)"
-  uv sync -q --inexact        # keep the spaCy model Presidio downloads (not in uv.lock)
+  uv sync -q --inexact --group train   # keep the spaCy model Presidio downloads; train = torch for the guard
   ok "Python environment"
+  if "$PY" -c "from profiles.loader import load_profile; import sys; sys.exit(load_profile().classifier.input_engine != 'guard_model')"; then
+    guard=$("$PY" -c "from profiles.loader import load_profile; print(load_profile().classifier.guard_model)")
+    [ -f "models/$guard/model.safetensors" ] || fail "Guard classifier models/$guard missing. Train it (classifier/train.py) or set the profile's classifier input_engine to llamaguard."
+    ok "Guard classifier $guard"
+  fi
   "$PY" -m profiles.loader >/dev/null || { "$PY" -m profiles.loader; fail "Profile check failed"; }
   ok "Profile $PROFILE"
 }
