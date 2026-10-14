@@ -52,6 +52,12 @@ be checked against v5 at the time. None of its messages enter training before `c
 has dropped anything close to a v5 message. The set frozen below is unchanged from the draft
 delivered for review before round 1 ran (same SHA-256).
 
+Correction (2026-10-14): the freeze was pushed in commit 0918b87 together with other work, not on
+its own: the input agent and its dev runs, the self-improvement agent, and round 1's attack messages
+and review queue (attack messages, not training data). The v5 files in that commit are unchanged
+from the reviewed draft (SHA-256 below). No v5 training data existed yet, and none of round 1's
+messages had entered training.
+
 Reviewed before freezing by: Wladimir Galperin (vgalperin), 2026-10-14, no changes
 
 ## Rules
