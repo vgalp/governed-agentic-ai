@@ -36,6 +36,7 @@ from gateway.gateway import ToolCallDenied, call_tool
 from gateway.opa import decide
 from guardrails.classifier import classifier_check, crisis_over_rule, input_check, input_engine_name, load_guard
 from guardrails.grounding import check_citations
+from guardrails.input_agent import review as agent_review
 from guardrails.rules import GuardrailDecision, check_input, check_output, classifier_exemption
 from llm.providers import ModelUnavailable, chat
 from privacy.masking import mask, unmask
@@ -66,10 +67,33 @@ if PROFILE.classifier.input_engine == "guard_model":
         raise SystemExit(f"Guard classifier {PROFILE.classifier.guard_model} could not be loaded ({e}). "
                          "Install it with: uv sync --group train, train it, or set the profile's "
                          "classifier input_engine to llamaguard.") from e
-GUARDS = {"question": input_engine_name(PROFILE), "answer": PROFILE.classifier.model}
+AGENT_MODEL = PROFILE.models[PROFILE.classifier.input_agent] if PROFILE.classifier.input_agent else None
+DECISION_CATEGORY = PROFILE.classifier.decision_category or PROFILE.classifier.default_category
+GUARDS = {"question": input_engine_name(PROFILE), "answer": PROFILE.classifier.model,
+          "input_agent": AGENT_MODEL["name"] if AGENT_MODEL else None}
 print(f"Planner agent listening on chat.requests (profile {PROFILE.name}, "
       f"local model {PROFILE.local_model['name']}, external model {_ext}, "
-      f"question guard {input_engine_name(PROFILE)}, answer guard {PROFILE.classifier.model})...")
+      f"question guard {input_engine_name(PROFILE)}, answer guard {PROFILE.classifier.model}, "
+      f"input agent {GUARDS['input_agent'] or 'off'})...")
+
+
+def label_of(decision: GuardrailDecision) -> str:
+    """A guardrail decision as one of the guard's three labels."""
+    if decision.allowed:
+        return "allow"
+    return "crisis" if decision.category == "crisis" else "decision"
+
+
+def view_label(text: str) -> str:
+    """One of the input agent's views, through the same checks as a question: rules, then the
+    classifier (with the profile's narrow exemptions). Never sent to a model to answer."""
+    ruled = check_input(text, PROFILE)
+    if not ruled.allowed:
+        return label_of(ruled)
+    flagged = input_check(text, profile=PROFILE)
+    if not flagged.allowed and classifier_exemption(text, flagged, PROFILE):
+        return "allow"
+    return label_of(flagged)
 
 
 def audit_guardrail(request_id: str, stage: str, layer: str, decision, role: str | None = None,
@@ -250,6 +274,30 @@ while True:
                        f"Classifier: crisis, which takes priority over the rule's {in_check.category}",
                        category="crisis")
             in_check, in_layer = crisis, "classifier"
+    # 1a. Input agent (optional): extra views of the question (its parts, a plain rewrite), each checked
+    #     the same way. The original was checked above; the strictest label wins, so the agent can only
+    #     add caution. If it fails, nothing changes (guardrails/input_agent.py).
+    if AGENT_MODEL and in_check.category != "crisis":
+        trace.start("intake", "input_agent", f"Input agent ({AGENT_MODEL['name']}) preparing extra views")
+        seen = agent_review(req["message"], label_of(in_check), AGENT_MODEL, view_label)
+        audit.emit("audit.input_agent", {
+            "request_id": request_id, "profile": PROFILE.name, "agent": AGENT_NAME, "role": role,
+            **{k: seen[k] for k in ("agent_model", "label", "original_label", "raised_by", "views",
+                                    "manipulation", "agent_error")},
+        })
+        if seen["label"] != seen["original_label"]:
+            category = "crisis" if seen["label"] == "crisis" else DECISION_CATEGORY
+            in_check = GuardrailDecision(False, category, f"input agent: a {seen['raised_by']} view was "
+                                         f"labelled {seen['label']}", PROFILE.response(category))
+            in_layer = "input_agent"
+            trace.step("intake", "input_agent", "block",
+                       f"A {seen['raised_by']} view of the question was labelled {seen['label']}",
+                       category=category, views=len(seen["views"]))
+        else:
+            trace.step("intake", "input_agent", "error" if seen["agent_error"] else "pass",
+                       f"Agent unavailable ({seen['agent_error']}); original checked only" if seen["agent_error"]
+                       else f"{len(seen['views'])} extra view(s) checked; none stricter",
+                       views=len(seen["views"]), manipulation=seen["manipulation"])
     audit_guardrail(request_id, "input", in_layer, in_check, role, override)
     if not in_check.allowed:
         publish_response(request_id, reply(in_check, role), [],

@@ -1,6 +1,7 @@
 """Review the sample in review.csv one message at a time, in the terminal.
 
     uv run python -m classifier.review
+    uv run python -m classifier.review --file classifier/data/found/round_001/review.csv   # a self-improvement round
 
 For each message it shows the profile, the kind of message and the label it was given.
 Press a key, then Enter:
@@ -15,12 +16,15 @@ Press a key, then Enter:
 
 Your answers are written to review.csv (your_label) as you go. When every message has an
 answer, run:  uv run python -m classifier.clean --apply-review --reviewer "NAME"
+(for a self-improvement round: uv run python -m classifier.improve accept --round N --reviewer "NAME")
 Judge by docs/classifier/labels.md: crisis wins; reading a record is allow; medication
 amounts are decision in the health profiles.
 """
 
+import argparse
 import csv
 import json
+from pathlib import Path
 
 from classifier import clean
 
@@ -30,20 +34,27 @@ HELP = ("Enter = keep · a = allow · d = decision · c = crisis · x = drop · 
         "medication amounts are decision in health profiles.")
 
 
+FILE: Path | None = None             # --file: another review file; default classifier/data/review.csv
+
+
+def review_file() -> Path:
+    return FILE or clean.REVIEW
+
+
 def progress_file():
-    """Next to review.csv: how far the review has got."""
-    return clean.REVIEW.with_name("review_progress.json")
+    """Next to the review file: how far the review has got."""
+    return review_file().with_name("review_progress.json")
 
 
 def load() -> tuple[list[dict], int]:
-    with clean.REVIEW.open(encoding="utf-8") as f:
+    with review_file().open(encoding="utf-8") as f:
         rows = list(csv.DictReader(f))
     done = json.loads(progress_file().read_text())["done"] if progress_file().exists() else 0
     return rows, min(done, len(rows))
 
 
 def save(rows: list[dict], done: int) -> None:
-    with clean.REVIEW.open("w", newline="", encoding="utf-8") as f:
+    with review_file().open("w", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, fieldnames=["id", "profile", "angle", "label", "text", "your_label", "note"])
         w.writeheader()
         w.writerows(rows)
@@ -71,7 +82,9 @@ def finished() -> bool:
     return p["done"] >= p["total"]
 
 
-def main() -> None:
+def main(file: Path | None = None) -> None:
+    global FILE
+    FILE = file
     rows, i = load()
     print(HELP)
     while i < len(rows):
@@ -95,11 +108,18 @@ def main() -> None:
     save(rows, i)
     changed = sum(1 for r in rows if r["your_label"])
     if i >= len(rows):
-        print(f"\nDone: {len(rows)} reviewed, {changed} changed. Next:\n"
-              '  uv run python -m classifier.clean --apply-review --reviewer "NAME"')
+        nxt = ('uv run python -m classifier.improve accept --round N --reviewer "NAME"' if FILE
+               else 'uv run python -m classifier.clean --apply-review --reviewer "NAME"')
+        print(f"\nDone: {len(rows)} reviewed, {changed} changed. Next:\n  {nxt}")
     else:
         print(f"\nSaved at {i}/{len(rows)}. Run again to continue.")
 
 
+def cli() -> None:
+    ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    ap.add_argument("--file", type=Path, default=None, help="review file (default classifier/data/review.csv)")
+    main(ap.parse_args().file)
+
+
 if __name__ == "__main__":
-    main()
+    cli()

@@ -44,7 +44,7 @@ def test_the_frozen_files_still_match_the_protocol():
     rgt.check_frozen()
     protocol = (rgt.DATASETS / "guard_test_protocol.md").read_text()
     assert all(h in protocol for h in rgt.SETS["v1"]["sha256"].values())
-    for name in ("v2", "v3", "v4"):
+    for name in ("v2", "v3", "v4", "v5"):
         s = rgt.SETS[name]
         if all(s["sha256"].values()):                           # once a set is frozen, it is checked too
             rgt.check_frozen((s["test"], s["policies"]))

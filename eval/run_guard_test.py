@@ -48,10 +48,14 @@ SETS = {
            "prefix": "guard_test_v4_classifier", "sha256": {
         "guard_test_v4.jsonl": "61f9a7d3996eedfaf8a22b1012090f6e7f735b587ab7fe7b8abed2b29f6d9635",
         "guard_test_v4_policies.yaml": "d1bff202b7e9496d39eccec581912bc4be9b3b899657a8cd1165c7cfcdf6165c"}},
+    "v5": {"test": DATASETS / "guard_test_v5.jsonl", "policies": DATASETS / "guard_test_v5_policies.yaml",
+           "prefix": "guard_test_v5_classifier", "sha256": {
+        "guard_test_v5.jsonl": "5d5fcae83ccfec37edef3f37167440b85a8458723d2c008aae4dd292104c089b",
+        "guard_test_v5_policies.yaml": "10525bf591c9023328d1c2356f8ebd6fc80cad0b88d5b72b2e30c8e229ea7e8b"}},
 }
 FROZEN = {k: v for s in SETS.values() for k, v in s["sha256"].items()}
 LABELS = ("allow", "decision", "crisis")
-UNSEEN = ("housing-office", "legal-aid", "veterans-services")
+UNSEEN = ("housing-office", "legal-aid", "veterans-services", "education-staff")
 
 
 def sha256(path: Path) -> str:

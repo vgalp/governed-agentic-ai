@@ -76,6 +76,9 @@ class ClassifierConfig:
     guard_model: str | None = None
     guard_policy: str | None = None
     decision_category: str | None = None       # reply category for the guard's "decision" label
+    # Optional input agent (guardrails/input_agent.py): a LOCAL model, by its key in models, that
+    # prepares extra views of a question for the checks. It can only make the result stricter.
+    input_agent: str | None = None
 
 
 @dataclass(frozen=True)
@@ -231,6 +234,20 @@ def _guard_settings(c: dict, name: str, where: str) -> dict:
             "guard_model": _require(c, "guard_model", f"{where}: classifier"),
             "guard_policy": str(policy).strip(),
             "decision_category": _require(c, "decision_category", f"{where}: classifier")}
+
+
+def _input_agent(c: dict, models: dict, where: str) -> str | None:
+    """The classifier block's optional input_agent: a key in models, and a local model, since it reads
+    the original question (personal details included)."""
+    key = c.get("input_agent")
+    if key is None:
+        return None
+    if key not in models:
+        raise ProfileError(f"{where}: classifier input_agent '{key}' is not one of the models")
+    if models[key].get("location") != "local":
+        raise ProfileError(f"{where}: classifier input_agent '{key}' must be a local model: it reads the "
+                           "original question, personal details included")
+    return key
 
 
 def _require(d: dict, key: str, where: str):
@@ -397,6 +414,7 @@ def select_external_model(profile: Profile, key: str) -> Profile:
     routing = {**profile.routing, "external_model": key,
                "fallback": tuple(k for k in profile.routing["fallback"] if k != key)}
     return replace(profile, routing=routing)
+
 
 
 def _tools(raw: dict, where: str) -> dict[str, Tool]:
@@ -613,6 +631,7 @@ def load_profile_from(path: Path) -> Profile:
         categories=cats,
         default_category=_require(c, "default_category", f"{where}: classifier"),
         **_guard_settings(c, name, where),
+        input_agent=_input_agent(c, models, where),
     )
 
     # Narrow overrides of an input classifier flag (e.g. a pure record lookup flagged as

@@ -5,6 +5,7 @@
     uv run python -m eval.run_guard_baselines --system llamaguard          # needs Ollama + llama-guard3:8b
     uv run python -m eval.run_guard_baselines --system pipeline            # rules, then Llama Guard (as in production)
     uv run --group train python -m eval.run_guard_baselines --system rules+classifier
+    uv run --group train python -m eval.run_guard_baselines --system rules+classifier+agent   # needs Ollama + mistral
 
 Systems:
   rules             layer 1 alone: the profile's rules.yaml. The unseen profiles have no rules, so
@@ -15,6 +16,9 @@ Systems:
                     classifier_policy.md and its exemptions. A new office has neither, so the unseen
                     profiles get Llama Guard with the policy paragraph, as above.
   rules+classifier  rules, then the fine-tuned guard classifier (unseen profiles: the classifier alone).
+  rules+classifier+agent
+                    the same, plus the input agent (guardrails/input_agent.py, local --agent-model): its
+                    views of each message go through the same checks, and the strictest label wins.
 
 A blocked category maps to the three labels: crisis -> crisis; any other block (medication,
 diagnosis, eligibility, honesty...) -> decision. A guard that cannot be reached counts as a block
@@ -32,7 +36,7 @@ import yaml
 
 from eval.run_guard_test import RESULTS, SETS, UNSEEN, check_frozen, sha256, summary, table
 
-SYSTEMS = ("rules", "llamaguard", "pipeline", "rules+classifier")
+SYSTEMS = ("rules", "llamaguard", "pipeline", "rules+classifier", "rules+classifier+agent")
 
 
 def label_of(decision) -> str:
@@ -79,7 +83,8 @@ def llamaguard_label(text: str, categories: str, model: str = "llama-guard3:8b")
 class Runner:
     """Labels one message the way a given system would."""
 
-    def __init__(self, system: str, policies: dict[str, str], model: str = "guard-modernbert-v2"):
+    def __init__(self, system: str, policies: dict[str, str], model: str = "guard-modernbert-v2",
+                 agent_model: str = "mistral"):
         from profiles.loader import load_profile
         self.system, self.policies = system, policies
         self.profiles = {}
@@ -87,7 +92,10 @@ class Runner:
             if name not in UNSEEN:
                 self.profiles[name] = load_profile(name)
         self.guard = None
-        if system == "rules+classifier":
+        self.agent = {"provider": "ollama", "name": agent_model, "location": "local", "temperature": 0}
+        self.extra: dict = {}                              # what the input agent did for the last message
+        self.keep_text = False                             # dev runs only: keep the agent's view texts
+        if system.startswith("rules+classifier"):
             from classifier.model import GuardModel
             from classifier.train import MODELS
             self.guard = GuardModel(MODELS / model)
@@ -101,6 +109,8 @@ class Runner:
         if p is not None:
             ruled = check_input(text, p)
             if not ruled.allowed:
+                if self.system == "rules+classifier+agent" and label_of(ruled) != "crisis":
+                    return self.with_agent(profile, text, label_of(ruled))   # as in the pipeline
                 return label_of(ruled)
         if self.system == "rules":
             return "allow"
@@ -111,10 +121,36 @@ class Runner:
             if not flagged.allowed and classifier_exemption(text, flagged, p):
                 return "allow"
             return label_of(flagged)
-        return self.guard.label(self.policies[profile], text)[0]       # rules+classifier
+        if self.system == "rules+classifier":
+            return self.guard.label(self.policies[profile], text)[0]
+        original = self.guard.label(self.policies[profile], text)[0]       # rules+classifier+agent
+        return original if original == "crisis" else self.with_agent(profile, text, original)
+
+    def with_agent(self, profile: str, text: str, original: str) -> str:
+        """The input agent's views, each through rules and the classifier; the strictest label wins."""
+        from guardrails.input_agent import review
+        seen = review(text, original, self.agent, lambda v: self.rules_classifier(profile, v),
+                      keep_text=self.keep_text)
+        self.extra = {"agent": {k: seen[k] for k in ("original_label", "raised_by", "views", "manipulation",
+                                                     "agent_error")}}
+        return seen["label"]
+
+    def rules_classifier(self, profile: str, text: str) -> str:
+        """One view through rules (seen profiles), then the guard classifier: as for a question."""
+        from guardrails.rules import check_input
+        p = self.profiles.get(profile)
+        if p is not None:
+            ruled = check_input(text, p)
+            if not ruled.allowed:
+                return label_of(ruled)
+        return self.guard.label(self.policies[profile], text)[0]
 
     def config_id(self) -> str:
         """What identifies this setup for the one-run rule: the model weights, or the rules files."""
+        if self.guard is not None and self.system == "rules+classifier+agent":
+            from guardrails import input_agent
+            agent = sha256_text(Path(input_agent.__file__).read_text() + self.agent["name"])[:6]
+            return f"{sha256(self.guard.path / 'model.safetensors')[:12]}-{agent}"
         if self.guard is not None:
             return sha256(self.guard.path / "model.safetensors")[:12]
         root = Path(__file__).resolve().parent.parent / "profiles"
@@ -136,11 +172,12 @@ def main() -> None:
     ap.add_argument("--system", choices=SYSTEMS, required=True)
     ap.add_argument("--set", choices=list(SETS), default="v4")
     ap.add_argument("--model", default="guard-modernbert-v4", help="for rules+classifier: folder under models/")
+    ap.add_argument("--agent-model", default="mistral", help="for rules+classifier+agent: local Ollama model")
     args = ap.parse_args()
     spec = SETS[args.set]
     check_frozen((spec["test"], spec["policies"]))
     policies = yaml.safe_load(spec["policies"].read_text(encoding="utf-8"))
-    runner = Runner(args.system, policies, args.model)
+    runner = Runner(args.system, policies, args.model, args.agent_model)
     out = result_path(args.set, args.system, runner.config_id())
     if out.exists():
         raise SystemExit(f"Already scored ({out.name}). Rule 4: one run per release.")
@@ -150,8 +187,9 @@ def main() -> None:
     rows = []
     for it in items:
         t0 = time.perf_counter()
+        runner.extra = {}
         predicted = runner.label(it["profile"], it["text"])
-        rows.append({**it, "predicted": predicted, "ms": round((time.perf_counter() - t0) * 1000, 1)})
+        rows.append({**it, "predicted": predicted, "ms": round((time.perf_counter() - t0) * 1000, 1), **runner.extra})
         mark = "" if predicted == it["label"] else f"   <- expected {it['label']}"
         print(f"{it['id']:14} {predicted:8}{mark}")
 

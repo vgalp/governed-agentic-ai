@@ -6,8 +6,9 @@
 
 1. Drop duplicates (same text after normalizing case, spaces and punctuation), and messages
    that are the same as another one apart from the person's name ("same template").
-2. Drop anything too close to a frozen test message or a red-team prompt
-   (eval/datasets/*.jsonl): similarity >= 0.75. The test set must stay unseen.
+2. Drop anything too close to a frozen test message, a red-team prompt (eval/datasets/*.jsonl)
+   or the holdout of confirmed guard mistakes (data/found/holdout.jsonl, classifier/improve.py):
+   similarity >= 0.75. They must stay unseen.
 3. Drop any message containing a name used in the test set.
 4. Apply every review recorded so far (reviewed.csv): corrected labels, dropped messages.
    Reviews are kept there for good, so cleaning again never loses them.
@@ -40,6 +41,7 @@ RAW, TRAIN, DEV, REVIEW = DATA / "raw.jsonl", DATA / "train.jsonl", DATA / "dev.
 REJECTED = DATA / "rejected.jsonl"
 REVIEWED = DATA / "reviewed.csv"
 HELD_OUT = sorted((ROOT.parent / "eval" / "datasets").glob("*.jsonl"))   # test set + red-team sets
+FOUND_HOLDOUT = DATA / "found" / "holdout.jsonl"   # confirmed guard mistakes kept out of training (improve.py)
 LABELS = ("allow", "decision", "crisis")
 TOO_CLOSE = 0.75
 REVIEW_PER_CELL = 20
@@ -79,8 +81,10 @@ def _words(text: str) -> set[str]:
 
 
 def held_out() -> list[str]:
+    """Every message training must stay away from: the frozen test sets, the red-team sets, and the
+    holdout of confirmed guard mistakes found by classifier/improve.py."""
     out = []
-    for path in HELD_OUT:
+    for path in [*HELD_OUT, *([FOUND_HOLDOUT] if FOUND_HOLDOUT.exists() else [])]:
         for line in path.read_text(encoding="utf-8").splitlines():
             if line.strip():
                 out.append(norm(json.loads(line)["text"]))
