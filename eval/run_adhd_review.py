@@ -10,6 +10,10 @@ difficulties adults with ADHD commonly describe (getting started, time, planning
 feelings, focus, work, routines, money) and a few questions the assistant must hand over (medication,
 diagnosis, crisis).
 
+Every reply names the models that checked it. The run stops if the running system's question guard
+is not the one in profiles/adhd-assistant/profile.yaml (the system was started before the profile
+changed: restart it), so a run can never be credited to a model that did not answer it.
+
 Output, in eval/results/ (commit both): adhd_review_<date>.json with every answer, and a .md file
 to read or share.
 """
@@ -40,6 +44,22 @@ def ask(text: str, wait: int = 300) -> dict:
     raise TimeoutError(f"No answer for request {rid} after {wait}s")
 
 
+def expected_guard(profile_name: str) -> str:
+    """The question guard the profile on disk names (what a freshly started system would load)."""
+    from guardrails.classifier import input_engine_name
+    from profiles.loader import load_profile
+    return input_engine_name(load_profile(profile_name))
+
+
+def check_guard(reply: dict, expected: str) -> str:
+    """The question guard that answered; stops the run if it is missing or not the expected one."""
+    got = (reply.get("guards") or {}).get("question")
+    if got != expected:
+        raise SystemExit(f"The running system's question guard is {got!r}, but the profile names "
+                         f"{expected!r}. Restart it (./scripts/dev.sh stop, then start) and run again.")
+    return got
+
+
 def outcome(reply: dict) -> str:
     """What happened, in plain words: answered, or stopped by which check."""
     g = reply.get("guardrail")
@@ -50,8 +70,9 @@ def outcome(reply: dict) -> str:
 
 def markdown(run: dict) -> str:
     lines = ["# ADHD planning assistant: answers for review\n",
-             f"Profile `{run['profile']}`, run {run['run_at']}, {len(run['rows'])} questions, each sent once "
-             "through the full system. Answers are shown exactly as returned.\n"]
+             f"Profile `{run['profile']}`, question guard `{run.get('question_guard')}`, run {run['run_at']}, "
+             f"{len(run['rows'])} questions, each sent once through the full system. Answers are shown "
+             "exactly as returned.\n"]
     for r in run["rows"]:
         lines += [f"## {r['id']} · {r['category']} · expected: {r['expected']}\n",
                   f"**Question:** {r['text']}\n",
@@ -70,19 +91,21 @@ def main() -> None:
         raise SystemExit(f"The running system uses profile {profile!r}. Start it with "
                          "PROFILE=adhd-assistant ./scripts/dev.sh start")
     items = [json.loads(line) for line in Path(args.dataset).read_text(encoding="utf-8").splitlines() if line.strip()]
+    guard = expected_guard(profile)
 
     rows = []
     for it in items:
         t0 = time.time()
         reply = ask(it["text"])
+        check_guard(reply, guard)
         row = {**it, "answer": reply.get("answer", ""), "guardrail": reply.get("guardrail"),
                "route": reply.get("route"), "sources": [s["id"] for s in reply.get("sources", [])],
                "outcome": outcome(reply), "seconds": round(time.time() - t0, 1)}
         rows.append(row)
         print(f"{it['id']}  {row['outcome']:40}  {it['text'][:60]}")
 
-    run = {"profile": profile, "dataset": args.dataset, "run_at": datetime.now().isoformat(timespec="seconds"),
-           "rows": rows}
+    run = {"profile": profile, "question_guard": guard, "dataset": args.dataset,
+           "run_at": datetime.now().isoformat(timespec="seconds"), "rows": rows}
     RESULTS.mkdir(parents=True, exist_ok=True)
     out = RESULTS / f"adhd_review_{datetime.now():%Y%m%d-%H%M}.json"
     out.write_text(json.dumps(run, indent=2, ensure_ascii=False), encoding="utf-8")

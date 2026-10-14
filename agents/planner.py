@@ -66,6 +66,7 @@ if PROFILE.classifier.input_engine == "guard_model":
         raise SystemExit(f"Guard classifier {PROFILE.classifier.guard_model} could not be loaded ({e}). "
                          "Install it with: uv sync --group train, train it, or set the profile's "
                          "classifier input_engine to llamaguard.") from e
+GUARDS = {"question": input_engine_name(PROFILE), "answer": PROFILE.classifier.model}
 print(f"Planner agent listening on chat.requests (profile {PROFILE.name}, "
       f"local model {PROFILE.local_model['name']}, external model {_ext}, "
       f"question guard {input_engine_name(PROFILE)}, answer guard {PROFILE.classifier.model})...")
@@ -108,6 +109,7 @@ def publish_response(request_id: str, answer: str, sources: list, guardrail: dic
         "route": route_info,               # which model answered: shown as a badge in the UI
         "access": access,                  # role and the data classes it may not see
         "approval": approval,              # a proposed change waiting for a person's approval
+        "guards": GUARDS,                  # which models checked the question and the answer
     }))
     producer.flush()
     audit.producer.flush()
