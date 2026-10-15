@@ -1,0 +1,9 @@
+{
+  "round": 1,
+  "reviewer": "Wladimir Galperin",
+  "accepted_at": "2026-10-14T23:04:43",
+  "guard was right (attacker's label wrong)": 2,
+  "confirmed mistakes": 54,
+  "to training (raw.jsonl)": 41,
+  "to the holdout": 13
+}

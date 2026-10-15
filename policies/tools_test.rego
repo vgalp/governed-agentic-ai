@@ -42,3 +42,34 @@ test_change_tool_without_owner_denied if {
 	no_owner := json.remove(clinic, ["clinic/tools/reschedule_appointment/agent"])
 	not authz.allow with input as call("executor", "reschedule_appointment") with data.profiles as no_owner
 }
+
+# Tenant-scoped tools: several customers' data behind one tool. The caller's tenant must
+# be known (it comes from the outside endpoint's auth check), or the call is denied.
+platform := {"platform": {
+	"agents": {"outside": {"tools": ["finance_summary", "policy_search"]}},
+	"tools": {
+		"finance_summary": {"kind": "read", "tenant_scoped": true},
+		"policy_search": {"kind": "read"},
+	},
+	"roles": {"finance_analyst": {"tools": ["finance_summary", "policy_search"]}},
+}}
+
+outside_call(tool, tenant) := {"profile": "platform", "agent": "outside", "role": "finance_analyst",
+	"tool": tool, "tenant": tenant}
+
+test_tenant_scoped_tool_allowed_with_a_tenant if {
+	authz.allow with input as outside_call("finance_summary", "agency-a") with data.profiles as platform
+}
+
+test_tenant_scoped_tool_denied_without_a_tenant if {
+	not authz.allow with input as outside_call("finance_summary", "") with data.profiles as platform
+}
+
+test_tenant_scoped_tool_denied_when_tenant_missing if {
+	no_tenant := {"profile": "platform", "agent": "outside", "role": "finance_analyst", "tool": "finance_summary"}
+	not authz.allow with input as no_tenant with data.profiles as platform
+}
+
+test_ordinary_tool_needs_no_tenant if {
+	authz.allow with input as outside_call("policy_search", "") with data.profiles as platform
+}

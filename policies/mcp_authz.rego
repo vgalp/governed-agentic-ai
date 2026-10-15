@@ -12,6 +12,17 @@ allow if {
 	input.tool in data.profiles[input.profile].agents[input.agent].tools
 	agent_may_use_kind
 	role_may_use_tool
+	tenant_known
+}
+
+# A tool that holds several tenants' data needs the caller's tenant (from the outside
+# endpoint's auth check). Without one, the call is denied.
+tenant_known if not data.profiles[input.profile].tools[input.tool].tenant_scoped
+
+tenant_known if {
+	data.profiles[input.profile].tools[input.tool].tenant_scoped
+	is_string(input.tenant)
+	input.tenant != ""
 }
 
 # A read tool may be used by any agent the profile grants it to.

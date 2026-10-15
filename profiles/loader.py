@@ -7,8 +7,9 @@ may call each one, and how its records database becomes records (records.yaml). 
 pipeline code is shared, so a new use case is a new folder, not new code.
 
 The active profile comes from the PROFILE environment variable (default:
-adhd-assistant). A profile that is incomplete or inconsistent fails at startup
-with a clear message, never halfway through a request.
+adhd-assistant), or from PROFILE_DIR, a profile folder kept outside this repository
+(for example an organization's own). A profile that is incomplete or inconsistent
+fails at startup with a clear message, never halfway through a request.
 """
 
 import os
@@ -100,7 +101,23 @@ class Tool:
     lane: str                        # where its steps show in the decision trace
     receives_identifiers: bool       # gets the real question (local-only data); audit stays masked
     role_filtered: bool              # results filtered by the data classes the role may see
+    tenant_scoped: bool = False      # data belongs to one tenant (customer); the gateway sets which
 
+
+@dataclass(frozen=True)
+class OutsideConfig:
+    """outside.yaml: the governed MCP endpoint for assistants outside this pipeline (ADR 015).
+
+    Who a caller is (client, tenant, role) comes from the auth check, never from the caller's
+    request. The endpoint calls tools as `agent`, through the gateway, like any other agent."""
+    agent: str                       # the agent grant outside callers use (profile.yaml agents)
+    host: str
+    port: int
+    auth_kind: str                   # introspection: ask the organization's own system who a token is
+    introspect_url: str
+    secret_env: str                  # environment variable holding the shared secret for that check
+    cache_seconds: int               # how long a verified token is trusted before checking again
+    mask_results: str                # external: mask results for clients marked external · always · never
 
 @dataclass(frozen=True)
 class Action:
@@ -147,6 +164,7 @@ class Profile:
     source_id_pattern: re.Pattern | None        # what a cited source ID looks like (grounding check)
     actions: dict[str, Action] = field(default_factory=dict)   # changes the assistant may propose (need approval)
     records_map: RecordsMap | None = None       # how records_db becomes records (records.yaml)
+    outside: OutsideConfig | None = None        # governed MCP endpoint for outside assistants (outside.yaml)
 
     def response(self, category: str, role: str | None = None) -> str:
         """The fixed reply for a category, worded for the role if the role has its own."""
@@ -190,7 +208,8 @@ class Profile:
             "agents": {a: {"tools": list(t)} for a, t in self.agents.items()},
             # The kind of each tool, and for a change tool the one agent that may run it.
             # policies/mcp_authz.rego denies any tool not listed here.
-            "tools": {n: {"kind": t.kind, **({"agent": self.tool_owner(n)} if t.kind == "change" else {})}
+            "tools": {n: {"kind": t.kind, **({"agent": self.tool_owner(n)} if t.kind == "change" else {}),
+                          **({"tenant_scoped": True} if t.tenant_scoped else {})}
                       for n, t in self.tools.items()},
             "routing": {
                 "external_allowed": r["external_allowed"],
@@ -436,7 +455,7 @@ def _tools(raw: dict, where: str) -> dict[str, Tool]:
             raise ProfileError(f"{w}: kind must be read or change")
         label = str(_require(t, "data_label", w))
         flags = {}
-        for f in ("receives_identifiers", "role_filtered"):
+        for f in ("receives_identifiers", "role_filtered", "tenant_scoped"):
             flags[f] = t.get(f, False)
             if not isinstance(flags[f], bool):
                 raise ProfileError(f"{w}: {f} must be true or false")
@@ -444,16 +463,56 @@ def _tools(raw: dict, where: str) -> dict[str, Tool]:
             if t.get("lane", CHANGE_LANE) != CHANGE_LANE:
                 raise ProfileError(f"{w}: a change tool always shows under the '{CHANGE_LANE}' lane")
             if any(flags.values()):
-                raise ProfileError(f"{w}: receives_identifiers and role_filtered are for read tools "
-                                   "(a change tool gets validated IDs only)")
+                raise ProfileError(f"{w}: receives_identifiers, role_filtered and tenant_scoped are for "
+                                   "read tools (a change tool gets validated IDs only)")
             lane = CHANGE_LANE
         else:
             lane = t.get("lane", "knowledge")
             if lane not in READ_LANES:
                 raise ProfileError(f"{w}: lane must be one of {sorted(READ_LANES)}")
         tools[name] = Tool(name, str(t.get("description", "")), server, kind, label, lane,
-                           flags["receives_identifiers"], flags["role_filtered"])
+                           flags["receives_identifiers"], flags["role_filtered"], flags["tenant_scoped"])
     return tools
+
+
+OUTSIDE_AUTH_KINDS = {"introspection"}
+MASK_RESULTS = {"external", "always", "never"}
+
+
+def _outside(raw: dict, tools: dict[str, Tool], agents: dict[str, tuple[str, ...]], where: str) -> OutsideConfig:
+    """outside.yaml: the governed MCP endpoint for outside assistants (ADR 015)."""
+    agent = str(_require(raw, "agent", where))
+    if agent not in agents:
+        raise ProfileError(f"{where}: agent '{agent}' is not in profile.yaml agents")
+    if agent == MODEL_AGENT:
+        raise ProfileError(f"{where}: outside callers need their own agent grant, not '{MODEL_AGENT}'")
+    for t in agents[agent]:
+        if tools[t].kind == "change":
+            raise ProfileError(f"{where}: agent '{agent}' may not hold '{t}': outside assistants never "
+                               "change anything directly")
+    listen = raw.get("listen") or {}
+    host = str(listen.get("host", "127.0.0.1"))
+    port = listen.get("port", 8110)
+    if not isinstance(port, int) or not 0 < port < 65536:
+        raise ProfileError(f"{where}: listen.port must be a port number")
+    auth = _require(raw, "auth", where)
+    kind = auth.get("kind")
+    if kind not in OUTSIDE_AUTH_KINDS:
+        raise ProfileError(f"{where}: auth.kind must be one of {sorted(OUTSIDE_AUTH_KINDS)}")
+    url = str(_require(auth, "url", f"{where}: auth"))
+    if not re.match(r"^https?://\S+$", url):
+        raise ProfileError(f"{where}: auth.url must be an http:// or https:// URL")
+    secret_env = str(_require(auth, "secret_env", f"{where}: auth"))
+    if not re.match(r"^[A-Z][A-Z0-9_]*$", secret_env):
+        raise ProfileError(f"{where}: auth.secret_env is the NAME of an environment variable "
+                           "(the secret itself never goes in a profile)")
+    cache = auth.get("cache_seconds", 30)
+    if not isinstance(cache, int) or not 0 <= cache <= 300:
+        raise ProfileError(f"{where}: auth.cache_seconds must be 0 to 300")
+    mask_results = raw.get("mask_results", "external")
+    if mask_results not in MASK_RESULTS:
+        raise ProfileError(f"{where}: mask_results must be one of {sorted(MASK_RESULTS)}")
+    return OutsideConfig(agent, host, port, kind, url, secret_env, cache, mask_results)
 
 
 def _check_grants(tools: dict[str, Tool], agents: dict[str, tuple[str, ...]], where: str) -> None:
@@ -718,6 +777,20 @@ def load_profile_from(path: Path) -> Profile:
 
     _check_tools(tools, agents, routing, roles, actions, f"{path.name}/{tools_file}")
 
+    outside = None
+    if p.get("outside"):
+        outside = _outside(_yaml(_file(path, p["outside"], where)), tools, agents,
+                           f"{path.name}/{p['outside']}")
+    scoped = [t.name for t in tools.values() if t.tenant_scoped and t.name in granted]
+    if scoped and outside is None:
+        raise ProfileError(f"{where}: {', '.join(scoped)} hold one tenant's data; only the outside "
+                           "endpoint knows a caller's tenant, so the profile needs outside.yaml")
+    for a, ts in agents.items():
+        bad = [t for t in ts if tools[t].tenant_scoped]
+        if bad and (outside is None or a != outside.agent):
+            raise ProfileError(f"{where}: agent '{a}' may not hold {', '.join(bad)}: tenant data is only "
+                               "served through the outside endpoint, which knows who is asking")
+
     privacy = p.get("privacy") or {}
     return Profile(
         name=name,
@@ -746,6 +819,7 @@ def load_profile_from(path: Path) -> Profile:
         source_id_pattern=source_id_pattern,
         actions=actions,
         records_map=records_map,
+        outside=outside,
     )
 
 
@@ -756,11 +830,22 @@ def load_profile(name: str | None = None) -> Profile:
     For the active profile, EXTERNAL_MODEL=<key> puts another of the profile's external
     models in front, without editing the file (e.g. to compare providers). It can only
     pick a model the profile already lists; anything else stops at startup."""
-    active = os.environ.get("PROFILE") or DEFAULT_PROFILE
+    outside_dir = os.environ.get("PROFILE_DIR")
+    if outside_dir:
+        # A profile kept outside this repository (for example an organization's own folder).
+        # It becomes the active profile; its folder name is its name, as for any profile.
+        folder = Path(outside_dir).expanduser().resolve()
+        if os.environ.get("PROFILE") and os.environ["PROFILE"] != folder.name:
+            raise ProfileError(f"PROFILE={os.environ['PROFILE']} but PROFILE_DIR points to "
+                               f"'{folder.name}': set one, or make them match")
+        active = folder.name
+    else:
+        folder = None
+        active = os.environ.get("PROFILE") or DEFAULT_PROFILE
     name = name or active
     if not NAME_RE.match(name):
         raise ProfileError(f"invalid profile name: {name!r}")
-    profile = load_profile_from(PROFILES_DIR / name)
+    profile = load_profile_from(folder if folder and name == active else PROFILES_DIR / name)
     choice = os.environ.get("EXTERNAL_MODEL")
     if choice and name == active:
         profile = select_external_model(profile, choice)

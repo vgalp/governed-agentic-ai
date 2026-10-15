@@ -10,6 +10,11 @@ In a profile with roles, the requesting role must also be allowed to use the too
 and for role-filtered tools the gateway asks OPA which data classes the role may see
 (policies/roles.rego), passes them to the tool, and drops any returned record that
 contains another class. It fails closed: a record without data classes is dropped.
+
+Tenant-scoped tools (tools.yaml tenant_scoped: true) hold several customers' data. The
+caller's tenant comes from who the caller is (the outside endpoint's auth check), never
+from the request: the gateway overwrites any tenant_id in the arguments, OPA refuses the
+call without a tenant, and any returned record for another tenant, or with none, is dropped.
 """
 
 import asyncio
@@ -33,10 +38,19 @@ def _audit(event: dict) -> None:
     get_audit_chain("gateway").emit("audit.tool_calls", event, flush=True)
 
 
-def _is_allowed(profile: Profile, agent: str, tool: str, role: str | None) -> bool:
+def _is_allowed(profile: Profile, agent: str, tool: str, role: str | None,
+                tenant: str | None = None) -> bool:
     result = decide(profile, "mcp/authz/allow",
-                    {"profile": profile.name, "agent": agent, "tool": tool, "role": role})
+                    {"profile": profile.name, "agent": agent, "tool": tool, "role": role,
+                     "tenant": tenant or ""})
     return result is True
+
+
+def tenant_filter(results: list[dict], tenant: str) -> tuple[list[dict], int]:
+    """Keep only records of this tenant. Returns (kept, dropped). Fails closed: a record
+    without a tenant_id is dropped."""
+    kept = [r for r in results if r.get("tenant_id") == tenant]
+    return kept, len(results) - len(kept)
 
 
 def allowed_classes(profile: Profile, role: str | None) -> list[str]:
@@ -63,9 +77,13 @@ async def _call(server_url: str, tool: str, args: dict) -> dict:
 
 def call_tool(agent: str, tool: str, args: dict, request_id: str,
               profile: Profile | None = None, audit_args: dict | None = None,
-              role: str | None = None) -> dict:
+              role: str | None = None, tenant: str | None = None,
+              client: str | None = None) -> dict:
     """Call a tool if policy allows it. audit_args is what the audit records instead of
-    args, for tools that receive real identifiers: the audit only ever holds masked text."""
+    args, for tools that receive real identifiers: the audit only ever holds masked text.
+
+    tenant and client come from the outside endpoint's auth check (who is calling), never
+    from the request. For a tenant-scoped tool the tenant is required and enforced."""
     profile = profile or load_profile()
     if audit_args is None and tool in profile.identifier_tools:
         raise ValueError(f"{tool} receives identifiers: pass masked audit_args")
@@ -77,12 +95,25 @@ def call_tool(agent: str, tool: str, args: dict, request_id: str,
         "tool": tool,
         "args": dict(audit_args if audit_args is not None else args),   # masked text only
     }
-    allowed = tool in profile.tools and _is_allowed(profile, agent, tool, role)
+    if client is not None:
+        event["client"] = client
+    scoped = tool in profile.tools and profile.tools[tool].tenant_scoped
+    if scoped or tenant is not None:
+        event["tenant"] = tenant
+    if tool not in profile.tools or (scoped and not tenant):
+        allowed = False
+    elif tenant is not None:
+        allowed = _is_allowed(profile, agent, tool, role, tenant=tenant)
+    else:
+        allowed = _is_allowed(profile, agent, tool, role)
     if not allowed:
         _audit({**event, "decision": "deny"})
         raise ToolCallDenied(f"Role '{role}' / agent '{agent}' may not call tool '{tool}' "
                              f"in profile '{profile.name}'")
 
+    if scoped:
+        args = {**args, "tenant_id": tenant}       # always the caller's tenant, whatever was sent
+        event["args"].pop("tenant_id", None)
     filtered = tool in profile.role_filtered_tools
     classes = allowed_classes(profile, role) if filtered else None
     if filtered:
@@ -97,6 +128,10 @@ def call_tool(agent: str, tool: str, args: dict, request_id: str,
         kept, dropped = filter_results(result.get("results", []), classes)
         result = {**result, "results": kept}
         event["dropped_by_gateway"] = dropped      # should always be 0; >0 means the tool over-returned
+    if scoped:
+        kept, dropped = tenant_filter(result.get("results", []), tenant)
+        result = {**result, "results": kept}
+        event["dropped_other_tenant"] = dropped    # should always be 0; >0 means the tool leaked
     event["returned"] = len(result.get("results", []))
     _audit({**event, "decision": "allow"})
     return result
