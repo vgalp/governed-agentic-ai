@@ -11,3 +11,5 @@ audit.jsonl
 profiles/*/data/*.db
 models/
 release/
+
+release/
