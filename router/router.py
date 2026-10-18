@@ -10,6 +10,10 @@ Whatever OPA returns, this code also enforces:
   2. a profile with external_allowed: false never uses an external model;
   3. if OPA cannot be reached, the request goes to the local model (fail safe).
 
+An organization served through the governed endpoint (ADR 015) can also keep its requests
+local whatever the profile allows: its administrator's setting arrives with the caller's
+verified identity (allow_external=False), and is checked before the policy is asked.
+
 Which external provider (OpenAI, Gemini, Claude, ...) is configured in the profile:
 routing.external_model, then routing.fallback in order. The first one with its API key
 set is used; if a call fails, the next is tried, and the local model is always last.
@@ -78,11 +82,18 @@ def fallbacks(profile: Profile, failed: RouteDecision) -> list[RouteDecision]:
             + [local_decision(profile, [f"{note}: falling back to the local model"])])
 
 
-def decide_route(profile: Profile, entities: list[str], labels: list[str]) -> RouteDecision:
+ADMIN_OFF = "the organization's administrator has not allowed outside AI models"
+
+
+def decide_route(profile: Profile, entities: list[str], labels: list[str],
+                 allow_external: bool = True) -> RouteDecision:
     r = profile.routing
+    local = local_decision(profile)
+    if not allow_external:
+        local.reasons = [ADMIN_OFF]
+        return local
     externals = available_externals(profile)
     external_available = bool(externals)
-    local = local_decision(profile)
     try:
         result = decide(profile, "routing/decision", {
             "profile": profile.name,
@@ -136,9 +147,9 @@ def audit_route(profile: Profile, d: RouteDecision, request_id: str, agent: str,
 
 
 def route(profile: Profile, mapping: dict[str, str], tools_used: list[str],
-          request_id: str, agent: str, role: str | None = None) -> RouteDecision:
+          request_id: str, agent: str, role: str | None = None, allow_external: bool = True) -> RouteDecision:
     entities = entity_types(mapping)
     labels = context_labels(profile, tools_used)
-    d = decide_route(profile, entities, labels)
+    d = decide_route(profile, entities, labels, allow_external)
     audit_route(profile, d, request_id, agent, role, entities, labels)
     return d

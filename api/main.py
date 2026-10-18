@@ -1,4 +1,5 @@
 import json
+import os
 import threading
 import uuid
 from contextlib import asynccontextmanager
@@ -13,7 +14,7 @@ from pydantic import BaseModel
 
 from agents import actions
 from api.events import buffer, consume_events, event_stream
-from audit.chain import key_from_env, unkeyed_chains, verify_chain
+from audit.chain import chains_of_profile, key_from_env, unkeyed_chains, verify_chain
 from profiles.loader import load_profile
 
 BOOTSTRAP = "localhost:9092"
@@ -109,11 +110,15 @@ async def events(request: Request):
 
 
 @app.get("/audit/verify")
-def audit_verify():
-    """Check the tamper-evident audit chain over every audit event seen since startup."""
+def audit_verify(scope: Literal["profile", "all"] = "profile"):
+    """Check the tamper-evident audit chain over the audit events seen since startup: the chains
+    that wrote for the active profile (default), or every chain in Kafka (scope=all)."""
     records = list(buffer.audit_records)
+    if scope == "profile":
+        records = chains_of_profile(records, PROFILE.name)
     problems = verify_chain(records, key_from_env())
     return {
+        "scope": "all profiles" if scope == "all" else PROFILE.name,
         "events": len(records),
         "chains": len({r["audit"]["chain_id"] for r in records}),
         "intact": not problems,
@@ -130,6 +135,8 @@ def profile_info():
         "title": PROFILE.title,
         "roles": [{"key": k, "title": r.title} for k, r in PROFILE.roles.items()],
         "examples": list(PROFILE.examples),
+        # Off for a profile served only through the governed endpoint (no pipeline chat running).
+        "chat": os.environ.get("DASHBOARD_CHAT", "on") != "off",
     }
 
 

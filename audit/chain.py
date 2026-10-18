@@ -110,6 +110,13 @@ def verify_chain(records: list[dict], key: bytes | None) -> list[str]:
     return problems
 
 
+def chains_of_profile(records: list[dict], profile: str) -> list[dict]:
+    """Every record of each chain that wrote at least one event for this profile. Whole chains are
+    kept, so a gap or a changed event inside them is still found."""
+    wanted = {r["audit"]["chain_id"] for r in records if r.get("profile") == profile}
+    return [r for r in records if r["audit"]["chain_id"] in wanted]
+
+
 def unkeyed_chains(records: list[dict]) -> list[str]:
     """Chains written without a key: changes are detected, deliberate forgery is not."""
     return sorted({r["audit"]["chain_id"] for r in records if r["audit"].get("alg") != "hmac-sha256"})

@@ -3,6 +3,7 @@ organization's own token check, tenant data is fenced per caller, the input chec
 arguments, and results for outside AI services are masked. No OPA, Kafka or model: fakes."""
 
 import copy
+import json
 import shutil
 from dataclasses import replace
 
@@ -343,3 +344,198 @@ def test_bearer_and_hidden_parameters():
               "required": ["period", "tenant_id"]}
     assert ep.strip_hidden(schema) == {"type": "object", "properties": {"period": {}}, "required": ["period"]}
     assert ep.texts({"a": "x", "b": ["y", {"c": "z"}], "d": 3, "e": "  "}) == ["x", "y", "z"]
+
+
+def test_results_that_cannot_be_masked_are_withheld(endpoint):
+    e, _, audits = endpoint
+
+    def broken(text):
+        raise RuntimeError("analyzer down")
+    e._mask = broken
+    out = e.handle(who(), "finance_summary", {})
+    assert out["error"] == "tool_failed" and "withheld" in out["message"]
+    assert audits[-1][1]["decision"] == "withheld"
+
+
+def test_text_arguments_that_cannot_be_masked_stop_the_call(endpoint):
+    e, _, audits = endpoint
+
+    def broken(text):
+        raise RuntimeError("analyzer down")
+    e._mask = broken
+    out = e.handle(who(), "search_knowledge", {"query": "overtime approval"})
+    assert out["error"] == "tool_failed" and "not run" in out["message"]
+    assert audits[-1][1]["decision"] == "deny" and "masking failed" in audits[-1][1]["reason"]
+
+
+# --- POST /check: questions typed into an assistant that runs its own model ----------------------
+
+def test_a_typed_question_is_checked_and_audited(endpoint):
+    e, calls, audits = endpoint
+    assert e.check_message(who(location="local"), "overtime approval policy") == {"allowed": True}
+    out = e.check_message(who(location="local"), "the patient's son hurt her")
+    assert out["allowed"] is False and out["stopped"] == "crisis" and out["hand_over"] is True
+    assert out["reply"] == e.profile.response("crisis", "finance_analyst")
+    topic, ev = audits[-1]
+    assert topic == "audit.guardrails" and ev["stage"] == "user_message" and ev["client"] == "kiro-a"
+    assert "hurt" not in str(ev) and calls == []                  # the text itself is never audited
+
+
+def test_check_route_needs_a_known_token_and_sane_text(endpoint):
+    from starlette.testclient import TestClient
+
+    class Known:
+        def identify(self, token):
+            return who(location="local") if token == "good" else None
+
+    e, _, _ = endpoint
+    c = TestClient(ep.build_app(e.profile, Known(), {}, e))
+    assert c.post("/check", json={"text": "hi"}).status_code == 401
+    assert c.post("/check", json={"text": "hi"}, headers={"Authorization": "Bearer bad"}).status_code == 401
+    auth = {"Authorization": "Bearer good"}
+    assert c.post("/check", json={"text": "  "}, headers=auth).status_code == 400
+    assert c.post("/check", json={"text": "x" * (ep.MAX_MESSAGE + 1)}, headers=auth).status_code == 400
+    assert c.post("/check", content=b"not json", headers=auth).status_code == 400
+    assert c.post("/check", json={"text": "overtime policy"}, headers=auth).json() == {"allowed": True}
+    assert c.post("/check", json={"text": "she was hurt"}, headers=auth).json()["stopped"] == "crisis"
+
+
+def test_asking_for_another_tenant_is_recorded_not_obeyed(endpoint):
+    e, calls, audits = endpoint
+    e.handle(who(), "finance_summary", {"tenant_id": "agency-b"})
+    assert calls[-1]["tenant"] == "agency-a" and "tenant_id" not in calls[-1]["args"]
+    topic, ev = audits[-1]
+    assert topic == "audit.tool_calls" and ev["decision"] == "override" and ev["tenant_requested"] == "agency-b"
+    assert ev["location"] == "external" and ev["tenant"] == "agency-a"
+    n = len(audits)
+    e.handle(who(), "finance_summary", {"tenant_id": "agency-a"})        # its own tenant: nothing to record
+    assert len(audits) == n
+
+
+# --- governed chat: one question = one pipeline request -------------------------------------------
+
+from router.router import RouteDecision  # noqa: E402
+
+CHAT = "chat-12345678-1234-1234-1234-123456789abc"
+
+
+class FakeTrace:
+    def __init__(self):
+        self.steps = []
+
+    def step(self, agent, step, outcome, summary, **details):
+        self.steps.append((agent, step, outcome))
+
+    def start(self, agent, step, summary):
+        self.steps.append((agent, step, "running"))
+
+
+@pytest.fixture
+def chat(endpoint):
+    e, calls, audits = endpoint
+    seen = {"published": [], "routes": [], "models": [], "traces": []}
+
+    def route(p, mapping, used, request_id, agent, role, allow_external=True):
+        seen["routes"].append({"used": used, "allow_external": allow_external, "entities": sorted(mapping)})
+        if allow_external:
+            return RouteDecision("external", "claude", {"name": "claude-x", "provider": "anthropic"}, True,
+                                 ["no personal information found; external model allowed"])
+        return RouteDecision("local", "local", e.profile.local_model, True, ["administrator: local only"])
+
+    def model(m, messages):
+        seen["models"].append((m["name"], messages))
+        return "<think>hmm</think>Margins for [PERSON_1] are fine."
+
+    def trace(profile, request_id, role):
+        t = FakeTrace()
+        seen["traces"].append(t)
+        return t
+
+    e._mask_map = lambda t: (t.replace("Mary Jones", "[PERSON_1]"), {"[PERSON_1]": "Mary Jones"})
+    e._route, e._model, e._trace = route, model, trace
+    e._output_check = lambda q, a: GuardrailDecision(True)
+    e._publish = lambda topic, v: seen["published"].append((topic, v))
+    return e, calls, audits, seen
+
+
+def test_a_governed_chat_request_goes_through_every_stage(chat):
+    e, calls, audits, seen = chat
+    me = replace(who(location="local"), external_model_allowed=True)
+    assert e.check_message(me, "Margins for Mary Jones?", CHAT) == {"allowed": True, "request_id": CHAT}
+    e.handle(me, "finance_summary", {"period": "Q3"}, CHAT)
+    out = e.answer(me, CHAT)
+    assert out["answer"] == "Margins for Mary Jones are fine." and out["route"]["target"] == "external"
+    name, messages = seen["models"][0]
+    assert "Mary Jones" not in json.dumps(messages) and "[PERSON_1]" in messages[1]["content"]   # only masked text left
+    assert seen["routes"][0] == {"used": ["finance_summary"], "allow_external": True, "entities": ["[PERSON_1]"]}
+    stages = [(t, ev.get("stage")) for t, ev in audits if ev["request_id"] == CHAT]
+    assert ("audit.guardrails", "input") in stages and ("audit.model_inputs", None) in stages
+    assert ("audit.guardrails", "output") in stages
+    assert calls[0]["tenant"] == "agency-a"
+    topic, resp = seen["published"][-1]
+    assert topic == "chat.responses" and resp["request_id"] == CHAT and resp["guardrail"] is None
+    lanes = [s[0] for s in seen["traces"][0].steps]
+    assert {"intake", "records", "router", "answer"} <= set(lanes)
+    assert e.answer(me, CHAT)["error"] == "not_allowed"                       # one answer per request
+
+
+def test_the_administrator_setting_reaches_routing(chat):
+    e, _, _, seen = chat
+    me = who(location="local")                                               # external_model_allowed False
+    e.check_message(me, "overtime policy", CHAT)
+    assert e.answer(me, CHAT)["route"]["target"] == "local"
+    assert seen["routes"][0]["allow_external"] is False
+
+
+def test_chat_steps_need_a_checked_question_from_the_same_client(chat):
+    e, calls, _, seen = chat
+    me, other = who(location="local"), ep.Identity("kiro-b", "Other", "agency-a", "finance_analyst", "local")
+    assert e.handle(me, "finance_summary", {}, CHAT)["error"] == "not_allowed"          # not checked yet
+    assert e.answer(me, CHAT)["error"] == "not_allowed"
+    e.check_message(me, "overtime policy", CHAT)
+    assert e.handle(other, "finance_summary", {}, CHAT)["error"] == "not_allowed"       # not its request
+    assert e.answer(other, CHAT)["error"] == "not_allowed"
+    assert e.check_message(me, "again", CHAT)["error"] == "already_checked"
+    assert e.handle(me, "finance_summary", {}, "chat-not-a-uuid")["error"] == "not_allowed"
+    assert calls == []
+
+
+def test_a_blocked_chat_question_gets_the_fixed_reply_and_ends(chat):
+    e, _, audits, seen = chat
+    me = who(location="local")
+    out = e.check_message(me, "her son hurt her", CHAT)
+    assert out["stopped"] == "crisis" and out["request_id"] == CHAT
+    topic, resp = seen["published"][-1]
+    assert resp["guardrail"] == {"stage": "input", "layer": "rules", "category": "crisis"}
+    assert e.handle(me, "finance_summary", {}, CHAT)["error"] == "not_allowed"
+    assert seen["models"] == []
+
+
+def test_an_answer_the_output_check_blocks_is_withheld(chat):
+    e, _, _, seen = chat
+    e._output_check = lambda q, a: GuardrailDecision(False, "crisis", "fake")
+    me = who(location="local")
+    e.check_message(me, "overtime policy", CHAT)
+    out = e.answer(me, CHAT)
+    assert out["stopped"] == "output" and "Margins" not in out["reply"]
+    assert seen["published"][-1][1]["guardrail"]["stage"] == "output"
+
+
+def test_chat_requests_expire(chat):
+    e, _, _, _ = chat
+    now = [0.0]
+    e._clock = lambda: now[0]
+    me = who(location="local")
+    e.check_message(me, "overtime policy", CHAT)
+    now[0] = ep.CHAT_SECONDS + 1
+    assert e.answer(me, CHAT)["error"] == "not_allowed"
+
+
+def test_a_stopped_tool_call_ends_the_chat_request(chat):
+    e, _, _, seen = chat
+    me = who(location="local")
+    e.check_message(me, "overtime policy", CHAT)
+    out = e.handle(me, "search_knowledge", {"query": "she was hurt"}, CHAT)
+    assert out["stopped"] == "crisis"
+    assert seen["published"][-1][1]["guardrail"]["category"] == "crisis"
+    assert e.answer(me, CHAT)["error"] == "not_allowed"

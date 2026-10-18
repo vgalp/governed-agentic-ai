@@ -154,3 +154,10 @@ def test_never_external_data_overrides_the_policy(monkeypatch, external_profile)
     policy_says(monkeypatch, {"target": "external", "reasons": ["ok"]})
     d = router.decide_route(p, [], ["approved_content"])
     assert d.target == "local" and "uses approved_content data" in d.reasons[-1]
+
+def test_the_organizations_administrator_can_keep_everything_local(monkeypatch, external_profile):
+    seen = policy_says(monkeypatch, {"target": "external", "reasons": ["no personal information found"]})
+    d = router.decide_route(external_profile, [], ["approved_content"], allow_external=False)
+    assert d.target == "local" and d.reasons == [router.ADMIN_OFF]
+    assert seen == {}                                  # decided before the policy is even asked
+    assert router.decide_route(external_profile, [], ["approved_content"]).target == "external"

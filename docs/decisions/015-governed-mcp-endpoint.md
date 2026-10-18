@@ -73,7 +73,25 @@ their data behind the same tools. An assistant acting for one customer must neve
    this repository, so an organization keeps its configuration in its own folder and connects
    without changing this code.
 
-10. **Not in this step.** Proposing changes from an outside assistant (through the approval flow
+10. **Questions typed into an assistant with its own model.** An assistant that runs its own
+    model (for example a chat panel inside the organization's app, using a local model) sends
+    each question to `POST /check` with its bearer token before its model sees it. The question
+    gets the same checks as tool text and the same fixed reply if stopped
+    (`audit.guardrails`, `stage: user_message`; the text itself is not recorded). If masking or
+    the checks fail, nothing is run.
+
+11. **Governed chat: one question, one pipeline request.** An assistant the organization builds
+    can hand a whole question to the pipeline under a request ID it makes up (`chat-<uuid>`):
+    - `POST /check` with that ID checks the question;
+    - tool calls over MCP with the header `X-Request-Id` follow, accepted only after an allowed check and only from the same client;
+    - `POST /answer` then makes the pipeline write the answer. It masks the question and the tool data together, routes the request (`router.route`), asks the model, runs the output checks (rules, then the classifier) and publishes `chat.responses`.
+
+    Each step is audited and traced (`agent.trace`, process `endpoint`) under the one ID, so the dashboard shows the request moving through all eight stages. Chat state lives in memory for 10 minutes. A tool call stopped by the checks ends the request.
+
+12. **The organization's administrator decides about outside models.** The introspection answer
+    may carry `external_model_allowed`. It is off unless the organization's system says true, and the token check passes it along. When it is off, routing stays local with the reason "the organization's administrator has not allowed outside AI models", before the routing policy is asked. When it is on, the profile, the routing policy (no personal information, never `never_external_labels` data) and an API key must all agree too. Only masked text leaves.
+
+13. **Not in this step.** Proposing changes from an outside assistant (through the approval flow
     of ADR 009), rate limits per client, and OAuth sign-in for MCP clients.
 
 ## Consequences
@@ -84,13 +102,23 @@ their data behind the same tools. An assistant acting for one customer must neve
 - A platform serving many customers can expose one endpoint; each customer's assistant sees only
   that customer's data, enforced in three places (the endpoint, OPA, the gateway's filter).
 - **Limit:** the endpoint governs what an outside assistant does with tools and data. It does not
-  see the rest of that assistant's conversation.
+  see the rest of that assistant's conversation, unless the assistant sends each question to
+  `/check`, which only assistants the organization builds itself can be relied on to do.
 - The organization's introspection service becomes part of the trust boundary: it must be reachable
   only by the endpoint (shared secret, local network) and answer from its own user records.
+
+- The live dashboard (`ui/dashboard.html`) shows endpoint requests (IDs starting `out-`) with their
+  own stages: caller identified, text checked, role allows the tool, data may leave, tool gateway
+  and policy, tenant fence. A caller that asks for another tenant is recorded
+  (`decision: override`, `tenant_requested`) and served its own tenant. With `PROFILE_DIR` set the
+  dashboard shows only that profile's events and verifies only the audit chains that wrote for it
+  (`/audit/verify?scope=all` checks every chain); `DASHBOARD_CHAT=off` hides the pipeline's own chat
+  for a profile served only through the endpoint.
 
 ## Tests
 
 `tests/test_endpoint.py`: outside.yaml checks, tenant-scoped grants, `PROFILE_DIR`, the gateway's
 tenant enforcement, role-based tool lists, crisis and decision arguments, never-external data,
-masking modes, masked audit arguments, plain errors, and introspection (identity, fail-closed,
-caching, unknown locations). `policies/tools_test.rego`: tenant-scoped tools need a tenant.
+masking modes, masked audit arguments, plain errors, governed chat requests (every stage, same
+client only, expiry, stopped tool calls, the administrator's setting reaching routing), and introspection (identity, fail-closed,
+caching, unknown locations), and `/check` (token, text limits, crisis reply, audit without the text). `policies/tools_test.rego`: tenant-scoped tools need a tenant.
