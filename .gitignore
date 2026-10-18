@@ -10,3 +10,4 @@ logs/
 audit.jsonl
 profiles/*/data/*.db
 models/
+release/
