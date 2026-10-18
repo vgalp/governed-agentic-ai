@@ -70,8 +70,22 @@ def _post(url: str, headers: dict, body: dict) -> dict:
         raise ModelUnavailable("model returned a response that is not JSON") from e
 
 
+def no_think(messages: list[dict]) -> list[dict]:
+    """For local models that reason at length before answering (e.g. Qwen3): ask for the answer
+    only, with the model's own switch "/no_think" at the end of the last user message. Faster,
+    and the answer is checked the same way."""
+    out = [dict(m) for m in messages]
+    for m in reversed(out):
+        if m["role"] == "user":
+            m["content"] = f"{m['content']}\n/no_think"
+            break
+    return out
+
+
 def _openai_chat(url: str, model: dict, messages: list[dict], key: str | None = None) -> str:
     headers = {"Authorization": f"Bearer {key}"} if key else {}
+    if model.get("no_think"):
+        messages = no_think(messages)
     data = _post(url, headers, {
         "model": model["name"],
         "temperature": model.get("temperature", 0),

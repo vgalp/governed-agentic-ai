@@ -5,6 +5,10 @@ An open-source reference architecture for running multi-agent AI systems safely 
 
 > **Status:** Research prototype (v0.2). Not production software and not a medical device.
 
+**Try it on your own machine:** `./scripts/quickstart.sh` sets everything up, starts the pipeline and
+checks that it works, all locally ([quick start](docs/quickstart.md)). The guard classifier is
+published with its model card on Hugging Face (see [`classifier/published.yaml`](classifier/published.yaml)).
+
 ## Why
 
 Organizations want to use AI agents, but running them on sensitive data is risky. Agents can expose personal information, take actions they shouldn't, fail halfway through a task, or give unsafe answers. Today each organization solves these problems on its own. This project provides an open, tested architecture that puts governance controls around any agent system, records every decision in a tamper-evident audit trail, and measures whether the controls actually work.

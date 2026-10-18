@@ -1,0 +1,9 @@
+# Published guard classifiers: where each one is, at which commit, and the SHA-256 of its weights.
+# classifier/fetch.py downloads exactly this commit and refuses weights with any other hash.
+# Quote every value ("...") so YAML never reads a hash as a number.
+# Fill in after `python -m classifier.publish ... --upload <repo>` prints these values.
+
+guard-modernbert-v4:
+  repo:                      # e.g. vgalp/guard-modernbert-v4
+  revision:                  # the commit the upload printed
+  sha256: "f85591407ded9320dbd1b4c12ae5ab2bad44d060eacd85dd37cd98892ec4e9ea"   # model.safetensors, as scored on test set v4

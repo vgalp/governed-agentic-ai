@@ -64,7 +64,7 @@ check_prereqs() {
   ok "Python environment"
   if "$PY" -c "from profiles.loader import load_profile; import sys; sys.exit(load_profile().classifier.input_engine != 'guard_model')"; then
     guard=$("$PY" -c "from profiles.loader import load_profile; print(load_profile().classifier.guard_model)")
-    [ -f "models/$guard/model.safetensors" ] || fail "Guard classifier models/$guard missing. Train it (classifier/train.py) or set the profile's classifier input_engine to llamaguard."
+    [ -f "models/$guard/model.safetensors" ] || fail "Guard classifier models/$guard missing. Download the published one: $PY -m classifier.fetch $guard (or train it: classifier/train.py)."
     ok "Guard classifier $guard"
   fi
   "$PY" -m profiles.loader >/dev/null || { "$PY" -m profiles.loader; fail "Profile check failed"; }

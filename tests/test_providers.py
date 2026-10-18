@@ -276,3 +276,11 @@ def test_fallbacks_skip_models_without_keys(monkeypatch):
 def test_no_fallback_after_the_local_model(monkeypatch):
     p = load_profile("clinic-assistant")
     assert router.fallbacks(p, router.local_decision(p)) == []
+
+def test_no_think_asks_for_the_answer_only_without_changing_the_original():
+    from llm.providers import no_think
+    messages = [{"role": "system", "content": "s"}, {"role": "user", "content": "q1"},
+                {"role": "assistant", "content": "a"}, {"role": "user", "content": "q2"}]
+    out = no_think(messages)
+    assert out[3]["content"] == "q2\n/no_think" and out[1]["content"] == "q1"
+    assert messages[3]["content"] == "q2"                           # the caller's list is untouched
