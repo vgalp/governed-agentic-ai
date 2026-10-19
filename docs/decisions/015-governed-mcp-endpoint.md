@@ -114,6 +114,9 @@ their data behind the same tools. An assistant acting for one customer must neve
   dashboard shows only that profile's events and verifies only the audit chains that wrote for it
   (`/audit/verify?scope=all` checks every chain); `DASHBOARD_CHAT=off` hides the pipeline's own chat
   for a profile served only through the endpoint.
+- **Changed by ADR 016:** the organization's `external_model_allowed` now also decides whether
+  outside assistants (`location: external`) may use the tools at all; off, every call is refused and
+  audited. Tool results are checked for prompt injection in the gateway before any assistant reads them.
 
 ## Tests
 

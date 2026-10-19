@@ -171,8 +171,9 @@ def test_gateway_refuses_tenant_data_without_a_tenant(platform, monkeypatch):
 
 # --- the endpoint: who, which tools, checks, what leaves ----------------------------------------
 
-def who(role="finance_analyst", tenant="agency-a", location="external"):
-    return ep.Identity("kiro-a", "Kiro, analyst", tenant, role, location)
+def who(role="finance_analyst", tenant="agency-a", location="external", allowed=True):
+    """An assistant whose organization allows outside AI (unless allowed=False)."""
+    return ep.Identity("kiro-a", "Kiro, analyst", tenant, role, location, allowed)
 
 
 def by_word(text, profile):
@@ -481,7 +482,7 @@ def test_a_governed_chat_request_goes_through_every_stage(chat):
 
 def test_the_administrator_setting_reaches_routing(chat):
     e, _, _, seen = chat
-    me = who(location="local")                                               # external_model_allowed False
+    me = who(location="local", allowed=False)                                # the administrator said no
     e.check_message(me, "overtime policy", CHAT)
     assert e.answer(me, CHAT)["route"]["target"] == "local"
     assert seen["routes"][0]["allow_external"] is False
@@ -539,3 +540,25 @@ def test_a_stopped_tool_call_ends_the_chat_request(chat):
     assert out["stopped"] == "crisis"
     assert seen["published"][-1][1]["guardrail"]["category"] == "crisis"
     assert e.answer(me, CHAT)["error"] == "not_allowed"
+
+
+
+# --- the organization's administrator decides about outside assistants ---------------------------
+
+def test_outside_assistants_get_nothing_unless_the_administrator_allows_it(endpoint):
+    e, calls, audits = endpoint
+    out = e.handle(who(allowed=False), "finance_summary", {})
+    assert out["error"] == "not_allowed" and "administrator" in out["message"] and calls == []
+    assert audits[-1][1]["reason"] == "outside AI not allowed by the organization"
+    e.handle(who(location="local", allowed=False), "finance_summary", {})          # inside: unaffected
+    assert len(calls) == 1
+    e.handle(who(allowed=True), "finance_summary", {})
+    assert len(calls) == 2
+
+
+def test_the_answering_model_is_told_what_the_role_cannot_see(platform):
+    p = load_profile_from(platform)
+    limits = ep.role_limits(p, "billing")
+    assert "finance_summary" in limits and "visit_costs" in limits and "search_knowledge" not in limits
+    assert "Never say the data does not exist" in limits
+    assert ep.role_limits(p, "finance_analyst") == ""                         # sees every tool

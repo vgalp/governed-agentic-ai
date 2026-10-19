@@ -25,6 +25,7 @@ from mcp.client.streamable_http import streamablehttp_client
 
 from audit.chain import get_audit_chain
 from gateway.opa import decide
+from guardrails.injection import check_result
 from profiles.loader import Profile, load_profile
 
 
@@ -132,6 +133,12 @@ def call_tool(agent: str, tool: str, args: dict, request_id: str,
         kept, dropped = tenant_filter(result.get("results", []), tenant)
         result = {**result, "results": kept}
         event["dropped_other_tenant"] = dropped    # should always be 0; >0 means the tool leaked
+    # Text from the tool's sources may try to instruct the AI (prompt injection): withheld here,
+    # before any model or outside assistant reads it (guardrails/injection.py, ADR 016).
+    result, injection = check_result(result, tool)
+    if injection:
+        event["injection_withheld"] = json.dumps(result, default=str).count("[withheld: this text from")
+        event["injection_kinds"] = sorted(set(injection))
     event["returned"] = len(result.get("results", []))
     _audit({**event, "decision": "allow"})
     return result

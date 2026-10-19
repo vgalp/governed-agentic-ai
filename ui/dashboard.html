@@ -68,7 +68,7 @@
   .stage .detail { font-size: 12px; margin-top: 4px; word-break: break-word; }
   .s-pass { background: var(--pass-bg); color: var(--pass); }
   .s-block { background: var(--block-bg); color: var(--block); }
-  .s-warn { background: var(--warn-bg); color: var(--warn); }
+  .s-warn, .s-flag { background: var(--warn-bg); color: var(--warn); }
   .s-skip { background: var(--skip-bg); color: var(--skip); }
   .s-wait { background: var(--skip-bg); color: var(--muted); border-color: var(--line); border-style: dashed; }
   .s-active { background: var(--active-bg); color: var(--active); animation: pulse 1.2s ease-in-out infinite; }
@@ -306,7 +306,7 @@ function deriveEndpoint(req) {
     s.gateway = ["block", `${tool}: denied by policy (OPA)`]; s.fence = ["skip", "not reached"];
     return {s, outcome: ["block", "DENIED · POLICY"], stages: EP_STAGES};
   }
-  s.gateway = ["pass", `${tool}: allowed by policy (OPA)${gw.returned !== undefined ? " · " + gw.returned + " returned" : ""}`];
+  s.gateway = [gw.injection_withheld ? "flag" : "pass", `${tool}: allowed by policy (OPA)${gw.returned !== undefined ? " · " + gw.returned + " returned" : ""}${gw.injection_withheld ? ` · ${gw.injection_withheld} field(s) withheld (prompt injection)` : ""}`];
   s.fence = ["pass", `${who.tenant} only${over ? ` · asked for ${over.tenant_requested}, used ${who.tenant}` : ""}${gw.dropped_other_tenant ? ` · ${gw.dropped_other_tenant} other-agency rows dropped` : ""}`];
   if (withheld) return {s, outcome: ["block", "WITHHELD · MASKING FAILED"], stages: EP_STAGES};
   return {s, outcome: over ? ["pass", "ALLOWED · OTHER AGENCY BLOCKED"] : ["pass", `ALLOWED · ${tool}`], stages: EP_STAGES};
@@ -335,7 +335,9 @@ function derive(req) {
     for (const k of ["masking", "gateway", "routing", "model", "output"]) s[k] = ["skip", "not reached"];
   } else {
     s.masking = mi ? ["pass", `${mi.data.entities_masked} personal detail(s) masked`] : tool ? ["pass", "masked"] : ["wait", ""];
-    if (tool) s.gateway = tool.data.decision === "allow" ? ["pass", `${tool.data.tool}: allowed by policy`] : ["warn", `${tool.data.tool}: denied by policy`];
+    if (tool) s.gateway = tool.data.decision === "allow"
+      ? [tool.data.injection_withheld ? "flag" : "pass", `${tool.data.tool}: allowed by policy${tool.data.injection_withheld ? ` · ${tool.data.injection_withheld} field(s) withheld (prompt injection)` : ""}`]
+      : ["warn", `${tool.data.tool}: denied by policy`];
     else s.gateway = mi ? ["skip", "no tool call"] : ["wait", ""];
     if (rt) s.routing = ["pass",
                          `${rt.data.target}: ${rt.data.model} · ${rt.data.sent_masked ? "masked" : "original"} text · ${(rt.data.reasons || []).join("; ")}`];
@@ -391,7 +393,7 @@ function renderSelected() {
   $("selId").textContent = req.id;
   const chip = el("span", `chip ${outcome[0]}`, outcome[1]);
   $("selChip").replaceChildren(chip);
-  const words = {pass: "passed", block: "blocked", warn: "denied", skip: "skipped", wait: "waiting", active: "running"};
+  const words = {pass: "passed", block: "blocked", warn: "denied", flag: "flagged", skip: "skipped", wait: "waiting", active: "running"};
   list.forEach(([k, name], i) => {
     const [state, detail] = s[k];
     const c = el("div", `stage s-${state}`);
@@ -470,7 +472,7 @@ function summarize(e) {
     case "chat.requests": return `chat.requests · message received (${d.message_chars} chars)`;
     case "chat.responses": return `chat.responses · ${d.guardrail ? "safe response" : "answer"} sent`;
     case "audit.guardrails": return `audit.guardrails · ${d.stage} ${d.layer} · ${d.allowed ? "allowed" : "blocked: " + d.category}${seq}`;
-    case "audit.tool_calls": return `audit.tool_calls · ${d.client ? d.client + " · " : ""}${d.tenant ? d.tenant + " · " : ""}${d.role ? d.role + " · " : ""}${d.agent === "outside" ? "endpoint" : d.agent} → ${d.tool || "(none)"} · ${d.decision}${d.reason ? " (" + d.reason + ")" : ""}${d.returned !== undefined ? " · " + d.returned + " returned" : ""}${seq}`;
+    case "audit.tool_calls": return `audit.tool_calls · ${d.client ? d.client + " · " : ""}${d.tenant ? d.tenant + " · " : ""}${d.role ? d.role + " · " : ""}${d.agent === "outside" ? "endpoint" : d.agent} → ${d.tool || "(none)"} · ${d.decision}${d.reason ? " (" + d.reason + ")" : ""}${d.returned !== undefined ? " · " + d.returned + " returned" : ""}${d.injection_withheld ? " · " + d.injection_withheld + " field(s) withheld: looked like instructions to the AI" : ""}${seq}`;
     case "audit.model_inputs": return `audit.model_inputs · ${d.model} · ${d.entities_masked} masked${seq}`;
     case "approvals.requested": return `approvals.requested · ${d.approval_id} · ${d.title}`;
     case "approvals.decided": return `approvals.decided · ${d.approval_id} · ${d.decision}${d.approver_role ? " by " + d.approver_role : ""}`;

@@ -89,6 +89,15 @@ if [ -n "$guard" ]; then
 fi
 
 say "5. Starting the pipeline"
+# Container names are fixed (broker, opa, ...): a copy of this repository in another folder that was
+# started before leaves containers with the same names, and Docker refuses to create them again.
+project=${COMPOSE_PROJECT_NAME:-$(basename "$PWD" | tr '[:upper:]' '[:lower:]' | tr -cd 'a-z0-9_-')}
+for c in broker opa schema-registry kafka-ui; do
+  owner=$(docker inspect -f '{{ index .Config.Labels "com.docker.compose.project" }}' "$c" 2>/dev/null || true)
+  if [ -n "$owner" ] && [ "$owner" != "$project" ]; then
+    fail "A container named $c belongs to another copy of this repository (folder \"$owner\"). Stop that copy and remove its containers (its Kafka data is kept): docker rm -f broker opa schema-registry kafka-ui"
+  fi
+done
 ./scripts/dev.sh start
 
 say "6. Checking that it works"
