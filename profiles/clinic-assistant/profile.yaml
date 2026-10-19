@@ -56,7 +56,7 @@ actions: actions.yaml                      # changes the assistant may propose; 
 cite_sources: true                         # the model sees source IDs so it can cite them
 # What a cited source ID looks like. An answer that cites an ID it was not given is
 # blocked (grounding check), e.g. citing the clinic-hours policy for a medication.
-source_id_pattern: '\b(kb-cl-\d{3}|pt-[0-9a-f]{8}|apt-\d{4}|med-\d+|enc-[0-9a-f]{8}|clm-[0-9a-f]{8})\b'
+source_id_pattern: '\b(kb-cl-\d{3}|pt-[0-9a-f]{8}|apt-\d{4}|med-\d+|enc-[0-9a-f]{8}|clm-[0-9a-f]{8}|lbl-[0-9a-f]{8})\b'
 
 prompt: prompt.md
 responses: responses.yaml
@@ -84,7 +84,7 @@ knowledge_base: data/knowledge_base.json
 
 agents:
   planner:
-    tools: [search_knowledge, search_records]
+    tools: [search_knowledge, search_records, medication_review]
   # Makes approved changes only. The planner, which talks to the model, cannot.
   executor:
     tools: [reschedule_appointment]
@@ -93,6 +93,7 @@ agents:
 examples:
   - What is our cancellation policy?
   - What medications is Chester Aufderhar taking?
+  - Check Harold Brinkley's medications for interactions.
   - When is Chester Aufderhar's next appointment?
   - Does Jesse Wolf owe anything?
   - Move Chester Aufderhar's next appointment to November 13 at 10:00.

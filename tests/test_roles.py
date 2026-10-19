@@ -107,7 +107,7 @@ def test_denied_role_raises_and_is_audited(monkeypatch):
 
 def test_clinic_roles_and_policy_data():
     assert set(CLINIC.roles) == {"clinician", "nurse", "front_desk", "compliance"}
-    assert CLINIC.role_filtered_tools == ("search_records",)
+    assert CLINIC.role_filtered_tools == ("search_records", "medication_review")
     assert CLINIC.policy_data()["roles"]["compliance"]["tools"] == ["search_knowledge"]
     assert "role_required" in CLINIC.responses
 

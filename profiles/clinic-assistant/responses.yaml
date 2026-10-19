@@ -52,3 +52,8 @@ action_unclear: >-
   I couldn't prepare that change: {reason}. Please name the patient, which
   appointment, and the new date and time, for example "Move Chester Aufderhar's
   appointment on November 9 to November 13 at 10:00".
+# A question for a tool this role may not use (e.g. medication review). {tool}, {role}, {roles}
+# are filled in by the pipeline. Nothing is looked up.
+tool_denied: >-
+  {tool} is not available to your role ({role}). It is available to: {roles}.
+  Please ask one of them. I can still show what your role may see in the record.

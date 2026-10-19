@@ -17,7 +17,7 @@ data_classes:
 roles:
   clinician:
     title: Clinician
-    tools: [search_knowledge, search_records, reschedule_appointment]   # may approve changes
+    tools: [search_knowledge, search_records, reschedule_appointment, medication_review]   # may approve changes
     data_classes: [patient_details, appointments, visit_dates, visit_clinical, medications, claims]
     # The same requests are blocked for every role; only the wording changes.
     # This assistant never recommends treatment, even to clinicians.

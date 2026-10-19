@@ -119,7 +119,8 @@ function meta(div, data, seconds) {
     const r = document.createElement("span");
     r.className = "badge route";
     const name = {openai: "OpenAI", gemini: "Gemini", anthropic: "Claude"}[data.route.provider];
-    r.textContent = data.route.target === "external"
+    r.textContent = data.route.target === "none" ? `NO MODEL · source text from ${data.route.provider}`
+      : data.route.target === "external"
       ? `EXTERNAL MODEL · ${name ? name + " · " : ""}${data.route.model}` : `LOCAL MODEL · ${data.route.model}`;
     m.appendChild(r);
   }

@@ -1,0 +1,37 @@
+# Hand-written synthetic patients for the medication review demo (ADR 017).
+# NOT real people and not from Synthea: invented names, dates and medication lists, chosen so
+# the review has well-known label interactions to show. Added to clinic.db by build_db.py.
+# Not for patient care.
+
+patients:
+  - id: 00000000-0000-4000-8000-00000000a001
+    name: Harold Brinkley
+    birth_date: "1948-03-14"
+    sex: M
+    city: Springfield
+    medications:
+      - {description: Warfarin Sodium 5 MG Oral Tablet, start: "2025-02-10", reason: Atrial fibrillation}
+      - {description: Ibuprofen 400 MG Oral Tablet, start: "2026-09-28", reason: Knee pain}
+      - {description: Ciprofloxacin 500 MG Oral Tablet, start: "2026-10-12", reason: Urinary tract infection}
+    appointment: {starts_at: "2026-11-03T10:00", type: Follow-up visit}
+
+  - id: 00000000-0000-4000-8000-00000000a002
+    name: Doris Whitfield
+    birth_date: "1953-07-02"
+    sex: F
+    city: Lakewood
+    medications:
+      - {description: Simvastatin 40 MG Oral Tablet, start: "2021-05-18", reason: Hyperlipidemia}
+      - {description: Amiodarone Hydrochloride 200 MG Oral Tablet, start: "2026-08-30", reason: Atrial fibrillation}
+      - {description: Metformin Hydrochloride 500 MG Oral Tablet, start: "2019-11-04", reason: Type 2 diabetes}
+    appointment: {starts_at: "2026-11-04T14:30", type: Follow-up visit}
+
+  - id: 00000000-0000-4000-8000-00000000a003
+    name: Lena Okafor
+    birth_date: "1981-01-22"
+    sex: F
+    city: Fairview
+    medications:
+      - {description: Levothyroxine Sodium 0.1 MG Oral Tablet, start: "2018-06-11", reason: Hypothyroidism}
+      - {description: Amoxicillin 500 MG Oral Capsule, start: "2026-10-14", reason: Sinusitis}
+    appointment: {starts_at: "2026-11-05T09:00", type: Annual physical}

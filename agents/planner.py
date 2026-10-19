@@ -30,6 +30,7 @@ import requests
 from confluent_kafka import Consumer, Producer
 
 from agents import actions
+from agents.tool_choice import tool_denied_reply, tools_to_call
 from agents.trace import Trace, ids_text, masking_summary
 from audit.chain import get_audit_chain
 from gateway.gateway import ToolCallDenied, call_tool
@@ -358,8 +359,11 @@ while True:
     # 3. Call the profile's tools through the gateway (policy-checked and audited).
     #    Tools get masked text, except tools the profile marks as receiving identifiers
     #    (a local records lookup needs the real name); the audit still records masked text.
-    notes, tools_used = [], []
-    for tool in PROFILE.agents.get(AGENT_NAME, ()):
+    #    A tool with `when` (tools.yaml) is called only for questions matching its pattern, and then
+    #    alone; the others are called for every other question.
+    to_call, triggered = tools_to_call(PROFILE, AGENT_NAME, req["message"])
+    notes, tools_used, direct, denied_for_role = [], [], None, None
+    for tool in to_call:
         receives_ids = tool in PROFILE.identifier_tools
         agent = PROFILE.tools[tool].lane         # where its steps show in the trace (tools.yaml)
         trace.start(agent, tool, f"{tool} through the gateway (policy check)")
@@ -371,6 +375,8 @@ while True:
             print("Denied:", e)
             trace.step(agent, tool, "block", f"Denied by policy: role {role} may not use {tool}"
                        if PROFILE.roles else f"Denied by policy: {AGENT_NAME} may not use {tool}")
+            if tool in triggered and PROFILE.roles:
+                denied_for_role = tool
             continue
         found = result.get("results", [])
         summary = f"{len(found)} result(s)" + (f": {ids_text([n['id'] for n in found])}" if found else "")
@@ -380,6 +386,39 @@ while True:
         if found:
             tools_used.append(tool)          # only tools that returned data count for routing
             notes += found
+        if PROFILE.tools[tool].answer == "direct" and result.get("answer"):
+            direct = (tool, result["answer"], found)
+
+    # 3a. The question was for a tool this role may not use: say so, and who may (no model).
+    if denied_for_role and not direct:
+        publish_response(request_id, tool_denied_reply(PROFILE, denied_for_role, role), [],
+                         {"stage": "access", "layer": "roles", "category": "tool_denied"}, access=access)
+        trace.step("intake", "reply", "info", f"Role {role} may not use {denied_for_role}; fixed reply sent")
+        consumer.commit(message=msg)
+        print(f"Tool {denied_for_role} not for role {role}: {request_id}")
+        continue
+
+    # 3a. Or a tool that answers directly (answer: direct): its text is the answer, quoting its sources.
+    #     No model writes or rewords it, so the checks for model-written text do not apply; the
+    #     gateway already checked the text for instructions (ADR 016), and its citations are checked.
+    if direct:
+        tool, answer_text, found = direct
+        cited = check_citations(answer_text, [n["id"] for n in found], PROFILE) \
+            if PROFILE.source_id_pattern is not None else GuardrailDecision(True)
+        audit_guardrail(request_id, "output", "grounding", cited, role)
+        if not cited.allowed:
+            publish_response(request_id, reply(cited, role), [], {"stage": "output", "layer": "grounding",
+                                                                   "category": cited.category}, access=access)
+            trace.step("answer", "grounding", "block", f"Blocked: {cited.reason}")
+        else:
+            sources = [{"id": n["id"], "title": n["title"]} for n in found]
+            publish_response(request_id, answer_text, sources, None,
+                             {"target": "none", "model": "none (source text)", "provider": tool}, access)
+            trace.step("answer", "reply", "info", f"Answer is {tool}'s source text, no model; "
+                       f"{len(sources)} source(s)", sources=[s["id"] for s in sources])
+        consumer.commit(message=msg)
+        print(f"Answered {request_id} directly by {tool} for role {role}")
+        continue
     if PROFILE.cite_sources:
         notes_text = "\n".join(f"- [{n['id']}] {n['title']}: {n['text']}" for n in notes)
     else:

@@ -16,7 +16,7 @@ patterns:
 
   # Words that turn a medication question into a request for a decision.
   dose_decision:
-    regex: '\b(how (much|many)|should (i|we|she|he|they)|can (i|we) (give|increase|decrease|double|stop|switch)|is it (ok|okay|safe) to|safe to (take|give|combine)|increase|decrease|double|adjust|taper|switch (to|from)|stop (taking|giving)|combine|interact)\b'
+    regex: '\b(how (much|many)|should (i|we|she|he|they)|can (i|we) (give|increase|decrease|double|stop|switch)|is it (ok|okay|safe) to|safe to (take|give|combine)|increase|decrease|double|adjust|taper|switch (to|from)|stop (taking|giving)|combine)\b'
 
   diagnosis_request:
     regex: '\b(diagnos\w*|what (does|could|might) (he|she|they|the patient) have|does (he|she|they|the patient) have|is (it|this) (an? )?(infection|cancer|covid|diabetes|serious)|interpret (the|these|this) (results?|labs?))\b'
@@ -46,6 +46,16 @@ patterns:
   # the lookup exemption below, so the classifier's flag stands.
   decision_words:
     regex: '\b(should|need to|have to|ought|must|increase|decrease|raise|lower|double|halve|adjust|titrate|taper|switch|change|stop|start|prescribe|recommend|suggest|give|add|combine|mix|safe|okay|ok|best|better|instead|alternative|how (much|many)|treat|treatment|for (his|her|their|my) [a-z]+)\b'
+
+  # A request for a medication review (ADR 017): where the FDA labels mention one of the patient's
+  # medications with another. Answered by the medication_review tool (clinicians only), quoting the
+  # labels; it decides nothing. A request that also asks for a decision ("should we stop...") is
+  # still blocked by the medication rule above, and decision words cancel the exemption below.
+  interaction_review:
+    regex:
+      - '\b(medication|drug) review\b'
+      - '|\binteractions?\b.{0,60}\b(medications?|meds|medicines?|drugs)\b'
+      - '|\b(medications?|meds|medicines?|drugs)\b.{0,60}\binteract(ions?|s)?\b'
 
   # A request to change an appointment. Starts a proposal that a person must approve
   # (actions.yaml); the assistant never changes anything itself.
@@ -78,3 +88,6 @@ output:
 classifier_exemptions:
   - {category: medical_advice, reason: record lookup with no decision words,
      any: [record_lookup], none: [decision_words]}
+  # A medication review: answered with FDA label text only, by a tool only clinicians have (ADR 017).
+  - {category: medical_advice, reason: medication review with no decision words (FDA label text only),
+     any: [interaction_review], none: [decision_words]}

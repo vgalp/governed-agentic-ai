@@ -102,6 +102,10 @@ class Tool:
     receives_identifiers: bool       # gets the real question (local-only data); audit stays masked
     role_filtered: bool              # results filtered by the data classes the role may see
     tenant_scoped: bool = False      # data belongs to one tenant (customer); the gateway sets which
+    when: re.Pattern | None = None   # called only for questions matching this rules.yaml pattern, and
+                                     # then alone; tools without one are called for every other question
+    answer: str = "model"            # model: a model writes the answer from the results ·
+                                     # direct: the tool's own text is the answer (source text, no model)
 
 
 @dataclass(frozen=True)
@@ -436,7 +440,10 @@ def select_external_model(profile: Profile, key: str) -> Profile:
 
 
 
-def _tools(raw: dict, where: str) -> dict[str, Tool]:
+TOOL_ANSWERS = {"model", "direct"}
+
+
+def _tools(raw: dict, where: str, patterns: dict[str, re.Pattern] | None = None) -> dict[str, Tool]:
     """tools.yaml: every tool the profile can use, with where it runs and what it does."""
     if not raw:
         raise ProfileError(f"{where}: list at least one tool")
@@ -470,8 +477,21 @@ def _tools(raw: dict, where: str) -> dict[str, Tool]:
             lane = t.get("lane", "knowledge")
             if lane not in READ_LANES:
                 raise ProfileError(f"{w}: lane must be one of {sorted(READ_LANES)}")
+        when = None
+        if t.get("when") is not None:
+            if kind != "read":
+                raise ProfileError(f"{w}: 'when' is for read tools (a change starts from actions.yaml)")
+            if t["when"] not in (patterns or {}):
+                raise ProfileError(f"{w}: when '{t['when']}' is not a pattern in rules.yaml")
+            when = patterns[t["when"]]
+        answer = t.get("answer", "model")
+        if answer not in TOOL_ANSWERS:
+            raise ProfileError(f"{w}: answer must be one of {sorted(TOOL_ANSWERS)}")
+        if answer == "direct" and when is None:
+            raise ProfileError(f"{w}: answer: direct needs 'when', so the tool answers only the questions it is for")
         tools[name] = Tool(name, str(t.get("description", "")), server, kind, label, lane,
-                           flags["receives_identifiers"], flags["role_filtered"], flags["tenant_scoped"])
+                           flags["receives_identifiers"], flags["role_filtered"], flags["tenant_scoped"],
+                           when, answer)
     return tools
 
 
@@ -728,7 +748,10 @@ def load_profile_from(path: Path) -> Profile:
         raise ProfileError(f"{path.name}/responses.yaml: every response must be non-empty text")
 
     tools_file = _require(p, "tools", where)
-    tools = _tools(_yaml(_file(path, tools_file, where)), f"{path.name}/{tools_file}")
+    tools = _tools(_yaml(_file(path, tools_file, where)), f"{path.name}/{tools_file}", patterns)
+    if any(t.when for t in tools.values()) and p.get("roles") and "tool_denied" not in responses:
+        raise ProfileError(f"{path.name}/responses.yaml: no response for tool_denied (needed because a "
+                           "tool is called for some questions only, and a role may not have it)")
     agents_raw = _require(p, "agents", where)
     agents = {a: tuple((cfg or {}).get("tools", [])) for a, cfg in agents_raw.items()}
     _check_grants(tools, agents, where)

@@ -60,7 +60,7 @@ def test_database_is_opened_read_only(db):
 
 def test_clinic_profile_gives_names_only_to_the_records_tool():
     p = load_profile("clinic-assistant")
-    assert p.identifier_tools == ("search_records",)
+    assert p.identifier_tools == ("search_records", "medication_review")
     assert p.tool_data_labels["search_records"] in p.routing["never_external_labels"]
 
 

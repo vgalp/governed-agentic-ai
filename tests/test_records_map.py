@@ -87,7 +87,7 @@ def test_values_are_parameters_not_sql(db):
     """A name with a quote in it is just text."""
     assert server.search(db, "When is O'Brien'; DROP TABLE patients; --'s visit?",
                          list(CLINIC.data_classes), MAP)["results"] == []
-    assert sqlite3.connect(db).execute("SELECT count(*) FROM patients").fetchone()[0] == 3
+    assert sqlite3.connect(db).execute("SELECT count(*) FROM patients").fetchone()[0] == 6   # 3 + 3 demo
 
 
 def test_schema_mismatch_is_reported(db):

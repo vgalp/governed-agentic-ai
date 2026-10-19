@@ -158,6 +158,48 @@ def make_appointments(db) -> None:
     print(f"appointments: {len(rows)}")
 
 
+DEMO_PATIENTS = HERE / "demo_patients.yaml"
+
+
+def load_demo_patients(db, path: Path = DEMO_PATIENTS) -> None:
+    """Hand-written synthetic patients for the medication review demo (demo_patients.yaml).
+    Added after the Synthea patients' appointments, so those stay exactly as they were."""
+    import yaml
+    if not path.exists():
+        return
+    people = (yaml.safe_load(path.read_text()) or {}).get("patients") or []
+    next_apt = db.execute("SELECT COUNT(*) FROM appointments").fetchone()[0] + 1
+    for p in people:
+        db.execute("INSERT INTO patients VALUES (?, ?, ?, ?, ?)",
+                   (p["id"], p["name"], str(p["birth_date"]), p["sex"], p["city"]))
+        db.executemany("INSERT INTO medications (patient_id, encounter_id, start, stop, description, reason) "
+                       "VALUES (?, NULL, ?, NULL, ?, ?)",
+                       [(p["id"], str(m["start"]), m["description"], m.get("reason")) for m in p["medications"]])
+        if p.get("appointment"):
+            a = p["appointment"]
+            db.execute("INSERT INTO appointments (id, patient_id, starts_at, type) VALUES (?, ?, ?, ?)",
+                       (f"apt-{next_apt:04d}", p["id"], str(a["starts_at"]), a["type"]))
+            next_apt += 1
+    print(f"demo patients: {len(people)} (demo_patients.yaml, hand-written, synthetic)")
+
+
+def add_demo(db_path: Path = DB_PATH, path: Path = DEMO_PATIENTS) -> Path:
+    """Add the demo patients to an existing database, keeping everything else. Run again: no change."""
+    import yaml
+    if not db_path.exists():
+        raise SystemExit(f"{db_path} does not exist: build it first with --csv")
+    db = sqlite3.connect(db_path)
+    db.execute("PRAGMA foreign_keys = ON")
+    ids = [p["id"] for p in (yaml.safe_load(path.read_text()) or {}).get("patients") or []]
+    if db.execute(f"SELECT COUNT(*) FROM patients WHERE id IN ({','.join('?' * len(ids))})", ids).fetchone()[0]:
+        print("demo patients: already there")
+    else:
+        load_demo_patients(db, path)
+        db.commit()
+    db.close()
+    return db_path
+
+
 def build(csv_folder: Path, db_path: Path = DB_PATH) -> Path:
     db_path.unlink(missing_ok=True)          # start clean every run
     db = sqlite3.connect(db_path)
@@ -168,6 +210,7 @@ def build(csv_folder: Path, db_path: Path = DB_PATH) -> Path:
     load_medications(db, csv_folder, patient_ids)
     load_claims(db, csv_folder, patient_ids)
     make_appointments(db)
+    load_demo_patients(db)
     db.commit()
     db.close()
     return db_path
@@ -175,7 +218,14 @@ def build(csv_folder: Path, db_path: Path = DB_PATH) -> Path:
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("--csv", type=Path, required=True, help="Synthea output/csv folder")
+    ap.add_argument("--csv", type=Path, help="Synthea output/csv folder")
     ap.add_argument("--out", type=Path, default=DB_PATH, help="where to write the database")
+    ap.add_argument("--add-demo", action="store_true",
+                    help="add only the demo patients (demo_patients.yaml) to an existing database")
     args = ap.parse_args()
-    print("Built", build(args.csv.expanduser(), args.out.expanduser()))
+    if args.add_demo:
+        print("Updated", add_demo(args.out.expanduser()))
+    elif args.csv:
+        print("Built", build(args.csv.expanduser(), args.out.expanduser()))
+    else:
+        ap.error("give --csv <synthea>/output/csv, or --add-demo")

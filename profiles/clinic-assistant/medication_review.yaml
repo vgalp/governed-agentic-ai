@@ -1,0 +1,27 @@
+# Medication review (ADR 017), read by mcp_servers/medication_review. For the patient named in the
+# question: their current medications, and where one drug's FDA label mentions another, quoted.
+
+# The FDA label sections, downloaded once by scripts/fetch_drug_labels.py (drug names only are sent).
+labels: data/drug_labels.json
+
+# The record type in records.yaml that holds current medications, and its name column.
+medications: medications
+drug_column: description
+
+# Label sections searched, in this order.
+sections: [contraindications, drug_interactions]
+
+# Other words labels use for an FDA drug class (the class names come from the labels themselves).
+# Only names for the same class: nothing here says whether a combination is safe.
+class_terms:
+  Nonsteroidal Anti-inflammatory Drug: [NSAID, NSAIDs, nonsteroidal anti-inflammatory]
+  Serotonin Reuptake Inhibitor: [SSRI, SSRIs, selective serotonin reuptake inhibitor, selective serotonin reuptake inhibitors]
+  Vitamin K Antagonist: [anticoagulant, anticoagulants, oral anticoagulants, coumarin]
+  Fluoroquinolone Antibacterial: [fluoroquinolone, fluoroquinolones, quinolone, quinolones]
+  HMG-CoA Reductase Inhibitor: [statin, statins, HMG-CoA reductase inhibitor, HMG-CoA reductase inhibitors]
+  Antiarrhythmic: [antiarrhythmic, antiarrhythmics]
+  Thiazide Diuretic: [thiazide, thiazides, diuretic, diuretics]
+  Angiotensin Converting Enzyme Inhibitor: [ACE inhibitor, ACE inhibitors]
+  Biguanide: [biguanide, biguanides]
+  Penicillin-class Antibacterial: [penicillin, penicillins]
+  l-Thyroxine: [thyroid hormone, thyroid hormones, levothyroxine]

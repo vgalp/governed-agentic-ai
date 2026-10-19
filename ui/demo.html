@@ -488,10 +488,11 @@ function outcome(req) {
     const g = d.guardrail;
     if (g.category === "crisis") return ["stop", "Crisis protocol shown", "The message suggested someone may be at risk. No AI was involved."];
     if (g.stage === "output") return ["stop", "Draft answer held back", BLOCK_WORDS[g.category] || "The answer did not pass the final check."];
+    if (g.stage === "access" && g.category === "tool_denied") return ["stop", "Not available to this role", "This role may not use that tool. Nothing was looked up."];
     if (g.stage === "access") return ["stop", "Choose a role first", BLOCK_WORDS.role_required];
     return ["stop", "Stopped before the AI", BLOCK_WORDS[g.category] || "This request needs a person, not the assistant."];
   }
-  const where = d.route ? (d.route.target === "external" ? "an outside model, with names removed" : "the model on this computer") : "the assistant";
+  const where = d.route ? (d.route.target === "none" ? "quoting its sources word for word, with no AI model" : d.route.target === "external" ? "an outside model, with names removed" : "the model on this computer") : "the assistant";
   const n = (d.sources || []).length;
   return ["pass", "Answered", `By ${where}, from ${n} approved source${n === 1 ? "" : "s"}.`];
 }

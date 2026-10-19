@@ -346,6 +346,11 @@ function derive(req) {
     if (!outG) s.output = ["wait", ""];
     else if (outG.data.allowed) s.output = ["pass", `${outG.data.layer}: allowed`];
     else s.output = ["block", `${outG.data.layer}: ${outG.data.category}`];
+    // A tool that answers with its own source text (answer: direct, e.g. medication review): no model.
+    if (resp && resp.data.route && resp.data.route.target === "none") {
+      s.routing = ["skip", "no model: the answer is source text"];
+      s.model = ["skip", `no model: ${resp.data.route.provider} quoted its sources`];
+    }
   }
   if (resp) s.response = ["pass", resp.data.guardrail ? "fixed safe response" : `answer · sources ${resp.data.sources.join(", ") || "none"}`];
   else s.response = ["wait", ""];
