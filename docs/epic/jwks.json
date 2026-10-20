@@ -1,0 +1,12 @@
+{
+  "keys": [
+    {
+      "kty": "RSA",
+      "alg": "RS384",
+      "use": "sig",
+      "kid": "gaai-sandbox-1",
+      "n": "tMwbYtWjpn31tWDZ9YOubeWl8rgxbd2cmpvS0lwH9zC59_iUSyRq0y83dAhIeKNHu74wHZsosAxfTuqyex3ym3aruZql1vn1KcmR7OO1wxbnuuL1an5VpEse3nkIuoOm3IYLAtfR0NrMtQkihQjK2P4tMKTC3hDgkotB374rlWJjUGEIo9u3BABugh7kSGPCZPXeUwDiYqbQAWbTIjB1Djl-1uRpkXc-yhZi8HstQ41xIuR6n378oLO7r7sC4oIw9A4IWnCAE5ho6m4Vv3eJ0b2ugtOjowi045diUGrqK1-888BaPhNRtO9tJhkFWa5O06Tl0nnXVSnS7V6QRlcxyQ",
+      "e": "AQAB"
+    }
+  ]
+}
