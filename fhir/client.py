@@ -12,6 +12,7 @@ key is published as a JWK Set, where the authorization server fetches it.
 """
 
 import os
+import re
 import time
 import uuid
 from dataclasses import dataclass
@@ -113,6 +114,11 @@ class FhirClient:
 
 
 def _brief(r) -> str:
+    why = (getattr(r, "headers", None) or {}).get("WWW-Authenticate", "")
+    m = re.search(r'error="([^"]+)"', why)
+    if m:                                      # e.g. insufficient_scope: the app lacks that API
+        return m.group(1) + (" (the app is not allowed this request: check its APIs at fhir.epic.com)"
+                             if m.group(1) == "insufficient_scope" else "")
     try:
         body = r.json()
     except ValueError:

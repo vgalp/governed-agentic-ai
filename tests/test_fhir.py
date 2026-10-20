@@ -345,3 +345,14 @@ def test_medication_review_asks_for_the_date_of_birth(tmp_path):
     out = review(None, p, load_config(p), "Check Nora Testwell's medications for interactions", ["medications"],
                  FhirClient(BASE, session=FakeServer()))
     assert "date of birth" in out["answer"] and out["results"] == []
+
+
+def test_a_missing_permission_is_named():
+    class NoScope(FakeServer):
+        def get(self, url, params=None, headers=None, timeout=None):
+            r = Response(403, {})
+            r.text = ""
+            r.headers = {"WWW-Authenticate": 'Bearer error="insufficient_scope", error_description="not authorized"'}
+            return r
+    with pytest.raises(FhirError, match="insufficient_scope.*APIs"):
+        FhirClient(BASE, session=NoScope()).search("MedicationRequest", {"patient": "x"})
