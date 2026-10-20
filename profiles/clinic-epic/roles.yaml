@@ -1,0 +1,40 @@
+# Who may see what, as in clinic-assistant. The Epic app reads patients, medications and visits
+# only (the APIs it was granted), so there are no appointments or claims here: the front desk
+# sees patient details and visit dates. OPA enforces this; the records server never requests a
+# resource type the role may not see.
+
+data_classes:
+  patient_details: Name, birth date, sex and city
+  visit_dates: Dates and types of past visits, without clinical details
+  visit_clinical: What a past visit was for, including the recorded reason
+  medications: Current medications and the recorded reason
+
+roles:
+  clinician:
+    title: Clinician
+    tools: [search_knowledge, search_records, medication_review]
+    data_classes: [patient_details, visit_dates, visit_clinical, medications]
+    responses:
+      medication: >-
+        I don't make medication decisions such as doses, timing or changes, for any
+        role: that stays your clinical judgment. I can show the patient's current
+        medication list from the record to support your decision.
+      diagnosis: >-
+        I don't diagnose or interpret symptoms or results, for any role: that stays
+        your clinical judgment. I can show what the record says about past visits.
+      medical_advice: >-
+        I don't make treatment or prescribing recommendations, for any role: that
+        stays your clinical judgment. I can show what the patient's record lists,
+        such as current medications and past visits, to support your decision.
+  nurse:
+    title: Nurse
+    tools: [search_knowledge, search_records]
+    data_classes: [patient_details, visit_dates, visit_clinical, medications]
+  front_desk:
+    title: Front desk and billing
+    tools: [search_knowledge, search_records]
+    data_classes: [patient_details, visit_dates]
+  compliance:
+    title: Compliance officer
+    tools: [search_knowledge]
+    data_classes: []

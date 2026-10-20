@@ -1,0 +1,50 @@
+# How Epic's FHIR resources become records (ADR 013): the FHIR counterpart of records.yaml.
+# Another FHIR server (Oracle Health, Meditech, a local HAPI server) is another version of this file.
+# Paths are simple FHIR paths; {a,b} takes the first with a value; |date and |datetime format dates.
+
+server:
+  base_url: https://fhir.epic.com/interconnect-fhir-oauth/api/FHIR/R4
+  auth: smart_backend                      # signed JWT (RS384), then a short-lived access token
+  token_url: https://fhir.epic.com/interconnect-fhir-oauth/oauth2/token
+  client_id_env: EPIC_CLIENT_ID            # the app's Non-Production Client ID, in .env
+  private_key_env: EPIC_PRIVATE_KEY_PATH   # path to privatekey.pem, in .env; never in the repo
+  key_id: gaai-sandbox-1                   # the kid in the published JWK Set (docs/epic/jwks.json)
+
+subject:
+  noun: patient
+  resource: Patient
+  # Epic finds a patient by name and date of birth: two identifiers, as patient-safety practice asks.
+  name_search: {given: given, family: family, birthdate: birthdate}
+  record:
+    data_class: patient_details
+    source_id: {prefix: pt-, keep_last: 8}
+    title: "Patient: {name}"
+    text: "{name}, born {birthDate}, sex {gender}, lives in {address.city}."
+
+records:
+  medications:
+    resource: MedicationRequest
+    link: patient
+    search: {status: active}
+    data_class: medications
+    source_id: {prefix: med-, keep_last: 8}
+    limit: 20
+    title: Current medication
+    text: "{subject}: {medicationCodeableConcept.text,medicationReference.display}, ordered {authoredOn|date}."
+    optional: {reasonCode.text: " Reason recorded: {reasonCode.text}."}
+
+  visits:
+    resource: Encounter
+    link: patient
+    data_class: visit_dates
+    source_id: {prefix: enc-, keep_last: 8}
+    limit: 3
+    title: Past visit
+    text: "{subject}: {class.display,class.code} visit on {period.start|date}."
+    more_detail:
+      data_class: visit_clinical
+      text: "{subject}: {type.text,type.coding.display} visit on {period.start|date}."
+      optional: {reasonCode.text: " Reason recorded: {reasonCode.text}."}
+
+max_results: 25
+status: Epic sandbox test record

@@ -1,0 +1,17 @@
+# Medication review (ADR 017), from Epic's MedicationRequest records (ADR 013).
+labels: data/drug_labels.json          # scripts/fetch_drug_labels.py --profile clinic-epic --patient "..."
+source: fhir                           # the medication list comes from fhir.yaml's record type below
+medications: medications
+sections: [contraindications, drug_interactions]
+class_terms:
+  Nonsteroidal Anti-inflammatory Drug: [NSAID, NSAIDs, nonsteroidal anti-inflammatory]
+  Serotonin Reuptake Inhibitor: [SSRI, SSRIs, selective serotonin reuptake inhibitor, selective serotonin reuptake inhibitors]
+  Vitamin K Antagonist: [anticoagulant, anticoagulants, oral anticoagulants, coumarin]
+  Fluoroquinolone Antibacterial: [fluoroquinolone, fluoroquinolones, quinolone, quinolones]
+  HMG-CoA Reductase Inhibitor: [statin, statins, HMG-CoA reductase inhibitor, HMG-CoA reductase inhibitors]
+  Antiarrhythmic: [antiarrhythmic, antiarrhythmics]
+  Thiazide Diuretic: [thiazide, thiazides, diuretic, diuretics]
+  Angiotensin Converting Enzyme Inhibitor: [ACE inhibitor, ACE inhibitors]
+  Biguanide: [biguanide, biguanides]
+  Penicillin-class Antibacterial: [penicillin, penicillins]
+  l-Thyroxine: [thyroid hormone, thyroid hormones, levothyroxine]

@@ -1,0 +1,59 @@
+# Fixed replies when a guardrail blocks. Written for clinic STAFF, not patients.
+# DRAFTS pending review by the clinic's medical director.
+
+crisis: >-
+  This may be a patient safety emergency. Follow the clinic's urgent-risk
+  protocol now: tell the on-call clinician immediately and do not leave the
+  person alone. If anyone is in immediate danger, call 911. The 988 Suicide &
+  Crisis Lifeline (call or text 988 in the U.S.) can also help. If the patient
+  is being hurt or threatened by someone, the National Domestic Violence Hotline
+  (1-800-799-7233, or text START to 88788) can help them plan for safety.
+
+medication: >-
+  I can't make medication decisions, including doses, timing or changes.
+  The patient's prescribing clinician must decide. I can show what the
+  patient's record lists, or help you prepare a message to the clinician.
+
+diagnosis: >-
+  I can't diagnose or interpret symptoms or results. Please ask the patient's
+  clinician. I can show what the record says about past visits.
+
+medical_advice: >-
+  That needs a clinical decision, which only the patient's clinician can make.
+  I can help you find what the record says or prepare a note for the clinician.
+
+unavailable: >-
+  Sorry, I can't answer right now because a safety check is unavailable.
+  Please try again shortly. For an urgent patient safety issue, follow the
+  urgent-risk protocol and tell the on-call clinician; call 911 in an emergency.
+
+# Sent when a request has no role, or a role this profile does not define.
+role_required: >-
+  Please choose your role first. What you can see depends on it, so I can't
+  answer until I know whether you're a clinician, nurse, front desk or
+  compliance officer.
+
+# Sent when an answer refers to a source it was not given, or invents a fill-in field.
+ungrounded: >-
+  I couldn't give a reliable answer: my draft referred to information that isn't in
+  the clinic's records. Please check the patient's record directly, or ask a more
+  specific question.
+
+# Changes (actions.yaml). {placeholders} are filled in by the pipeline.
+action_pending: >-
+  I've prepared this change, but nothing has been changed yet. It needs approval
+  by {approvers}, and it expires in {expires} minutes if no one approves it.
+  Proposed: {summary} (approval request {approval_id}).
+
+action_denied: >-
+  I can't prepare that change: {reasons}.
+
+action_unclear: >-
+  I couldn't prepare that change: {reason}. Please name the patient, which
+  appointment, and the new date and time, for example "Move Chester Aufderhar's
+  appointment on November 9 to November 13 at 10:00".
+# A question for a tool this role may not use (e.g. medication review). {tool}, {role}, {roles}
+# are filled in by the pipeline. Nothing is looked up.
+tool_denied: >-
+  {tool} is not available to your role ({role}). It is available to: {roles}.
+  Please ask one of them. I can still show what your role may see in the record.

@@ -1,0 +1,72 @@
+[
+  {
+    "id": "kb-cl-001",
+    "title": "Clinic hours",
+    "text": "The clinic is open Monday to Friday, 8:00 to 18:00, and closed on weekends and public holidays. Appointments run from 9:00 to 17:00.",
+    "tags": ["hours", "open", "closed", "weekend", "holiday", "schedule"],
+    "status": "SAMPLE - fictional clinic policy"
+  },
+  {
+    "id": "kb-cl-002",
+    "title": "Cancellations and missed appointments",
+    "text": "Patients should cancel at least 24 hours before the appointment. Front desk records late cancellations and no-shows in the appointment record. After three no-shows in 12 months, the practice manager contacts the patient.",
+    "tags": ["cancel", "cancellation", "no-show", "missed", "reschedule", "appointment"],
+    "status": "SAMPLE - fictional clinic policy"
+  },
+  {
+    "id": "kb-cl-003",
+    "title": "Booking and rescheduling",
+    "text": "Front desk books and reschedules appointments. Annual physicals are 30 minutes, follow-up visits 15 minutes, consultations 30 minutes. Urgent same-day requests go to the triage nurse.",
+    "tags": ["book", "booking", "reschedule", "appointment", "physical", "follow-up", "same-day", "triage"],
+    "status": "SAMPLE - fictional clinic policy"
+  },
+  {
+    "id": "kb-cl-004",
+    "title": "Claim statuses",
+    "text": "A claim marked CLOSED has no balance left for the patient. BILLED means the patient has been sent a statement and has an outstanding balance. Billing staff answer questions about balances; clinical staff do not discuss charges.",
+    "tags": ["claim", "claims", "billing", "balance", "closed", "billed", "statement", "outstanding"],
+    "status": "SAMPLE - fictional clinic policy"
+  },
+  {
+    "id": "kb-cl-005",
+    "title": "Payment plans",
+    "text": "Patients with a balance over 200 dollars may ask billing for a payment plan of up to 6 monthly payments. Billing records the plan in the patient's account.",
+    "tags": ["payment", "plan", "balance", "billing", "installments", "pay"],
+    "status": "SAMPLE - fictional clinic policy"
+  },
+  {
+    "id": "kb-cl-006",
+    "title": "Prescription refill requests",
+    "text": "Front desk takes refill requests and sends them to the prescribing clinician; they never approve refills. Requests are answered within 2 business days. Staff must not suggest doses or substitutes.",
+    "tags": ["refill", "prescription", "renew", "medication", "request", "pharmacy"],
+    "status": "SAMPLE - fictional clinic policy"
+  },
+  {
+    "id": "kb-cl-007",
+    "title": "Releasing medical records",
+    "text": "Copies of records are released only with a signed authorization from the patient or their legal representative. Verify identity with two identifiers, such as full name and date of birth, before discussing any record.",
+    "tags": ["records", "release", "copy", "authorization", "identity", "verify", "privacy"],
+    "status": "SAMPLE - fictional clinic policy"
+  },
+  {
+    "id": "kb-cl-008",
+    "title": "Minimum necessary access",
+    "text": "Staff see only the information their role needs. Front desk sees contact details and appointments; billing sees claims; nurses see visits and medications. Do not look up patients you are not working with.",
+    "tags": ["privacy", "access", "role", "minimum necessary", "hipaa", "confidential"],
+    "status": "SAMPLE - fictional clinic policy"
+  },
+  {
+    "id": "kb-cl-009",
+    "title": "Urgent-risk protocol",
+    "text": "If a patient may harm themselves or others, tell the on-call clinician immediately and do not leave the person alone. If anyone is in immediate danger, call 911. Record what happened after the person is safe.",
+    "tags": ["urgent", "risk", "emergency", "safety", "suicide", "crisis", "on-call", "911"],
+    "status": "SAMPLE - fictional clinic policy"
+  },
+  {
+    "id": "kb-cl-010",
+    "title": "New patient registration",
+    "text": "New patients complete the registration form, provide photo ID and insurance details, and sign the privacy notice before their first visit. Front desk creates the patient record.",
+    "tags": ["new", "patient", "register", "registration", "insurance", "id", "form"],
+    "status": "SAMPLE - fictional clinic policy"
+  }
+]

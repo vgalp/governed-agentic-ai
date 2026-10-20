@@ -1,0 +1,29 @@
+# Tools this profile can use (see clinic-assistant/tools.yaml for what each field means).
+# search_records reads Epic through the FHIR records server; everything else is the same.
+
+search_knowledge:
+  description: Approved clinic policies
+  server: http://127.0.0.1:8100/mcp
+  kind: read
+  data_label: approved_content
+  lane: knowledge
+
+search_records:
+  description: Patient records from Epic (FHIR R4, read-only), built only from the data classes the role may see
+  server: http://127.0.0.1:8104/mcp         # mcp_servers/fhir_records
+  kind: read
+  data_label: patient_record               # never leaves the clinic (routing.never_external_labels)
+  lane: records
+  receives_identifiers: true               # looks patients up by name
+  role_filtered: true
+
+medication_review:
+  description: Medication review (where FDA drug labels mention one of the patient's medications with another)
+  server: http://127.0.0.1:8103/mcp
+  kind: read
+  data_label: patient_record
+  lane: records
+  receives_identifiers: true
+  role_filtered: true
+  when: interaction_review
+  answer: direct

@@ -1,6 +1,6 @@
 # 013. FHIR records source (Epic-ready)
 
-Status: Proposed · Date: 2026-10-11
+Status: Accepted · Proposed 2026-10-11 · Implemented 2026-10-19 · Epic sandbox test: pending
 
 ## Context
 
@@ -15,7 +15,8 @@ offers a public developer portal with a sandbox (fhir.epic.com).
 
 ## Decision
 
-1. **A second kind of records source: FHIR.** `records.yaml` may say `source: fhir`. The ideas stay
+1. **A second kind of records source: FHIR.** A profile names `fhir: fhir.yaml` instead of
+   `records_db` and `records_map` (one records source per profile). The ideas stay
    the same as ADR 011: a subject (the Patient), record types, data classes, templates, citable source
    IDs. What changes is where values come from: a record type names a FHIR resource type and search
    parameters instead of a table, and its texts use simple FHIR paths (`period.start`,
@@ -70,3 +71,27 @@ offers a public developer portal with a sandbox (fhir.epic.com).
   match. Ambiguous matches still return nothing ("use the full name").
 - Wording: this project "integrates with Epic through its public FHIR APIs, tested in Epic's
   sandbox". It is not an Epic partner, certified or endorsed.
+## Implementation (2026-10-19)
+
+- `fhir/client.py`: GET-only FHIR R4 client (read, search with paging that never follows a link off
+  the server, capability). SMART Backend Services sign-in: a JWT signed with RS384, key ID in the
+  header, exchanged for a short-lived access token, cached until shortly before it expires. The
+  client ID and the private key's path come from `.env`; the loader refuses them written in the file.
+- `profiles/fhir_map.py`: the mapping (`fhir.yaml`): subject, record types, data classes, templates
+  with FHIR paths, alternatives (`{a,b}`) and date filters, source IDs from resource IDs.
+- `mcp_servers/fhir_records` (port 8104): the same `search_records` tool and record shape as the
+  database source. A resource type is requested only for the data classes the role may see. The
+  patient is found by given and family name from the question; two matches or none return nothing.
+- `profiles/clinic-epic`: the clinic assistant on Epic's sandbox. Its rules, replies, prompt and guard
+  policy are the clinic's (a test checks they have not drifted); roles have no appointments or claims,
+  because the Epic app reads Patient, MedicationRequest, Medication and Encounter only.
+- The medication review (ADR 017) reads MedicationRequest, follows a medicationReference to its
+  Medication for the RxNorm code, and finds ingredients by code.
+- The Epic app: Backend Systems audience, those four resource types, read and search only. Its public
+  key is published as a JWK Set (`docs/epic/jwks.json`); the private key stays outside the repository.
+- Tests: `tests/test_fhir.py`, against a fake FHIR server with invented resources (no network).
+- `scripts/epic_check.py` checks sign-in, the server's capabilities and one test patient. The record of
+  the first successful sandbox run (date, what was read) is added here when it is done.
+
+Not yet: the CapabilityStatement check at startup only reports (the server may not be reachable when
+the pipeline starts); `_elements` is not used yet; appointments and writing back are separate decisions.

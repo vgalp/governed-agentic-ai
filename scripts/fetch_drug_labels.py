@@ -112,32 +112,74 @@ def label(ingredient: str, sections: list[str]) -> dict | None:
     }
 
 
+def rxcui_ingredients(rxcui: str) -> list[str]:
+    rel = get(f"{RXNAV}/rxcui/{rxcui}/related.json?tty=IN")
+    return sorted({p["name"].lower() for g in (rel.get("relatedGroup") or {}).get("conceptGroup") or []
+                   for p in g.get("conceptProperties") or []})
+
+
+def medications_from_fhir(profile, cfg: dict, patients: list[str]) -> list[tuple[str, str | None]]:
+    """(name, RxNorm code) of the current medications of the named patients, read from the FHIR
+    server (ADR 013). Patient data stays here: only drug names and codes go to RxNorm and openFDA."""
+    from fhir.client import client_from_settings
+    from mcp_servers.medication_review.server import fhir_medications
+    m = profile.fhir_map
+    client = client_from_settings(m.server)
+    out = []
+    for p in patients:
+        name, meds = fhir_medications(client, m, m.record(cfg["medications"]), f"medications for {p}")
+        if name is None:
+            print(f"  ? {p}: {meds} found")
+            continue
+        print(f"  ✓ {name}: {len(meds)} current medication(s)")
+        out += [(x["name"], x.get("rxcui")) for x in meds]
+    return out
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--profile", default=None, help="profile name (default: PROFILE, or clinic-assistant)")
+    ap.add_argument("--patient", action="append", default=[],
+                    help="FHIR profiles: a test patient whose medications to cover (repeat for several)")
     args = ap.parse_args()
     import os
     profile = load_profile(args.profile or os.environ.get("PROFILE") or "clinic-assistant")
     cfg_path = profile.path / "medication_review.yaml"
     cfg = yaml.safe_load(cfg_path.read_text())
     sections = cfg.get("sections", FIELDS)
-    rtype = next(r for r in profile.records_map.records if r.name == cfg["medications"])
-    if not profile.records_db or not profile.records_db.exists():
-        sys.exit(f"Build the records database first: {profile.records_db} (see the profile's data/README.md)")
-    with sqlite3.connect(f"file:{profile.records_db}?mode=ro", uri=True) as db:
-        names = sorted({n for (n,) in db.execute(f'SELECT DISTINCT "{cfg["drug_column"]}" FROM "{rtype.table}"') if n})
+    out = (profile.path / cfg["labels"]).resolve()
+    # A FHIR profile adds to what earlier runs downloaded (other test patients); a database profile
+    # covers every medication in the database, so it starts fresh.
+    previous = json.loads(out.read_text()) if out.exists() and cfg.get("source") == "fhir" else {}
 
-    print(f"{len(names)} medication names in {profile.records_db.name}; looking them up in RxNorm (names only)")
-    meds, ingredients = {}, set()
-    for n in names:
-        rxcui, ings = rxnorm(n)
-        meds[n] = {"rxcui": rxcui, "ingredients": ings}
+    if cfg.get("source") == "fhir":
+        if not args.patient:
+            sys.exit('Name the test patients with dates of birth: --patient "Camila Lopez 1987-09-12"')
+        print(f"Reading current medications from {profile.fhir_map.server['base_url']}")
+        coded = medications_from_fhir(profile, cfg, args.patient)
+    else:
+        rtype = next(r for r in profile.records_map.records if r.name == cfg["medications"])
+        if not profile.records_db or not profile.records_db.exists():
+            sys.exit(f"Build the records database first: {profile.records_db} (see the profile's data/README.md)")
+        with sqlite3.connect(f"file:{profile.records_db}?mode=ro", uri=True) as db:
+            coded = [(n, None) for (n,) in db.execute(
+                f'SELECT DISTINCT "{cfg["drug_column"]}" FROM "{rtype.table}"') if n]
+
+    print(f"{len(coded)} medication names; looking them up in RxNorm (names and codes only)")
+    meds, by_code, ingredients = dict(previous.get("medications") or {}), dict(previous.get("rxcui") or {}), set()
+    for n, code in sorted(set(coded), key=lambda x: x[0]):
+        if code:
+            ings = rxcui_ingredients(code)
+            by_code[code] = ings
+        else:
+            code, ings = rxnorm(n)
+        meds[n] = {"rxcui": code, "ingredients": ings}
         ingredients |= set(ings)
         print(f"  {'✓' if ings else '?'} {n} -> {', '.join(ings) or 'not found'}")
         time.sleep(0.1)
 
     print(f"{len(ingredients)} ingredients; downloading FDA label sections from openFDA")
-    labels = {}
+    labels = dict(previous.get("ingredients") or {})
     for ing in sorted(ingredients):
         lab = label(ing, sections)
         if lab:
@@ -145,13 +187,14 @@ def main() -> None:
         print(f"  {'✓' if lab else '–'} {ing}" + (f" ({lab['title']}, {lab['effective_time']})" if lab else ": no label"))
         time.sleep(0.3)
 
-    out = (profile.path / cfg["labels"]).resolve()
+    out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps({
         "source": "openFDA drug label API, https://open.fda.gov/apis/drug/label/ ; ingredients from RxNorm, "
                   "https://lhncbc.nlm.nih.gov/RxNav/",
         "downloaded": date.today().isoformat(),
         "sections": sections,
         "medications": meds,
+        "rxcui": by_code,
         "ingredients": labels,
     }, indent=1, sort_keys=True) + "\n")
     print(f"Wrote {out} ({len(labels)} labels). Restart the pipeline to use them.")

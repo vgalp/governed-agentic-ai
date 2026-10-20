@@ -6,7 +6,7 @@
 #   ./scripts/dev.sh down      stop the Python services and the Docker containers
 #   ./scripts/dev.sh restart   stop, then start
 #   ./scripts/dev.sh status    show what is running, and warn about duplicate processes
-#   ./scripts/dev.sh logs [knowledge-base|records|changes|medication-review|api|planner|executor]   follow logs
+#   ./scripts/dev.sh logs [knowledge-base|records|changes|medication-review|fhir-records|api|planner|executor]   follow logs
 #
 #   PROFILE=<name> ./scripts/dev.sh start   run another profile (default: adhd-assistant)
 #
@@ -29,6 +29,7 @@ SERVICES=(
   "records|-m mcp_servers\.records|mcp_servers.records.server|8101"
   "changes|-m mcp_servers\.changes|mcp_servers.changes.server|8102"
   "medication-review|-m mcp_servers\.medication_review|mcp_servers.medication_review.server|8103"
+  "fhir-records|-m mcp_servers\.fhir_records|mcp_servers.fhir_records.server|8104"
   "api|-m uvicorn api\.main|uvicorn api.main:app --port 8000|8000"
   "planner|-m agents\.planner|agents.planner|"
   "executor|-m agents\.executor|agents.executor|"

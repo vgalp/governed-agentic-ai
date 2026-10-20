@@ -1,0 +1,93 @@
+# Layer 1 guardrails for the clinic staff assistant (same format as adhd-assistant).
+# Staff may READ what records say, including medication names and strengths
+# ("Acetaminophen 325 MG"). What is blocked is a DECISION: dosing, changing,
+# diagnosing, or treating.
+
+patterns:
+  # Someone may be at risk. Staff relay this ("the patient said she wants to die").
+  crisis:
+    terms: ['suicid\w*', 'kill (himself|herself|themselves|myself)', 'end (his|her|their|my) life',
+            'wants? to die', 'hurt(ing)? (himself|herself|themselves|myself)', 'self[- ]?harm\w*',
+            'overdosed?', took too many]
+
+  medication:
+    terms: ['medications?', 'medicines?', meds, 'prescriptions?', 'pills?', 'tablets?', 'doses?',
+            dosage, 'mg', insulin, 'antibiotics?', 'opioids?']
+
+  # Words that turn a medication question into a request for a decision.
+  dose_decision:
+    regex: '\b(how (much|many)|should (i|we|she|he|they)|can (i|we) (give|increase|decrease|double|stop|switch)|is it (ok|okay|safe) to|safe to (take|give|combine)|increase|decrease|double|adjust|taper|switch (to|from)|stop (taking|giving)|combine)\b'
+
+  diagnosis_request:
+    regex: '\b(diagnos\w*|what (does|could|might) (he|she|they|the patient) have|does (he|she|they|the patient) have|is (it|this) (an? )?(infection|cancer|covid|diabetes|serious)|interpret (the|these|this) (results?|labs?))\b'
+
+  # In a model ANSWER: advice to change or give a medication.
+  output_advice:
+    regex: '\b(you (should|could|can) (give|increase|decrease|double|stop|switch|adjust)|increase the dose|decrease the dose|double the dose|stop (taking|giving)|switch (him|her|them|the patient) to|recommend (giving|starting|stopping))\b'
+
+  # In a model ANSWER: wording that suggests a diagnosis.
+  diagnosis_affirm:
+    regex:
+      - '\b((he|she|they|the patient) (likely|probably|may|might|could) (have|has)'
+      - '|((sounds|looks|seems) like (he|she|they|the patient) (has|have)|(sounds|looks|seems) like'
+      - '|consistent with|suggestive of|signs? of) [^.]{0,40}?'
+      - '(infection|disease|disorder|syndrome|itis|osis|emia|cancer|tumou?r|diabetes|pneumonia|flu|covid|fracture|depression|anxiety)'
+      - '|(likely|probable) diagnosis)'
+
+  # A question that only asks what the record already lists ("what medications is
+  # X taking", "list the current medications for X").
+  record_lookup:
+    regex:
+      - '\b(what|which|list|show|tell me|look up|find|read)\b.{0,40}\b(medications?|medicines?|meds|prescriptions?)\b'
+      - '|\b(medications?|medicines?|meds|prescriptions?)\b.{0,30}\b(on file|on (his|her|their) list|listed|recorded)\b'
+      - '|\bcurrent (medications?|medicines?|meds|prescriptions?)\b'
+
+  # Words that turn a question into a request for a decision. Any of these cancels
+  # the lookup exemption below, so the classifier's flag stands.
+  decision_words:
+    regex: '\b(should|need to|have to|ought|must|increase|decrease|raise|lower|double|halve|adjust|titrate|taper|switch|change|stop|start|prescribe|recommend|suggest|give|add|combine|mix|safe|okay|ok|best|better|instead|alternative|how (much|many)|treat|treatment|for (his|her|their|my) [a-z]+)\b'
+
+  # A request for a medication review (ADR 017): where the FDA labels mention one of the patient's
+  # medications with another. Answered by the medication_review tool (clinicians only), quoting the
+  # labels; it decides nothing. A request that also asks for a decision ("should we stop...") is
+  # still blocked by the medication rule above, and decision words cancel the exemption below.
+  interaction_review:
+    regex:
+      - '\b(medication|drug) review\b'
+      - '|\binteractions?\b.{0,60}\b(medications?|meds|medicines?|drugs)\b'
+      - '|\b(medications?|meds|medicines?|drugs)\b.{0,60}\binteract(ions?|s)?\b'
+
+  # A request to change an appointment. Starts a proposal that a person must approve
+  # (actions.yaml); the assistant never changes anything itself.
+  reschedule_request:
+    regex:
+      - '\b(reschedul\w*|move|postpone|push back|bring forward|change the (date|time) of)\b.{0,80}\b(appointments?|visit|booking)\b'
+      - '|\b(appointments?|visit|booking)\b.{0,80}\b(reschedul\w*|moved?|postponed?)\b'
+
+  # In a model ANSWER: an invented fill-in field such as [METFORMIN_DOSE]. Real masking
+  # tokens always end in a number ([PERSON_1]), so a bracketed name without one was made up.
+  fabricated_placeholder:
+    regex: '\[[A-Z][A-Z_]*[A-Z]\]'
+
+input:
+  - {category: crisis, reason: patient safety risk in input, any: [crisis]}
+  - {category: medication, reason: medication decision requested, all: [medication], any: [dose_decision]}
+  - {category: diagnosis, reason: diagnosis requested, any: [diagnosis_request]}
+
+output:
+  - {category: ungrounded, reason: model answer invents a fill-in field, any: [fabricated_placeholder]}
+  - {category: medication, reason: model answer gives medication advice, scope: sentence,
+     all: [medication], any: [output_advice]}
+  - {category: diagnosis, reason: model answer suggests a diagnosis, any: [diagnosis_affirm]}
+
+# Narrow cases where an INPUT classifier flag is overridden. The safety classifier flags
+# plain record lookups ("What medications is X taking?") as medical advice; measured on
+# the development probe (eval/classifier_probe.py). A lookup with no decision words is
+# allowed through; the answer is still checked by the output rules, the grounding check
+# and the classifier. Crisis flags can never be overridden (the loader refuses it).
+classifier_exemptions:
+  - {category: medical_advice, reason: record lookup with no decision words,
+     any: [record_lookup], none: [decision_words]}
+  # A medication review: answered with FDA label text only, by a tool only clinicians have (ADR 017).
+  - {category: medical_advice, reason: medication review with no decision words (FDA label text only),
+     any: [interaction_review], none: [decision_words]}

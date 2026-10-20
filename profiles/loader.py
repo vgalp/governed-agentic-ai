@@ -24,6 +24,8 @@ from profiles.changes import Change
 from profiles.changes import parse as parse_change
 from profiles.records_map import MappingError, RecordsMap
 from profiles.records_map import parse as parse_records_map
+from profiles.fhir_map import FhirMap, FhirMappingError
+from profiles.fhir_map import parse as parse_fhir_map
 
 PROFILES_DIR = Path(__file__).resolve().parent
 DEFAULT_PROFILE = "adhd-assistant"
@@ -169,6 +171,7 @@ class Profile:
     actions: dict[str, Action] = field(default_factory=dict)   # changes the assistant may propose (need approval)
     records_map: RecordsMap | None = None       # how records_db becomes records (records.yaml)
     outside: OutsideConfig | None = None        # governed MCP endpoint for outside assistants (outside.yaml)
+    fhir_map: FhirMap | None = None             # how a FHIR server's resources become records (ADR 013)
 
     def response(self, category: str, role: str | None = None) -> str:
         """The fixed reply for a category, worded for the role if the role has its own."""
@@ -241,7 +244,7 @@ INPUT_ENGINES = ("llamaguard", "guard_model")
 
 def _guard_settings(c: dict, name: str, where: str) -> dict:
     """The input_engine settings of a profile's classifier block. With guard_model, the policy
-    paragraph is the profile's own guard_policy, or its entry in classifier/policies.yaml."""
+    paragraph is the profile's own guard_policy, or its entry (or guard_policy_of's) in classifier/policies.yaml."""
     engine = c.get("input_engine", "llamaguard")
     if engine not in INPUT_ENGINES:
         raise ProfileError(f"{where}: classifier input_engine must be one of {', '.join(INPUT_ENGINES)}")
@@ -249,7 +252,8 @@ def _guard_settings(c: dict, name: str, where: str) -> dict:
         return {"input_engine": engine}
     policy = c.get("guard_policy")
     if not policy and GUARD_POLICIES.exists():
-        policy = (yaml.safe_load(GUARD_POLICIES.read_text(encoding="utf-8")) or {}).get(name)
+        # guard_policy_of: use another profile's paragraph (the same organization, another setup).
+        policy = (yaml.safe_load(GUARD_POLICIES.read_text(encoding="utf-8")) or {}).get(c.get("guard_policy_of", name))
     if not policy:
         raise ProfileError(f"{where}: classifier input_engine guard_model needs a guard_policy paragraph "
                            f"(in the classifier block, or under '{name}' in classifier/policies.yaml)")
@@ -789,6 +793,19 @@ def load_profile_from(path: Path) -> Profile:
         except MappingError as e:
             raise ProfileError(str(e)) from e
 
+    # fhir.yaml: records from a FHIR server instead of a database (ADR 013). Same data classes.
+    fhir_map = None
+    if p.get("fhir"):
+        if not roles:
+            raise ProfileError(f"{where}: fhir needs roles (who may see which data class)")
+        if p.get("records_map"):
+            raise ProfileError(f"{where}: use records_map or fhir, not both (one records source)")
+        try:
+            fhir_map = parse_fhir_map(_yaml(_file(path, p["fhir"], where)), f"{path.name}/{p['fhir']}",
+                                      set(data_classes))
+        except FhirMappingError as e:
+            raise ProfileError(str(e)) from e
+
     actions = {}
     if p.get("actions"):
         actions = _actions(_yaml(_file(path, p["actions"], where)), f"{path.name}/{p['actions']}",
@@ -842,6 +859,7 @@ def load_profile_from(path: Path) -> Profile:
         source_id_pattern=source_id_pattern,
         actions=actions,
         records_map=records_map,
+        fhir_map=fhir_map,
         outside=outside,
     )
 

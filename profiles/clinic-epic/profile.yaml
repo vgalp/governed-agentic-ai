@@ -1,0 +1,87 @@
+# Profile: the clinic staff assistant, with its patient records in an Epic system (ADR 013).
+# The same assistant, roles, guardrails and medication review as clinic-assistant; only the records
+# source differs: Epic's FHIR R4 API instead of a local database. Read-only.
+# For development: Epic's public sandbox (fhir.epic.com) and its test patients. Not a real hospital,
+# not real patients. Needs EPIC_CLIENT_ID and EPIC_PRIVATE_KEY_PATH in .env (docs/epic/README.md).
+# Select with PROFILE=clinic-epic.
+
+name: clinic-epic
+title: Clinic staff assistant (Epic sandbox)
+description: >-
+  Helps clinic staff find information in patient records held in Epic, and clinic policies,
+  with a source for every answer. Read-only. Not a clinical decision tool.
+version: 1
+
+models:
+  local:
+    provider: ollama
+    name: mistral
+    location: local
+    temperature: 0
+  openai:
+    provider: openai
+    name: gpt-4.1-mini
+    location: external
+    api_key_env: OPENAI_API_KEY
+  gemini:
+    provider: gemini
+    name: gemini-2.5-flash
+    location: external
+    api_key_env: GEMINI_API_KEY
+  claude:
+    provider: anthropic
+    name: claude-haiku-4-5-20251001
+    location: external
+    api_key_env: ANTHROPIC_API_KEY
+
+routing:
+  local_model: local
+  external_model: claude
+  fallback: [openai, gemini]
+  external_allowed: true
+  send_external_when: no_personal_info
+  never_external_entities: [PERSON, PHONE_NUMBER, EMAIL_ADDRESS, LOCATION, US_SSN, CREDIT_CARD]
+  never_external_labels: [patient_record]  # record data never leaves the clinic
+  local_input: original
+
+tools: tools.yaml
+fhir: fhir.yaml                            # records come from Epic (FHIR R4), read-only
+roles: roles.yaml
+cite_sources: true
+# Epic resource IDs are letters and digits; the last 8 are kept (fhir.yaml source_id).
+source_id_pattern: '\b(kb-cl-\d{3}|pt-[A-Za-z0-9]{8}|med-[A-Za-z0-9]{8}|enc-[A-Za-z0-9]{8}|lbl-[0-9a-f]{8})\b'
+
+prompt: prompt.md
+responses: responses.yaml
+rules: rules.yaml
+
+classifier:
+  model: llama-guard3:8b
+  policy: classifier_policy.md
+  categories:
+    - {code: S1, name: patient safety risk, category: crisis}
+    - {code: S2, name: clinical decision, category: medical_advice}
+  default_category: medical_advice
+  input_engine: guard_model
+  guard_model: guard-modernbert-v4
+  guard_policy_of: clinic-assistant         # the same clinic: the same decisions and crisis rules
+  decision_category: medical_advice
+
+privacy:
+  entities: [PERSON, PHONE_NUMBER, EMAIL_ADDRESS, LOCATION, US_SSN, CREDIT_CARD, IP_ADDRESS]
+  allow_list: []
+
+knowledge_base: data/knowledge_base.json
+
+agents:
+  planner:
+    tools: [search_knowledge, search_records, medication_review]
+
+# Epic sandbox test patients (fhir.epic.com documentation lists them), found by name and date of
+# birth. Shown as example buttons.
+examples:
+  - What is our cancellation policy?
+  - What medications is Camila Lopez (born 1987-09-12) taking?
+  - Check Camila Lopez's medications for interactions, born 1987-09-12.
+  - When was Camila Lopez (born 1987-09-12) last seen?
+  - How much insulin should we give Camila Lopez?

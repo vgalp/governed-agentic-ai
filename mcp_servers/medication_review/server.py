@@ -1,4 +1,4 @@
-"""MCP server: medication review for a clinician, from FDA drug labels (ADR 017).
+"""MCP server: medication review for a clinician, from FDA drug labels (ADR 017; Epic records: ADR 013).
 
 For the patient named in the question it reads the current medication list from the records
 database, and for every pair of those medications looks for where one drug's FDA label
@@ -30,7 +30,6 @@ import yaml
 from mcp.server.fastmcp import FastMCP
 
 from profiles.loader import Profile, load_profile
-from profiles.records_map import RecordType
 
 DAILYMED = "https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid={set_id}"
 QUOTE_CHARS = 320                      # around the mention; the full section is on DailyMed
@@ -39,30 +38,40 @@ QUOTE_CHARS = 320                      # around the mention; the full section is
 @dataclass(frozen=True)
 class Config:
     labels: dict                       # the downloaded label file (see scripts/fetch_drug_labels.py)
-    medications: RecordType            # the record type holding current medications (records.yaml)
-    drug_column: str                   # the column with the medication's name
+    medications: object                # the record type holding current medications (records.yaml or fhir.yaml)
+    drug_column: str | None            # database source: the column with the medication's name
     sections: tuple[str, ...]          # label sections searched, in order
     class_terms: dict[str, list[str]]  # FDA drug class -> other words labels use for it
     data_class: str                    # the data class of everything returned
+    source: str = "database"           # database (records.yaml) or fhir (fhir.yaml, ADR 013)
 
 
 def load_config(profile: Profile) -> Config | None:
     path = profile.path / "medication_review.yaml"
-    if not path.exists() or profile.records_map is None:
+    if not path.exists():
         return None
     raw = yaml.safe_load(path.read_text()) or {}
-    rtype = next((r for r in profile.records_map.records if r.name == raw["medications"]), None)
+    source = raw.get("source", "database")
+    mapping = profile.fhir_map if source == "fhir" else profile.records_map
+    if mapping is None:
+        return None
+    rtype = next((r for r in mapping.records if r.name == raw["medications"]), None)
     if rtype is None:
-        raise ValueError(f"{path.name}: medications '{raw['medications']}' is not a record type in records.yaml")
+        raise ValueError(f"{path.name}: medications '{raw['medications']}' is not a record type in "
+                         f"{'fhir.yaml' if source == 'fhir' else 'records.yaml'}")
     labels_path = (profile.path / raw["labels"]).resolve()
     labels = json.loads(labels_path.read_text()) if labels_path.exists() else {}
-    return Config(labels, rtype, raw["drug_column"], tuple(raw.get("sections", ["contraindications", "drug_interactions"])),
-                  {k.lower(): v for k, v in (raw.get("class_terms") or {}).items()}, rtype.data_class)
+    return Config(labels, rtype, raw.get("drug_column"),
+                  tuple(raw.get("sections", ["contraindications", "drug_interactions"])),
+                  {k.lower(): v for k, v in (raw.get("class_terms") or {}).items()}, rtype.data_class, source)
 
 
-def ingredients_of(description: str, labels: dict) -> list[str]:
-    """The ingredients of a medication: from the RxNorm lookup saved with the labels, else any
-    ingredient with a label whose name appears in the description."""
+def ingredients_of(description: str, labels: dict, rxcui: str | None = None) -> list[str]:
+    """The ingredients of a medication: from its RxNorm code, or the RxNorm lookup saved with the
+    labels, else any ingredient with a label whose name appears in the description."""
+    by_code = (labels.get("rxcui") or {}).get(rxcui or "")
+    if by_code:
+        return [i.lower() for i in by_code]
     known = (labels.get("medications") or {}).get(description)
     if known and known.get("ingredients"):
         return [i.lower() for i in known["ingredients"]]
@@ -145,30 +154,79 @@ def current_medications(db: sqlite3.Connection, cfg: Config, sid: str) -> list[d
     return [{"id": i, "name": n} for n, i in meds.items()]
 
 
-def review(db_path: Path | None, profile: Profile, cfg: Config | None, query: str, allowed_classes: list[str]) -> dict:
-    """The review for the patient named in the query: results to cite, and the answer text."""
-    if cfg is None or db_path is None or not Path(db_path).exists():
+RXNORM = "rxnorm"
+
+
+def _rxcui(concept: dict | None) -> str | None:
+    for c in (concept or {}).get("coding") or []:
+        if RXNORM in (c.get("system") or "").lower() and c.get("code"):
+            return str(c["code"])
+    return None
+
+
+def fhir_medications(client, m, r, query: str) -> tuple[str | None, list[dict] | str]:
+    """(patient name, medications) from a FHIR server, or (None, why not). Each medication has its
+    name and, when the record codes it, its RxNorm code."""
+    from mcp_servers.fhir_records.server import find_patient as find_fhir_patient
+    from profiles.fhir_map import human_name
+    patient, why = find_fhir_patient(client, m, query)
+    if patient is None:
+        return None, {"more than one": "several", "birthdate": "birthdate"}.get(why, "none")
+    meds = {}
+    for res in client.search(r.resource, {r.link: patient["id"], **dict(r.search), "_count": r.limit}, r.limit):
+        concept = res.get("medicationCodeableConcept")
+        if not concept and (res.get("medicationReference") or {}).get("reference", "").startswith("Medication/"):
+            ref = res["medicationReference"]
+            try:
+                concept = client.read("Medication", ref["reference"].split("/", 1)[1]).get("code")
+            except Exception:                 # the display name is still enough to list it
+                concept = {"text": ref.get("display")}
+        name = (concept or {}).get("text") or (res.get("medicationReference") or {}).get("display") or \
+            next((c.get("display") for c in (concept or {}).get("coding") or [] if c.get("display")), None)
+        if name:
+            meds.setdefault(name, {"id": r.source_id.make(res.get("id", "")), "name": name, "rxcui": _rxcui(concept)})
+    return human_name(patient), list(meds.values())
+
+
+def review(db_path: Path | None, profile: Profile, cfg: Config | None, query: str, allowed_classes: list[str],
+           client=None) -> dict:
+    """The review for the patient named in the query: results to cite, and the answer text.
+    Medications come from the records database, or with a FHIR source (ADR 013) from `client`."""
+    fhir = cfg is not None and cfg.source == "fhir"
+    if cfg is None or (fhir and client is None) or (not fhir and (db_path is None or not Path(db_path).exists())):
         return {"results": [], "note": "medication review is not set up for this profile"}
     if cfg.data_class not in allowed_classes:
         return {"results": [], "note": "this role may not see medication records"}
     if not cfg.labels.get("ingredients"):
         return {"results": [], "answer": "Medication review is not available: the FDA label file has not been "
                                          "downloaded yet (scripts/fetch_drug_labels.py)."}
-    db = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
-    try:
-        sid, name = find_patient(db, profile, query)
-        if sid is None:
-            msg = ("More than one patient matches; please use the full name." if name == "several"
-                   else "I couldn't find that patient. Please use the full name as it appears in the record.")
-            return {"results": [], "answer": msg}
-        meds = current_medications(db, cfg, sid)
-    finally:
-        db.close()
+    not_found = {"several": "More than one patient matches; please use the full name.",
+                 "none": "I couldn't find that patient. Please use the full name as it appears in the record."}
+    if fhir:
+        from fhir.client import FhirError
+        try:
+            name, meds = fhir_medications(client, profile.fhir_map, cfg.medications, query)
+        except FhirError as e:
+            return {"results": [], "answer": f"The record system did not answer, so nothing was reviewed: {e}"}
+        if name is None:
+            if meds == "birthdate":
+                from mcp_servers.fhir_records.server import NEED_BIRTHDATE
+                return {"results": [], "answer": NEED_BIRTHDATE}
+            return {"results": [], "answer": not_found[meds]}
+    else:
+        db = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
+        try:
+            sid, name = find_patient(db, profile, query)
+            if sid is None:
+                return {"results": [], "answer": not_found["several" if name == "several" else "none"]}
+            meds = current_medications(db, cfg, sid)
+        finally:
+            db.close()
     dc = [cfg.data_class]
     results = [{"id": m["id"], "title": "Current medication", "text": f"{name}: {m['name']}", "data_classes": dc}
                for m in meds]
     for m in meds:
-        m["ingredients"] = ingredients_of(m["name"], cfg.labels)
+        m["ingredients"] = ingredients_of(m["name"], cfg.labels, m.get("rxcui"))
 
     findings, unchecked, labels_used = [], set(), {}
     for i, a in enumerate(meds):
@@ -238,13 +296,20 @@ def _answer(name, meds, findings, labels_used, unchecked, no_ingredients, cfg: C
 if __name__ == "__main__":
     PROFILE = load_profile()
     CONFIG = load_config(PROFILE)
+    CLIENT = None
+    if CONFIG is not None and CONFIG.source == "fhir":
+        from fhir.client import FhirError, client_from_settings
+        try:
+            CLIENT = client_from_settings(PROFILE.fhir_map.server)
+        except FhirError as e:
+            print(f"Medication review: the FHIR server is not set up yet ({e})")
     mcp = FastMCP("medication_review", host="127.0.0.1", port=8103)
 
     @mcp.tool()
     def medication_review(query: str, allowed_classes: list[str]) -> dict:
         """For the patient named in the question: their current medications, and where the FDA
         labels mention one of them with another, quoted with the source. For a clinician's review."""
-        return review(PROFILE.records_db, PROFILE, CONFIG, query, allowed_classes)
+        return review(PROFILE.records_db, PROFILE, CONFIG, query, allowed_classes, CLIENT)
 
     if CONFIG is None:
         print(f"Medication review for profile {PROFILE.name}: not set up (no medication_review.yaml)")

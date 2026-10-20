@@ -362,7 +362,7 @@ while True:
     #    A tool with `when` (tools.yaml) is called only for questions matching its pattern, and then
     #    alone; the others are called for every other question.
     to_call, triggered = tools_to_call(PROFILE, AGENT_NAME, req["message"])
-    notes, tools_used, direct, denied_for_role = [], [], None, None
+    notes, tools_used, direct, denied_for_role, tool_notes = [], [], None, None, []
     for tool in to_call:
         receives_ids = tool in PROFILE.identifier_tools
         agent = PROFILE.tools[tool].lane         # where its steps show in the trace (tools.yaml)
@@ -386,6 +386,8 @@ while True:
         if found:
             tools_used.append(tool)          # only tools that returned data count for routing
             notes += found
+        elif result.get("note") and tool in PROFILE.identifier_tools:
+            tool_notes.append(f"{tool}: {result['note']}")      # e.g. "give the date of birth too"
         if PROFILE.tools[tool].answer == "direct" and result.get("answer"):
             direct = (tool, result["answer"], found)
 
@@ -424,6 +426,8 @@ while True:
     else:
         notes_text = "\n".join(f"- {n['title']}: {n['text']}" for n in notes)
     notes_text = notes_text or "- (no approved notes found)"
+    if tool_notes:
+        notes_text += "\n\nWhy some records were not found (tell the person): " + "; ".join(tool_notes)
     if access and access["restricted"]:
         hidden = "; ".join(PROFILE.data_classes[c] for c in access["restricted"])
         notes_text += (f"\n\nAccess: the person asking is {access['role_title']}. Their role may not see: "
