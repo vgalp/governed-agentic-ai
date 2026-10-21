@@ -87,6 +87,11 @@ offers a public developer portal with a sandbox (fhir.epic.com).
   because the Epic app reads Patient, MedicationRequest, Medication and Encounter only.
 - The medication review (ADR 017) reads MedicationRequest, follows a medicationReference to its
   Medication for the RxNorm code, and finds ingredients by code.
+- Medication lists (`medication_list`, clinicians and nurses): a question such as "what medications is
+  Camila Lopez taking?" is answered with the record's own medication lines, cited, and no model
+  (`answer: direct`, ADR 017). In the first Epic run the model's draft named the medication with its
+  recorded reason, and the output classifier withheld it as advice; a list needs no model wording, and
+  record text adds no advice. Front desk and compliance get the `tool_denied` reply.
 - The Epic app: Backend Systems audience, those four resource types, read and search only. Its public
   key is published as a JWK Set (`docs/epic/jwks.json`); the private key stays outside the repository.
 - Tests: `tests/test_fhir.py`, against a fake FHIR server with invented resources (no network).

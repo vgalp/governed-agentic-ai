@@ -143,6 +143,8 @@ def main() -> None:
                     help="FHIR profiles: a test patient whose medications to cover (repeat for several)")
     args = ap.parse_args()
     import os
+    from scripts.epic_check import load_env          # EPIC_CLIENT_ID etc., as dev.sh does
+    load_env(Path(__file__).resolve().parent.parent / ".env")
     profile = load_profile(args.profile or os.environ.get("PROFILE") or "clinic-assistant")
     cfg_path = profile.path / "medication_review.yaml"
     cfg = yaml.safe_load(cfg_path.read_text())

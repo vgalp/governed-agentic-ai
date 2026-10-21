@@ -75,7 +75,7 @@ knowledge_base: data/knowledge_base.json
 
 agents:
   planner:
-    tools: [search_knowledge, search_records, medication_review]
+    tools: [search_knowledge, search_records, medication_review, medication_list]   # review before list
 
 # Epic sandbox test patients (fhir.epic.com documentation lists them), found by name and date of
 # birth. Shown as example buttons.

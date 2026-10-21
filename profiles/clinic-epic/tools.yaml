@@ -27,3 +27,17 @@ medication_review:
   role_filtered: true
   when: interaction_review
   answer: direct
+
+# The patient's current medications as the record lists them (ADR 013, 017): a list question is
+# answered with the record's own lines, cited, and no model, so no AI wording can turn a list into
+# advice. Clinicians and nurses; others get the tool_denied reply.
+medication_list:
+  description: Medication list (the patient's current medications as the record lists them)
+  server: http://127.0.0.1:8103/mcp
+  kind: read
+  data_label: patient_record
+  lane: records
+  receives_identifiers: true
+  role_filtered: true
+  when: record_lookup                      # rules.yaml: "what medications is ... taking", "current medications"
+  answer: direct

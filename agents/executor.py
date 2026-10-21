@@ -145,13 +145,19 @@ def expire_overdue() -> None:
 
 def catch_up(consumer: Consumer) -> None:
     """Read every approval event already in Kafka, without acting on it."""
-    parts = []
+    # Start from the oldest event Kafka still keeps (the low watermark), not offset 0: once the
+    # topic's retention has deleted old events, offset 0 no longer exists, and waiting for events up
+    # to the end would never finish when every event is gone.
+    parts, ends, done = [], {}, set()
     for topic in actions.APPROVAL_TOPICS:
         meta = consumer.list_topics(topic, timeout=10).topics[topic]
-        parts += [TopicPartition(topic, p, 0) for p in meta.partitions]
+        for p in meta.partitions:
+            low, high = consumer.get_watermark_offsets(TopicPartition(topic, p), timeout=10)
+            parts.append(TopicPartition(topic, p, low))
+            ends[(topic, p)] = high
+            if high <= low:
+                done.add((topic, p))          # nothing left to read
     consumer.assign(parts)
-    ends = {(tp.topic, tp.partition): consumer.get_watermark_offsets(tp, timeout=10)[1] for tp in parts}
-    done = {k for k, end in ends.items() if end == 0}
     while len(done) < len(ends):
         msg = consumer.poll(1.0)
         if msg is None or msg.error():

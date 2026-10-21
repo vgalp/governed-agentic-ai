@@ -188,6 +188,36 @@ def fhir_medications(client, m, r, query: str) -> tuple[str | None, list[dict] |
     return human_name(patient), list(meds.values())
 
 
+def medication_list(db_path: Path | None, profile: Profile, cfg: Config | None, query: str,
+                    allowed_classes: list[str], client=None) -> dict:
+    """The patient's current medications exactly as the record lists them, cited, with no model: a
+    list question needs no AI to answer, and record text cannot add advice. The records come from the
+    profile's records source (database or FHIR), asked for the medications data class only."""
+    if cfg is None:
+        return {"results": [], "note": "medication list is not set up for this profile"}
+    if cfg.data_class not in allowed_classes:
+        return {"results": [], "note": "this role may not see medication records"}
+    if cfg.source == "fhir":
+        if client is None:
+            return {"results": [], "answer": "The record system is not set up, so nothing was looked up."}
+        from mcp_servers.fhir_records.server import search as records_search
+        out = records_search(client, profile.fhir_map, query, [cfg.data_class])
+    else:
+        from mcp_servers.records.server import search as db_search
+        out = db_search(db_path, query, [cfg.data_class], profile.records_map)
+    found = [r for r in out.get("results", []) if cfg.data_class in r.get("data_classes", [])]
+    if not found:
+        note = out.get("note")
+        return {"results": [], "answer": (note[0].upper() + note[1:] + ".") if note else
+                "The record lists no current medications for that patient."}
+    source = "the record system" if cfg.source == "fhir" else "the clinic's records"
+    lines = [f"Current medications, as written in {source}:", ""]
+    lines += [f"- {r['text']} [{r['id']}]" for r in found]
+    lines += ["", "This is the record's list, not a recommendation; decisions about medications stay with the "
+                  "patient's clinician."]
+    return {"results": found, "answer": "\n".join(lines)}
+
+
 def review(db_path: Path | None, profile: Profile, cfg: Config | None, query: str, allowed_classes: list[str],
            client=None) -> dict:
     """The review for the patient named in the query: results to cite, and the answer text.
@@ -310,6 +340,12 @@ if __name__ == "__main__":
         """For the patient named in the question: their current medications, and where the FDA
         labels mention one of them with another, quoted with the source. For a clinician's review."""
         return review(PROFILE.records_db, PROFILE, CONFIG, query, allowed_classes, CLIENT)
+
+    @mcp.tool(name="medication_list")
+    def medication_list_tool(query: str, allowed_classes: list[str]) -> dict:
+        """For the patient named in the question: their current medications exactly as the record
+        lists them, with source IDs. No model, no recommendation."""
+        return medication_list(PROFILE.records_db, PROFILE, CONFIG, query, allowed_classes, CLIENT)
 
     if CONFIG is None:
         print(f"Medication review for profile {PROFILE.name}: not set up (no medication_review.yaml)")

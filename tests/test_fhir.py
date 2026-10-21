@@ -314,8 +314,10 @@ def test_the_epic_profile_is_the_clinic_with_another_records_source():
         assert (EPIC.path / f).read_text() == (CLINIC.path / f).read_text(), f"{f} drifted from clinic-assistant"
     assert EPIC.classifier.guard_policy == CLINIC.classifier.guard_policy
     assert EPIC.records_map is None and EPIC.fhir_map is not None and not EPIC.actions
-    assert EPIC.roles["clinician"].tools == ("search_knowledge", "search_records", "medication_review")
-    assert "medication_review" not in EPIC.roles["nurse"].tools
+    assert EPIC.roles["clinician"].tools == ("search_knowledge", "search_records", "medication_review",
+                                             "medication_list")
+    assert "medication_review" not in EPIC.roles["nurse"].tools and "medication_list" in EPIC.roles["nurse"].tools
+    assert "medication_list" not in EPIC.roles["front_desk"].tools
     assert EPIC.tools["search_records"].server.endswith(":8104/mcp")
     assert "client_id" not in (EPIC.path / "fhir.yaml").read_text().replace("client_id_env", "")
 
@@ -356,3 +358,23 @@ def test_a_missing_permission_is_named():
             return r
     with pytest.raises(FhirError, match="insufficient_scope.*APIs"):
         FhirClient(BASE, session=NoScope()).search("MedicationRequest", {"patient": "x"})
+
+
+
+def test_a_medication_list_is_the_record_s_own_lines_with_no_model(tmp_path):
+    from agents.tool_choice import tool_denied_reply, tools_to_call
+    from mcp_servers.medication_review.server import medication_list
+    p = EPIC.__class__(**{**EPIC.__dict__, "fhir_map": mapping()})
+    q = "What medications is Nora Testwell (born 1987-09-12) taking?"
+    assert tools_to_call(p, "planner", q)[0] == ["medication_list"]
+    server = FakeServer()
+    out = medication_list(None, p, load_config(p), q, ["medications"], FhirClient(BASE, session=server))
+    a = out["answer"]
+    assert "warfarin 5 MG tablet, ordered 2026-02-01. Reason recorded: Atrial fibrillation. [med-qwarf001]" in a
+    assert "not a recommendation" in a and all(r["data_classes"] == ["medications"] for r in out["results"])
+    assert {u for u, _, _ in server.gets} == {"/Patient", "/MedicationRequest"}     # nothing else is fetched
+    cited = {m.group(0) for m in p.source_id_pattern.finditer(a)}
+    assert cited <= {r["id"] for r in out["results"]}
+    assert "not available to your role (Front desk and billing)" in tool_denied_reply(p, "medication_list", "front_desk")
+    assert "date of birth" in medication_list(None, p, load_config(p), "What medications is Nora Testwell taking?",
+                                              ["medications"], FhirClient(BASE, session=FakeServer()))["answer"]

@@ -388,7 +388,7 @@ while True:
             notes += found
         elif result.get("note") and tool in PROFILE.identifier_tools:
             tool_notes.append(f"{tool}: {result['note']}")      # e.g. "give the date of birth too"
-        if PROFILE.tools[tool].answer == "direct" and result.get("answer"):
+        if PROFILE.tools[tool].answer == "direct" and result.get("answer") and direct is None:
             direct = (tool, result["answer"], found)
 
     # 3a. The question was for a tool this role may not use: say so, and who may (no model).
