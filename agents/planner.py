@@ -260,10 +260,10 @@ while True:
             in_check = GuardrailDecision(True, in_check.category,
                                          f"{in_check.reason}; overridden: {override}")
         elif in_check.allowed:
-            trace.step("intake", "input_classifier", "pass", "Classifier: safe")
+            trace.step("intake", "input_classifier", "pass", f"{GUARDS['question']}: safe")
         else:
             trace.step("intake", "input_classifier", "block",
-                       f"Blocked by the classifier: {in_check.category}", category=in_check.category)
+                       f"Blocked by {GUARDS['question']}: {in_check.category}", category=in_check.category)
     else:
         trace.step("intake", "input_rules", "block", f"Blocked by rule: {in_check.reason}",
                    category=in_check.category)
@@ -272,7 +272,7 @@ while True:
         crisis = crisis_over_rule(in_check, req["message"], PROFILE)
         if crisis:
             trace.step("intake", "input_classifier", "block",
-                       f"Classifier: crisis, which takes priority over the rule's {in_check.category}",
+                       f"{GUARDS['question']}: crisis, which takes priority over the rule's {in_check.category}",
                        category="crisis")
             in_check, in_layer = crisis, "classifier"
     # 1a. Input agent (optional): extra views of the question (its parts, a plain rewrite), each checked
@@ -302,7 +302,8 @@ while True:
     audit_guardrail(request_id, "input", in_layer, in_check, role, override)
     if not in_check.allowed:
         publish_response(request_id, reply(in_check, role), [],
-                         {"stage": "input", "layer": in_layer, "category": in_check.category})
+                         {"stage": "input", "layer": in_layer, "category": in_check.category,
+                          **({"engine": GUARDS["question"]} if in_layer == "classifier" else {})})
         trace.step("intake", "reply", "info", f"Fixed {in_check.category} reply sent; nothing reached the model")
         consumer.commit(message=msg)
         print(f"Blocked at input by {in_layer} ({in_check.category}): {request_id}")
@@ -515,11 +516,12 @@ while True:
         out_check = classifier_check(req["message"], restored_answer, PROFILE)
         out_layer = "classifier"
         trace.step("answer", "output_classifier", "pass" if out_check.allowed else "block",
-                   "Classifier: safe" if out_check.allowed else f"Blocked by the classifier: {out_check.category}")
+                   f"{GUARDS['answer']}: safe" if out_check.allowed else f"Blocked by {GUARDS['answer']}: {out_check.category}")
     audit_guardrail(request_id, "output", out_layer, out_check, role)
     if not out_check.allowed:
         publish_response(request_id, reply(out_check, role), [],
-                         {"stage": "output", "layer": out_layer, "category": out_check.category},
+                         {"stage": "output", "layer": out_layer, "category": out_check.category,
+                          **({"engine": GUARDS["answer"]} if out_layer == "classifier" else {})},
                          route_info, access)
         trace.step("answer", "reply", "info", f"Answer withheld; fixed {out_check.category} reply sent")
         consumer.commit(message=msg)

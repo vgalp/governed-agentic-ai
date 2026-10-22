@@ -239,6 +239,8 @@ const LAYER_WORDS = {rules: "clinic safety rules", classifier: "AI safety classi
                      roles: "role check", policy: "policy engine"};
 const FRIENDLY = [
   [/^No input rule matched$/, "Safety rules: nothing found"],
+  [/^guard-[\w.-]+: safe$/, "Our trained safety model: safe"],
+  [/^llama-guard[\w.:-]*: safe$/, "AI safety classifier: safe"],
   [/^Classifier: safe$/, "AI safety classifier: safe"],
   [/^No output rule matched$/, "Answer rules: nothing found"],
   [/^Question received \((\d+) characters, not shown\)( from role .*)?$/, "Message received$2"],

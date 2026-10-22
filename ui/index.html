@@ -96,7 +96,7 @@ function meta(div, data, seconds) {
     followApproval(div, badge, data.approval.approval_id);
   } else if (g) {
     badge.className = "badge block";
-    badge.textContent = `BLOCKED · ${g.stage} · ${g.layer || "rules"} · ${g.category}`;
+    badge.textContent = `BLOCKED · ${g.stage} · ${g.layer || "rules"}${g.engine ? " (" + g.engine + ")" : ""} · ${g.category}`;
   } else {
     badge.className = "badge ok";
     badge.textContent = "ANSWERED";
