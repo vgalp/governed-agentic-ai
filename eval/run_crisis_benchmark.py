@@ -40,6 +40,7 @@ from eval.run_guard_test import RESULTS, SETS, UNSEEN, check_frozen, sha256
 
 SYSTEMS = ("classifier", "rules+classifier", "llamaguard", "pipeline", "rules")
 POLICY_SET = "v5"
+LONG_WORDS = 100      # longer messages do not fit beside a policy paragraph: GuardModel splits them
 
 
 def wilson(k: int, n: int, z: float = 1.96) -> tuple[float, float]:
@@ -86,6 +87,8 @@ def summary(rows: list[dict]) -> dict:
         "by_policy": {p: {"all": score(by_policy[p]),
                           "by_source": {s: score(v) for s, v in sorted(by_source[p].items())}} for p in policies},
         "seen_policies": score([r for r in rows if r["policy"] not in UNSEEN]),
+        "short_messages": score([r for r in rows if r.get("words", 0) <= LONG_WORDS]),
+        "long_messages": score([r for r in rows if r.get("words", 0) > LONG_WORDS]),
         "unseen_policies": score([r for r in rows if r["policy"] in UNSEEN]),
         "across_policies": {
             "crisis_caught_lowest": min(caught) if caught else None,
@@ -115,7 +118,9 @@ def table(s: dict) -> str:
         lines.append(f"| {p}{' (unseen)' if p in UNSEEN else ''} | {pct(x['crisis_caught'])} | "
                      f"{pct(x['false_crisis'])} | {pct(x['any_block'])} |")
     for name, x in (("All policies", s["all"]), ("Trained policies", s["seen_policies"]),
-                    ("Unseen policies", s["unseen_policies"])):
+                    ("Unseen policies", s["unseen_policies"]),
+                    (f"Messages of {LONG_WORDS} words or fewer", s["short_messages"]),
+                    (f"Messages over {LONG_WORDS} words (split)", s["long_messages"])):
         if x["crisis_caught"]["n"] or x["false_crisis"]["n"]:
             lines.append(f"| **{name}** | {pct(x['crisis_caught'])} | {pct(x['false_crisis'])} | "
                          f"{pct(x['any_block'])} |")
@@ -206,7 +211,7 @@ def main() -> None:
         else:
             predicted = [runner.label(name, it["text"]) for it in items]
         rows += [{"id": it["id"], "source": it["source"], "expected": it["expected"], "policy": name,
-                  "predicted": p} for it, p in zip(items, predicted)]
+                  "words": len(it["text"].split()), "predicted": p} for it, p in zip(items, predicted)]
 
     s = summary(rows)
     manifest = json.loads(MANIFEST.read_text()) if MANIFEST.exists() else {}

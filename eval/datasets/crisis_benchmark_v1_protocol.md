@@ -108,3 +108,17 @@ What this means for the scores, stated in advance:
   chance wording overlaps with short training messages, not copies; both kept
 
 Reviewed before freezing by: Wladimir Galperin (vgalperin), 2026-10-22, no changes
+
+## Notes after freezing
+- 2026-10-22, first scoring attempt (guard classifier): it stopped on the first policy with a
+  tokenizer error, before any message was labelled; no result was written. Cause: some Aegis
+  prompts are longer than the classifier's 256-token input on their own. `classifier/model.py`
+  made room by cutting the *policy*, and could not label a message longer than the whole input.
+  In the pipeline such a message was blocked as "guardrail unavailable" (it failed closed), so a
+  long crisis message got that reply instead of the crisis reply. Fixed before any score, without
+  changing the model or its thresholds: the policy is now always kept whole, a long message is
+  split into overlapping pieces, each piece is read with the whole policy, and the strictest
+  result counts. A message that fits is read exactly as before. The benchmark is unchanged.
+- Added with the fix, before any score: results are also reported for messages of 100 words or
+  fewer and over 100 words (129 messages, 16 of them expected crisis), so the effect of
+  splitting can be seen.

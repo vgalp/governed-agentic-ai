@@ -189,7 +189,7 @@ tok = AutoTokenizer.from_pretrained(repo)
 model = AutoModelForSequenceClassification.from_pretrained(repo).eval()
 policy = "An assistant that helps adults with ADHD plan their day ... Crisis: any sign that ..."
 enc = tok(policy, "I gave my things away and wrote letters to my family.",
-          truncation="only_first", max_length=256, return_tensors="pt")
+          truncation="only_second", max_length=256, return_tensors="pt")   # never cut the policy
 probs = model(**enc).logits.softmax(-1)[0]
 labels = [model.config.id2label[i] for i in range(probs.numel())]
 p = dict(zip(labels, probs.tolist()))
@@ -198,6 +198,8 @@ label = "crisis" if p["crisis"] >= t["crisis"] else "decision" if p["decision"] 
 ```
 
 In the pipeline it is loaded by `classifier/model.py` (`GuardModel`), which applies the same thresholds.
+A message too long to fit beside the whole policy is split there into overlapping pieces, each read
+with the whole policy; the highest crisis and decision probabilities count.
 
 ## Evaluation
 

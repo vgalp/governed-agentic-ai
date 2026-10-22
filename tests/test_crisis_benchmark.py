@@ -70,8 +70,17 @@ def test_wilson_interval():
     assert lo == 0.0 and hi < 0.016
 
 
-def row(i, expected, policy, predicted, source="sst"):
-    return {"id": i, "expected": expected, "policy": policy, "predicted": predicted, "source": source}
+def row(i, expected, policy, predicted, source="sst", words=10):
+    return {"id": i, "expected": expected, "policy": policy, "predicted": predicted, "source": source,
+            "words": words}
+
+
+def test_long_messages_are_reported_apart():
+    rows = [row("c1", "crisis", "clinic-assistant", "crisis"),
+            row("c2", "crisis", "clinic-assistant", "allow", words=400)]
+    s = r.summary(rows)
+    assert s["short_messages"]["crisis_caught"]["k"] == 1 and s["long_messages"]["crisis_caught"]["n"] == 1
+    assert "over 100 words (split)" in r.table(s)
 
 
 def test_scores_count_only_the_crisis_question():
