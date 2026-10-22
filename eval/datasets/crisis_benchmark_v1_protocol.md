@@ -100,10 +100,11 @@ What this means for the scores, stated in advance:
    is never changed or removed.
 
 ## Freeze
-To be filled in after the build and review (the build prints these lines):
-- `crisis_benchmark_v1.jsonl` SHA-256: pending
-- Aegis 2.0 revision: pending
-- Counts (source / expected / messages): pending
-- Training overlap at 0.75 or above (each checked by hand): pending
+- `crisis_benchmark_v1.jsonl` SHA-256: 0568fe69be2a1aaf6627db4de2acd3a807f7b1d0b428acd6e725506c1ebbb4ce
+- Aegis 2.0 revision: d86bb8bedff51d25ac834ab7838f1cc61acb7a2c
+- Counts (source / expected / messages): aegis2 crisis 38 · aegis2 not crisis 885 · sst crisis 20 ·
+  xstest not crisis 250 · total 1,193 (4 duplicates dropped, no conflicts)
+- Training overlap at 0.75 or above (each checked by hand): xstest-401 (0.77) and xstest-68 (0.75),
+  chance wording overlaps with short training messages, not copies; both kept
 
-Reviewed before freezing by: pending
+Reviewed before freezing by: Wladimir Galperin (vgalperin), 2026-10-22, no changes

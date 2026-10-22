@@ -1,0 +1,63 @@
+{
+  "benchmark": "crisis_benchmark_v1.jsonl",
+  "built": "2026-10-22",
+  "benchmark_sha256": "0568fe69be2a1aaf6627db4de2acd3a807f7b1d0b428acd6e725506c1ebbb4ce",
+  "sources": {
+    "aegis2": {
+      "name": "Aegis AI Content Safety Dataset 2.0 (NVIDIA), test split",
+      "repo": "nvidia/Aegis-AI-Content-Safety-Dataset-2.0",
+      "file": "test.json",
+      "revision": "d86bb8bedff51d25ac834ab7838f1cc61acb7a2c",
+      "licence": "CC BY 4.0",
+      "url": "https://huggingface.co/datasets/nvidia/Aegis-AI-Content-Safety-Dataset-2.0",
+      "citation": "Ghosh et al., AEGIS2.0: A Diverse AI Safety Dataset and Risks Taxonomy for Alignment of LLM Guardrails, NAACL 2025.",
+      "labels_by": "human annotators (prompt labels); prompts written by people (Anthropic HH-RLHF red-teaming, DAN, AI-assisted red-teaming)",
+      "sha256": "b0a6d602260524866053cb34105194f074f2c2906e3691b68d43b9e6e9318f35"
+    },
+    "sst": {
+      "name": "SimpleSafetyTests",
+      "repo": "bertiev/SimpleSafetyTests",
+      "file": "SimpleSafetyTests - test cases.csv",
+      "revision": "d7aee9a9422a5a5488f478fd79c2479c891c0f3b",
+      "sha256": "6d95a1301e0d0f3a3c4cf5392f4afff11ad6e3066f95d23aaa138d44aedf986c",
+      "licence": "CC BY 4.0",
+      "url": "https://github.com/bertiev/SimpleSafetyTests",
+      "citation": "Vidgen et al., SimpleSafetyTests: a Test Suite for Identifying Critical Safety Risks in Large Language Models, 2023 (arXiv:2311.08370).",
+      "labels_by": "the authors (handcrafted prompts, each written for one harm area)"
+    },
+    "xstest": {
+      "name": "XSTest",
+      "repo": "paul-rottger/xstest",
+      "file": "xstest_prompts.csv",
+      "revision": "d7bb5bd738c1fcbc36edd83d5e7d1b71a3e2d84d",
+      "sha256": "11783fb294ed017473ee53c207d71f2161c7672c8d0b037501e78387f801cb5a",
+      "licence": "CC BY 4.0",
+      "url": "https://github.com/paul-rottger/xstest",
+      "citation": "Röttger et al., XSTest: A Test Suite for Identifying Exaggerated Safety Behaviours in Large Language Models, NAACL 2024.",
+      "labels_by": "the authors (handcrafted safe prompts and unsafe contrasts)"
+    }
+  },
+  "counts": {
+    "aegis2 crisis": 38,
+    "aegis2 not_crisis": 885,
+    "sst crisis": 20,
+    "xstest not_crisis": 250
+  },
+  "dropped": {
+    "duplicate": 4
+  },
+  "training_overlap": {
+    "training_messages_compared": 4208,
+    "threshold": 0.75,
+    "too_close": [
+      {
+        "id": "xstest-401",
+        "similarity": 0.77
+      },
+      {
+        "id": "xstest-68",
+        "similarity": 0.75
+      }
+    ]
+  }
+}
