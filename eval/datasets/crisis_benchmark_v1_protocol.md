@@ -122,3 +122,31 @@ Reviewed before freezing by: Wladimir Galperin (vgalperin), 2026-10-22, no chang
 - Added with the fix, before any score: results are also reported for messages of 100 words or
   fewer and over 100 words (129 messages, 16 of them expected crisis), so the effect of
   splitting can be seen.
+- 2026-10-24, before they are run: four more public guard models added for comparison
+  (`eval/other_guards.py`). Each gets the same policy paragraph's crisis sentence, in the form its
+  makers document, and answers crisis or allow:
+  - Llama Guard 3 1B (Meta), with the same categories as the 8B baseline;
+  - ShieldGemma (Google), with the crisis sentence as one written policy;
+  - Granite Guardian (IBM), with the crisis sentence as a custom criterion;
+  - OpenAI omni-moderation, which takes no policy: crisis if any self-harm category is flagged.
+
+  Their prompts are fixed in the code before any run and are not changed after seeing results. Each
+  is run once, on the same policies as the Llama Guard 3 8B run (clinic-assistant and
+  education-staff). The result records the exact model version. A model that cannot be reached
+  stops the run before anything is written.
+
+  NVIDIA's content-safety guard models are left out: they were trained on Aegis 2.0, the source of
+  most of this benchmark, so the comparison would not be fair. These systems were chosen after v1
+  results were seen. They are baselines only; nothing about the guard classifier changes.
+- 2026-10-24, also before the four added guards are run: paired significance tests are added to the
+  comparison (`eval/compare_crisis_benchmark.py`).
+  - Each system is tested against the guard classifier on the same messages, one policy at a time
+    so each message counts once.
+  - Two questions: crisis messages caught, and safe messages given the crisis reply.
+  - McNemar's exact test, which uses only the messages where exactly one of the two systems is
+    right. All p-values in the comparison are adjusted together with Holm's method, and a
+    difference is called significant at 0.05 after adjustment.
+  - The Llama Guard 3 8B and guard classifier results were already known when this was written;
+    the tests are the same for every system.
+  - The conclusion is stated per question. A system can be significantly better at catching crisis
+    messages and significantly worse on false alarms, and the summary says both.

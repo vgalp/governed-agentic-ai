@@ -17,6 +17,13 @@ Systems:
   llamaguard        Llama Guard 3 8B with categories built from the same policy paragraph
   pipeline          rules, then Llama Guard as configured in production (see run_guard_baselines.py)
   rules             the rules alone (allows everything for profiles without rules)
+  llamaguard-1b, shieldgemma, granite-guardian, openai-moderation
+                    other public guard models, given the same policy's crisis wording
+                    (eval/other_guards.py; --guard-model picks the size, e.g. shieldgemma:2b).
+                    They answer crisis or allow only, so "blocked at all" equals crisis for them.
+
+    uv run python -m eval.run_crisis_benchmark --system shieldgemma --policies clinic-assistant,education-staff
+    uv run python -m eval.run_crisis_benchmark --system openai-moderation          # OPENAI_API_KEY; free
 
 Rules: the benchmark must be frozen (its SHA-256 in the protocol); one run per system and release
 (the result file is never overwritten); nothing here may be used for training, thresholds or rules.
@@ -38,7 +45,9 @@ import yaml
 from eval.build_crisis_benchmark import BENCHMARK, MANIFEST, PROTOCOL, frozen_hash, sha256_bytes
 from eval.run_guard_test import RESULTS, SETS, UNSEEN, check_frozen, sha256
 
-SYSTEMS = ("classifier", "rules+classifier", "llamaguard", "pipeline", "rules")
+SYSTEMS = ("classifier", "rules+classifier", "llamaguard", "pipeline", "rules",
+           "llamaguard-1b", "shieldgemma", "granite-guardian", "openai-moderation")
+OTHER = SYSTEMS[5:]
 POLICY_SET = "v5"
 LONG_WORDS = 100      # longer messages do not fit beside a policy paragraph: GuardModel splits them
 
@@ -182,6 +191,7 @@ def main() -> None:
     ap.add_argument("--system", choices=SYSTEMS, default="classifier")
     ap.add_argument("--model", default="guard-modernbert-v4", help="classifier systems: folder under models/")
     ap.add_argument("--policies", default=None, help="comma-separated policy names (default: all seven)")
+    ap.add_argument("--guard-model", default=None, help="other guards: the model tag (default in other_guards.py)")
     args = ap.parse_args()
     bench_hash = check_benchmark()
     spec = SETS[POLICY_SET]
@@ -195,6 +205,12 @@ def main() -> None:
 
     if args.system == "classifier":
         runner = Classifier(args.model)
+    elif args.system in OTHER:
+        from eval.other_guards import GuardError, OtherGuard
+        try:
+            runner = OtherGuard(args.system, args.guard_model)
+        except GuardError as e:
+            sys.exit(f"{args.system}: {e}")
     else:
         from eval.run_guard_baselines import Runner
         runner = Runner(args.system, policies, args.model)
@@ -208,6 +224,15 @@ def main() -> None:
         print(f"{name}: {len(items)} messages")
         if isinstance(runner, Classifier):
             predicted = runner.labels(paragraph, [it["text"] for it in items])
+        elif args.system in OTHER:
+            try:
+                predicted = []
+                for i, it in enumerate(items, 1):
+                    predicted.append(runner.label(paragraph, it["text"]))
+                    if i % 100 == 0:
+                        print(f"  {i}/{len(items)}")
+            except GuardError as e:
+                sys.exit(f"{args.system} stopped on {it['id']}: {e}. Nothing was written; the run can be repeated.")
         else:
             predicted = [runner.label(name, it["text"]) for it in items]
         rows += [{"id": it["id"], "source": it["source"], "expected": it["expected"], "policy": name,
@@ -216,14 +241,16 @@ def main() -> None:
     s = summary(rows)
     manifest = json.loads(MANIFEST.read_text()) if MANIFEST.exists() else {}
     run = {"system": args.system, "config": runner.config_id(),
-           "model": args.model if "classifier" in args.system else None,
+           "model": args.model if "classifier" in args.system else
+           (f"{runner.model} ({runner.version})" if args.system in OTHER else None),
            "benchmark_sha256": bench_hash, "policies_sha256": spec["sha256"][spec["policies"].name],
            "sources": {k: {"revision": v.get("revision"), "sha256": v.get("sha256")}
                        for k, v in (manifest.get("sources") or {}).items()},
            "run_at": datetime.now().isoformat(timespec="seconds"), "summary": s, "rows": rows}
     RESULTS.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(run, indent=1, ensure_ascii=False))
-    who = f"{args.system}, {args.model}" if "classifier" in args.system else args.system
+    who = (f"{args.system}, {args.model}" if "classifier" in args.system else
+           f"{args.system}, {run['model']}" if args.system in OTHER else args.system)
     out.with_suffix(".md").write_text(
         f"# Independent crisis benchmark v1: {who}\n\nConfig `{run['config']}`, run {run['run_at']}, benchmark "
         f"`{bench_hash[:12]}`. Messages and labels from Aegis 2.0, SimpleSafetyTests and XSTest "
