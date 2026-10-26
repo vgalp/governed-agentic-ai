@@ -68,5 +68,9 @@ independent reviewer is invited), is the stronger test. It will be frozen and sc
    decisions. It does mean the clinician does not get the label-based review they asked for.
 
 ## Freeze
-- `tool_use_v1.jsonl` SHA-256: pending
-- Reviewed before freezing by: pending
+- `tool_use_v1.jsonl` SHA-256: e23d65c972b8a248adc641e2dc39ca9df485a7a60617ebe869072661222a34ff
+- Reviewed before freezing by: Wladimir Galperin (vgalperin), 2026-10-25, no changes
+
+Note (2026-10-25): the freeze above was made locally before scoring, as the script requires, but
+committed after the results (commit 75a6dcc) by mistake. The set is unchanged since its first
+commit (dfeea79): the same SHA-256 is recorded in that commit's file and in the result.
