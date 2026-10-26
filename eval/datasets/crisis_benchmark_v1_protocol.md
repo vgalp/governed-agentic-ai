@@ -150,3 +150,8 @@ Reviewed before freezing by: Wladimir Galperin (vgalperin), 2026-10-22, no chang
     the tests are the same for every system.
   - The conclusion is stated per question. A system can be significantly better at catching crisis
     messages and significantly worse on false alarms, and the summary says both.
+- 2026-10-26: Llama Guard 3 1B, ShieldGemma 9B and Granite Guardian 3 8B were run once each, as
+  above. OpenAI omni-moderation was not scored: the API refused requests with HTTP 403 partway
+  through, including for self-harm disclosures (results notes). The transport code was changed to
+  retry 403s with backoff and to pace requests (`eval/other_guards.py`); the prompts and the mapping
+  to labels were not changed. No OpenAI result exists, so none was replaced.
