@@ -68,9 +68,20 @@ is a person, not an answer. The dashboard always shows the breakdown next to the
 has to accept that definition on trust.
 
 This is *operational* success: the request reached a sound end. Whether an answer was *correct*
-needs labelled questions and is measured offline (the frozen test sets, the crisis benchmark). The
-reviewer's tool-use accuracy is likewise an offline measure, left for a labelled set of questions
-with the tool each should use.
+needs labelled questions and is measured offline (the frozen test sets, the crisis benchmark).
+
+**Tool-use accuracy** (offline, `eval/run_tool_use.py`).
+- The planner's routing, now in one function (`agents/tool_choice.py` `route`), is scored on a
+  frozen, labelled set of 61 staff questions from three profiles (`eval/datasets/tool_use_v1.jsonl`
+  and its protocol). Routing means: a change request, then a triggered tool, else the general tools.
+- Two things are scored for each question: is the destination right, and is the role's permission
+  right? Results come by kind (plain, paraphrase, near miss, role) and by destination (precision
+  and recall), with missed routings and false triggers counted apart.
+- Routing is decided by patterns, so no model is involved. One run per routing configuration, so
+  patterns cannot be tuned against the set and scored again as new.
+- The set was drafted by the same author as the patterns; the protocol says so. An independent set
+  (v1b), written by someone who has not read the patterns, is the stronger test.
+- The dashboard shows the latest result, marked out of date if the routing has changed since.
 
 **Toxicity** (`guardrails/toxicity.py`).
 - Detoxify's "original" model (`unitary/toxic-bert`, published by the Detoxify authors, Apache 2.0)
@@ -106,5 +117,5 @@ with the tool each should use.
   milliseconds on a laptop GPU. Its model, about 440 MB, downloads from Hugging Face the first
   time the planner starts.
 - **Prices.** Prices are per profile, so two offices with different contracts see their own costs.
-- **Credit.** The reviewer's suggestions shaped this ADR. Tool-use accuracy is recorded here as
-  the next measure, once a labelled set of questions exists.
+- **Credit.** The reviewer's suggestions shaped this ADR: all five measures she named are here,
+  four live and one offline.

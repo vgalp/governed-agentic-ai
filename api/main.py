@@ -127,6 +127,22 @@ def audit_verify(scope: Literal["profile", "all"] = "profile"):
     }
 
 
+@app.get("/evaluations")
+def evaluations():
+    """The latest offline tool-use accuracy result (eval/run_tool_use.py), for the dashboard. Marked
+    out of date when the routing patterns or code have changed since it was scored."""
+    from eval import run_tool_use as tu
+    runs = sorted(tu.RESULTS.glob("tool_use_v1_*.json"), key=lambda p: p.stat().st_mtime)
+    if not runs:
+        return {"tool_use": None}
+    d = json.loads(runs[-1].read_text())
+    profiles = sorted({r["profile"] for r in d["rows"]})
+    return {"tool_use": {"set": d["set"], "config": d["config"], "run_at": d["run_at"],
+                         "both": d["summary"]["all"]["both"], "routing": d["summary"]["all"]["routing"],
+                         "missed": d["summary"]["missed"], "false_trigger": d["summary"]["false_trigger"],
+                         "current": d["config"] == tu.config_id(profiles)}}
+
+
 @app.get("/profile")
 def profile_info():
     """What the chat page needs: the active profile, its roles and example questions."""

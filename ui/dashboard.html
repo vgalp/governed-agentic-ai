@@ -210,7 +210,9 @@
           reply decided by policy, such as the crisis hand-off) and not withheld, failed or unanswered.
           Iteration cost: model calls per request, including the safety checks. Cost: tokens × each model's
           price in the profile; local models count as $0. Toxicity: Detoxify's model on each answer the model
-          wrote; measured, never used to block. Requests before this was added are not counted.</div>
+          wrote; measured, never used to block. Tool-use accuracy is offline: the latest run of a labelled set
+          of staff questions, scored for the right tool and the role's permission. Requests before this was
+          added are not counted.</div>
       </div>
       <div class="panel" style="margin-top:14px">
         <h2>Recent requests</h2>
@@ -596,7 +598,9 @@ function renderQuality(all) {
   }
   const total = ms.length + noreply;
   if (!total) {
-    $("quality").replaceChildren(el("div", "empty", "Send a message to measure cost and quality."));
+    const [v, k] = toolUseCard();
+    const c = el("div", "counter"); c.append(el("div", "v", v), el("div", "k", k));
+    $("quality").replaceChildren(c, el("div", "empty", "Send a message to measure cost and quality."));
     $("outcomes").replaceChildren();
     return;
   }
@@ -618,12 +622,25 @@ function renderQuality(all) {
     [scored.length ? Math.max(...scored.map(m => m.toxicity)).toFixed(2) : "—",
      scored.length ? `Highest toxicity (${scored.length} answers scored)` : `Toxicity: ${status || "no answers yet"}`],
     [scored.length ? String(scored.filter(m => m.toxicity >= 0.5).length) : "—", "Answers with high toxicity (≥ 0.5)"],
+    toolUseCard(),
   ];
   $("quality").replaceChildren(...cards.map(([v, k]) => {
     const c = el("div", "counter"); c.append(el("div", "v", v), el("div", "k", k)); return c;
   }));
   $("outcomes").replaceChildren(...Object.keys(OUTCOME_TEXT).filter(k => count[k])
     .map(k => el("span", "", `${OUTCOME_TEXT[k]}: ${count[k]}`)));
+}
+
+// Offline: the latest tool-use accuracy run (eval/run_tool_use.py), not live traffic.
+let TOOL_USE = null;
+async function loadEvaluations() {
+  try { TOOL_USE = (await (await fetch("/evaluations")).json()).tool_use; render(); } catch { /* keep the last */ }
+}
+function toolUseCard() {
+  if (!TOOL_USE) return ["—", "Tool-use accuracy: not scored yet (eval/run_tool_use.py)"];
+  const b = TOOL_USE.both;
+  return [`${Math.round(100 * b.rate)}%`, `Tool-use accuracy, offline (${b.k} of ${b.n}, ${TOOL_USE.set.replace(".jsonl", "")})` +
+          `${TOOL_USE.current ? "" : " · out of date: routing changed since"}`];
 }
 
 // --- approvals ---------------------------------------------------------------
@@ -756,7 +773,7 @@ setInterval(render, 1000);        // keeps "running" states and progress fresh
 setInterval(verifyAudit, 15000);
 setInterval(render, 20000);           // so "no reply after 2 min" is counted even when nothing new arrives
 setInterval(loadApprovals, 2000);
-render(); verifyAudit(); loadApprovals();
+render(); verifyAudit(); loadApprovals(); loadEvaluations();
 profileLoaded.finally(connect);     // filter events by profile from the first one
 </script>
 </body>
