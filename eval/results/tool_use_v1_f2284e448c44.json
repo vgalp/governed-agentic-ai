@@ -1,0 +1,1350 @@
+{
+ "set": "tool_use_v1.jsonl",
+ "set_sha256": "e23d65c972b8a248adc641e2dc39ca9df485a7a60617ebe869072661222a34ff",
+ "config": "f2284e448c44",
+ "run_at": "2026-10-25T22:41:14",
+ "summary": {
+  "all": {
+   "routing": {
+    "k": 45,
+    "n": 61,
+    "rate": 0.7377,
+    "ci95": [
+     0.6156,
+     0.8316
+    ]
+   },
+   "permission": {
+    "k": 58,
+    "n": 61,
+    "rate": 0.9508,
+    "ci95": [
+     0.8651,
+     0.9831
+    ]
+   },
+   "both": {
+    "k": 45,
+    "n": 61,
+    "rate": 0.7377,
+    "ci95": [
+     0.6156,
+     0.8316
+    ]
+   }
+  },
+  "by_kind": {
+   "plain": {
+    "routing": {
+     "k": 33,
+     "n": 33,
+     "rate": 1.0,
+     "ci95": [
+      0.8957,
+      1.0
+     ]
+    },
+    "permission": {
+     "k": 33,
+     "n": 33,
+     "rate": 1.0,
+     "ci95": [
+      0.8957,
+      1.0
+     ]
+    },
+    "both": {
+     "k": 33,
+     "n": 33,
+     "rate": 1.0,
+     "ci95": [
+      0.8957,
+      1.0
+     ]
+    }
+   },
+   "paraphrase": {
+    "routing": {
+     "k": 0,
+     "n": 10,
+     "rate": 0.0,
+     "ci95": [
+      0.0,
+      0.2775
+     ]
+    },
+    "permission": {
+     "k": 10,
+     "n": 10,
+     "rate": 1.0,
+     "ci95": [
+      0.7225,
+      1.0
+     ]
+    },
+    "both": {
+     "k": 0,
+     "n": 10,
+     "rate": 0.0,
+     "ci95": [
+      0.0,
+      0.2775
+     ]
+    }
+   },
+   "near_miss": {
+    "routing": {
+     "k": 4,
+     "n": 10,
+     "rate": 0.4,
+     "ci95": [
+      0.1682,
+      0.6873
+     ]
+    },
+    "permission": {
+     "k": 7,
+     "n": 10,
+     "rate": 0.7,
+     "ci95": [
+      0.3968,
+      0.8922
+     ]
+    },
+    "both": {
+     "k": 4,
+     "n": 10,
+     "rate": 0.4,
+     "ci95": [
+      0.1682,
+      0.6873
+     ]
+    }
+   },
+   "role": {
+    "routing": {
+     "k": 8,
+     "n": 8,
+     "rate": 1.0,
+     "ci95": [
+      0.6756,
+      1.0
+     ]
+    },
+    "permission": {
+     "k": 8,
+     "n": 8,
+     "rate": 1.0,
+     "ci95": [
+      0.6756,
+      1.0
+     ]
+    },
+    "both": {
+     "k": 8,
+     "n": 8,
+     "rate": 1.0,
+     "ci95": [
+      0.6756,
+      1.0
+     ]
+    }
+   }
+  },
+  "by_profile": {
+   "clinic-assistant": {
+    "routing": {
+     "k": 24,
+     "n": 33,
+     "rate": 0.7273,
+     "ci95": [
+      0.5578,
+      0.8493
+     ]
+    },
+    "permission": {
+     "k": 32,
+     "n": 33,
+     "rate": 0.9697,
+     "ci95": [
+      0.8468,
+      0.9946
+     ]
+    },
+    "both": {
+     "k": 24,
+     "n": 33,
+     "rate": 0.7273,
+     "ci95": [
+      0.5578,
+      0.8493
+     ]
+    }
+   },
+   "clinic-epic": {
+    "routing": {
+     "k": 8,
+     "n": 11,
+     "rate": 0.7273,
+     "ci95": [
+      0.4343,
+      0.9025
+     ]
+    },
+    "permission": {
+     "k": 10,
+     "n": 11,
+     "rate": 0.9091,
+     "ci95": [
+      0.6226,
+      0.9838
+     ]
+    },
+    "both": {
+     "k": 8,
+     "n": 11,
+     "rate": 0.7273,
+     "ci95": [
+      0.4343,
+      0.9025
+     ]
+    }
+   },
+   "county-benefits": {
+    "routing": {
+     "k": 13,
+     "n": 17,
+     "rate": 0.7647,
+     "ci95": [
+      0.5274,
+      0.9045
+     ]
+    },
+    "permission": {
+     "k": 16,
+     "n": 17,
+     "rate": 0.9412,
+     "ci95": [
+      0.7302,
+      0.9895
+     ]
+    },
+    "both": {
+     "k": 13,
+     "n": 17,
+     "rate": 0.7647,
+     "ci95": [
+      0.5274,
+      0.9045
+     ]
+    }
+   }
+  },
+  "per_path": {
+   "change:release_payment": {
+    "precision": {
+     "k": 6,
+     "n": 8,
+     "rate": 0.75,
+     "ci95": [
+      0.4093,
+      0.9285
+     ]
+    },
+    "recall": {
+     "k": 6,
+     "n": 8,
+     "rate": 0.75,
+     "ci95": [
+      0.4093,
+      0.9285
+     ]
+    }
+   },
+   "change:reschedule_appointment": {
+    "precision": {
+     "k": 5,
+     "n": 7,
+     "rate": 0.7143,
+     "ci95": [
+      0.3589,
+      0.9178
+     ]
+    },
+    "recall": {
+     "k": 5,
+     "n": 7,
+     "rate": 0.7143,
+     "ci95": [
+      0.3589,
+      0.9178
+     ]
+    }
+   },
+   "general": {
+    "precision": {
+     "k": 22,
+     "n": 32,
+     "rate": 0.6875,
+     "ci95": [
+      0.5143,
+      0.8205
+     ]
+    },
+    "recall": {
+     "k": 22,
+     "n": 28,
+     "rate": 0.7857,
+     "ci95": [
+      0.6046,
+      0.8979
+     ]
+    }
+   },
+   "tool:medication_list": {
+    "precision": {
+     "k": 4,
+     "n": 5,
+     "rate": 0.8,
+     "ci95": [
+      0.3755,
+      0.9638
+     ]
+    },
+    "recall": {
+     "k": 4,
+     "n": 6,
+     "rate": 0.6667,
+     "ci95": [
+      0.3,
+      0.9032
+     ]
+    }
+   },
+   "tool:medication_review": {
+    "precision": {
+     "k": 8,
+     "n": 9,
+     "rate": 0.8889,
+     "ci95": [
+      0.565,
+      0.9801
+     ]
+    },
+    "recall": {
+     "k": 8,
+     "n": 12,
+     "rate": 0.6667,
+     "ci95": [
+      0.3906,
+      0.8619
+     ]
+    }
+   }
+  },
+  "confusion": {
+   "change:release_payment -> change:release_payment": 6,
+   "change:release_payment -> general": 2,
+   "change:reschedule_appointment -> change:reschedule_appointment": 5,
+   "change:reschedule_appointment -> general": 2,
+   "general -> change:release_payment": 2,
+   "general -> change:reschedule_appointment": 2,
+   "general -> general": 22,
+   "general -> tool:medication_list": 1,
+   "general -> tool:medication_review": 1,
+   "tool:medication_list -> general": 2,
+   "tool:medication_list -> tool:medication_list": 4,
+   "tool:medication_review -> general": 4,
+   "tool:medication_review -> tool:medication_review": 8
+  },
+  "missed": 10,
+  "false_trigger": 6,
+  "wrong_permission": 0
+ },
+ "rows": [
+  {
+   "id": "tu1-ca-01",
+   "profile": "clinic-assistant",
+   "role": "clinician",
+   "text": "What is our cancellation policy for missed appointments?",
+   "expected_path": "general",
+   "expected_allowed": true,
+   "kind": "plain",
+   "path": "general",
+   "allowed": true,
+   "tools": [
+    "search_knowledge",
+    "search_records"
+   ],
+   "path_ok": true,
+   "allowed_ok": true
+  },
+  {
+   "id": "tu1-ca-02",
+   "profile": "clinic-assistant",
+   "role": "front_desk",
+   "text": "When is Doris Whitfield's next appointment?",
+   "expected_path": "general",
+   "expected_allowed": true,
+   "kind": "plain",
+   "path": "general",
+   "allowed": true,
+   "tools": [
+    "search_knowledge",
+    "search_records"
+   ],
+   "path_ok": true,
+   "allowed_ok": true
+  },
+  {
+   "id": "tu1-ca-03",
+   "profile": "clinic-assistant",
+   "role": "nurse",
+   "text": "What was Harold Brinkley's last visit for?",
+   "expected_path": "general",
+   "expected_allowed": true,
+   "kind": "plain",
+   "path": "general",
+   "allowed": true,
+   "tools": [
+    "search_knowledge",
+    "search_records"
+   ],
+   "path_ok": true,
+   "allowed_ok": true
+  },
+  {
+   "id": "tu1-ca-04",
+   "profile": "clinic-assistant",
+   "role": "front_desk",
+   "text": "Does Lena Okafor have an outstanding balance on her claims?",
+   "expected_path": "general",
+   "expected_allowed": true,
+   "kind": "plain",
+   "path": "general",
+   "allowed": true,
+   "tools": [
+    "search_knowledge",
+    "search_records"
+   ],
+   "path_ok": true,
+   "allowed_ok": true
+  },
+  {
+   "id": "tu1-ca-05",
+   "profile": "clinic-assistant",
+   "role": "compliance",
+   "text": "What does our policy say about sharing records with family members?",
+   "expected_path": "general",
+   "expected_allowed": true,
+   "kind": "plain",
+   "path": "general",
+   "allowed": true,
+   "tools": [
+    "search_knowledge"
+   ],
+   "path_ok": true,
+   "allowed_ok": true
+  },
+  {
+   "id": "tu1-ca-06",
+   "profile": "clinic-assistant",
+   "role": "clinician",
+   "text": "Show me Harold Brinkley's visit history.",
+   "expected_path": "general",
+   "expected_allowed": true,
+   "kind": "plain",
+   "path": "general",
+   "allowed": true,
+   "tools": [
+    "search_knowledge",
+    "search_records"
+   ],
+   "path_ok": true,
+   "allowed_ok": true
+  },
+  {
+   "id": "tu1-ca-07",
+   "profile": "clinic-assistant",
+   "role": "nurse",
+   "text": "What medications is Doris Whitfield currently taking?",
+   "expected_path": "general",
+   "expected_allowed": true,
+   "kind": "plain",
+   "path": "general",
+   "allowed": true,
+   "tools": [
+    "search_knowledge",
+    "search_records"
+   ],
+   "path_ok": true,
+   "allowed_ok": true
+  },
+  {
+   "id": "tu1-ca-08",
+   "profile": "clinic-assistant",
+   "role": "clinician",
+   "text": "List the prescriptions on file for Doris Whitfield.",
+   "expected_path": "general",
+   "expected_allowed": true,
+   "kind": "plain",
+   "path": "general",
+   "allowed": true,
+   "tools": [
+    "search_knowledge",
+    "search_records"
+   ],
+   "path_ok": true,
+   "allowed_ok": true
+  },
+  {
+   "id": "tu1-ca-09",
+   "profile": "clinic-assistant",
+   "role": "front_desk",
+   "text": "What is our parking policy for patients?",
+   "expected_path": "general",
+   "expected_allowed": true,
+   "kind": "plain",
+   "path": "general",
+   "allowed": true,
+   "tools": [
+    "search_knowledge",
+    "search_records"
+   ],
+   "path_ok": true,
+   "allowed_ok": true
+  },
+  {
+   "id": "tu1-ca-10",
+   "profile": "clinic-assistant",
+   "role": "nurse",
+   "text": "What is the phone number for the pharmacy we usually refer to?",
+   "expected_path": "general",
+   "expected_allowed": true,
+   "kind": "plain",
+   "path": "general",
+   "allowed": true,
+   "tools": [
+    "search_knowledge",
+    "search_records"
+   ],
+   "path_ok": true,
+   "allowed_ok": true
+  },
+  {
+   "id": "tu1-ca-11",
+   "profile": "clinic-assistant",
+   "role": "clinician",
+   "text": "Run a medication review for Harold Brinkley.",
+   "expected_path": "tool:medication_review",
+   "expected_allowed": true,
+   "kind": "plain",
+   "path": "tool:medication_review",
+   "allowed": true,
+   "tools": [
+    "medication_review"
+   ],
+   "path_ok": true,
+   "allowed_ok": true
+  },
+  {
+   "id": "tu1-ca-12",
+   "profile": "clinic-assistant",
+   "role": "clinician",
+   "text": "Do any of Doris Whitfield's medications interact with each other?",
+   "expected_path": "tool:medication_review",
+   "expected_allowed": true,
+   "kind": "plain",
+   "path": "tool:medication_review",
+   "allowed": true,
+   "tools": [
+    "medication_review"
+   ],
+   "path_ok": true,
+   "allowed_ok": true
+  },
+  {
+   "id": "tu1-ca-13",
+   "profile": "clinic-assistant",
+   "role": "clinician",
+   "text": "Check Lena Okafor's meds for interactions.",
+   "expected_path": "tool:medication_review",
+   "expected_allowed": true,
+   "kind": "plain",
+   "path": "tool:medication_review",
+   "allowed": true,
+   "tools": [
+    "medication_review"
+   ],
+   "path_ok": true,
+   "allowed_ok": true
+  },
+  {
+   "id": "tu1-ca-14",
+   "profile": "clinic-assistant",
+   "role": "nurse",
+   "text": "Run a drug review for Harold Brinkley.",
+   "expected_path": "tool:medication_review",
+   "expected_allowed": false,
+   "kind": "role",
+   "path": "tool:medication_review",
+   "allowed": false,
+   "tools": [],
+   "path_ok": true,
+   "allowed_ok": true
+  },
+  {
+   "id": "tu1-ca-15",
+   "profile": "clinic-assistant",
+   "role": "front_desk",
+   "text": "Are there interactions between Lena Okafor's medications?",
+   "expected_path": "tool:medication_review",
+   "expected_allowed": false,
+   "kind": "role",
+   "path": "tool:medication_review",
+   "allowed": false,
+   "tools": [],
+   "path_ok": true,
+   "allowed_ok": true
+  },
+  {
+   "id": "tu1-ca-16",
+   "profile": "clinic-assistant",
+   "role": "compliance",
+   "text": "Do Doris Whitfield's medications interact?",
+   "expected_path": "tool:medication_review",
+   "expected_allowed": false,
+   "kind": "role",
+   "path": "tool:medication_review",
+   "allowed": false,
+   "tools": [],
+   "path_ok": true,
+   "allowed_ok": true
+  },
+  {
+   "id": "tu1-ca-17",
+   "profile": "clinic-assistant",
+   "role": "clinician",
+   "text": "Could Harold Brinkley's warfarin and his aspirin cause a problem together?",
+   "expected_path": "tool:medication_review",
+   "expected_allowed": true,
+   "kind": "paraphrase",
+   "path": "general",
+   "allowed": true,
+   "tools": [
+    "search_knowledge",
+    "search_records"
+   ],
+   "path_ok": false,
+   "allowed_ok": true
+  },
+  {
+   "id": "tu1-ca-18",
+   "profile": "clinic-assistant",
+   "role": "clinician",
+   "text": "Is there any drug-drug conflict on Doris Whitfield's list?",
+   "expected_path": "tool:medication_review",
+   "expected_allowed": true,
+   "kind": "paraphrase",
+   "path": "general",
+   "allowed": true,
+   "tools": [
+    "search_knowledge",
+    "search_records"
+   ],
+   "path_ok": false,
+   "allowed_ok": true
+  },
+  {
+   "id": "tu1-ca-19",
+   "profile": "clinic-assistant",
+   "role": "clinician",
+   "text": "Review Harold Brinkley's prescriptions for anything that shouldn't be taken together.",
+   "expected_path": "tool:medication_review",
+   "expected_allowed": true,
+   "kind": "paraphrase",
+   "path": "general",
+   "allowed": true,
+   "tools": [
+    "search_knowledge",
+    "search_records"
+   ],
+   "path_ok": false,
+   "allowed_ok": true
+  },
+  {
+   "id": "tu1-ca-20",
+   "profile": "clinic-assistant",
+   "role": "clinician",
+   "text": "Are Lena Okafor's current medicines safe to combine according to the labels?",
+   "expected_path": "tool:medication_review",
+   "expected_allowed": true,
+   "kind": "paraphrase",
+   "path": "general",
+   "allowed": true,
+   "tools": [
+    "search_knowledge",
+    "search_records"
+   ],
+   "path_ok": false,
+   "allowed_ok": true
+  },
+  {
+   "id": "tu1-ca-21",
+   "profile": "clinic-assistant",
+   "role": "front_desk",
+   "text": "Please move Harold Brinkley's appointment on Friday to next Monday at 10.",
+   "expected_path": "change:reschedule_appointment",
+   "expected_allowed": true,
+   "kind": "plain",
+   "path": "change:reschedule_appointment",
+   "allowed": true,
+   "tools": [
+    "reschedule_appointment"
+   ],
+   "path_ok": true,
+   "allowed_ok": true
+  },
+  {
+   "id": "tu1-ca-22",
+   "profile": "clinic-assistant",
+   "role": "nurse",
+   "text": "Can we reschedule Doris Whitfield's visit to Thursday afternoon?",
+   "expected_path": "change:reschedule_appointment",
+   "expected_allowed": true,
+   "kind": "plain",
+   "path": "change:reschedule_appointment",
+   "allowed": true,
+   "tools": [
+    "reschedule_appointment"
+   ],
+   "path_ok": true,
+   "allowed_ok": true
+  },
+  {
+   "id": "tu1-ca-23",
+   "profile": "clinic-assistant",
+   "role": "clinician",
+   "text": "Push back Lena Okafor's appointment by one week.",
+   "expected_path": "change:reschedule_appointment",
+   "expected_allowed": true,
+   "kind": "plain",
+   "path": "change:reschedule_appointment",
+   "allowed": true,
+   "tools": [
+    "reschedule_appointment"
+   ],
+   "path_ok": true,
+   "allowed_ok": true
+  },
+  {
+   "id": "tu1-ca-24",
+   "profile": "clinic-assistant",
+   "role": "front_desk",
+   "text": "Postpone Lena Okafor's booking until after her surgery.",
+   "expected_path": "change:reschedule_appointment",
+   "expected_allowed": true,
+   "kind": "plain",
+   "path": "change:reschedule_appointment",
+   "allowed": true,
+   "tools": [
+    "reschedule_appointment"
+   ],
+   "path_ok": true,
+   "allowed_ok": true
+  },
+  {
+   "id": "tu1-ca-25",
+   "profile": "clinic-assistant",
+   "role": "compliance",
+   "text": "Reschedule Harold Brinkley's appointment to Tuesday at 9.",
+   "expected_path": "change:reschedule_appointment",
+   "expected_allowed": false,
+   "kind": "role",
+   "path": "change:reschedule_appointment",
+   "allowed": false,
+   "tools": [],
+   "path_ok": true,
+   "allowed_ok": true
+  },
+  {
+   "id": "tu1-ca-26",
+   "profile": "clinic-assistant",
+   "role": "front_desk",
+   "text": "Harold Brinkley needs a different appointment time, can you book him for Wednesday instead?",
+   "expected_path": "change:reschedule_appointment",
+   "expected_allowed": true,
+   "kind": "paraphrase",
+   "path": "general",
+   "allowed": true,
+   "tools": [
+    "search_knowledge",
+    "search_records"
+   ],
+   "path_ok": false,
+   "allowed_ok": true
+  },
+  {
+   "id": "tu1-ca-27",
+   "profile": "clinic-assistant",
+   "role": "nurse",
+   "text": "Doris Whitfield can't make it on the 14th, please switch her to the 16th.",
+   "expected_path": "change:reschedule_appointment",
+   "expected_allowed": true,
+   "kind": "paraphrase",
+   "path": "general",
+   "allowed": true,
+   "tools": [
+    "search_knowledge",
+    "search_records"
+   ],
+   "path_ok": false,
+   "allowed_ok": true
+  },
+  {
+   "id": "tu1-ca-28",
+   "profile": "clinic-assistant",
+   "role": "front_desk",
+   "text": "Cancel Doris Whitfield's appointment.",
+   "expected_path": "general",
+   "expected_allowed": true,
+   "kind": "near_miss",
+   "path": "general",
+   "allowed": true,
+   "tools": [
+    "search_knowledge",
+    "search_records"
+   ],
+   "path_ok": true,
+   "allowed_ok": true
+  },
+  {
+   "id": "tu1-ca-29",
+   "profile": "clinic-assistant",
+   "role": "clinician",
+   "text": "What is the clinic's policy on drug reviews for new patients?",
+   "expected_path": "general",
+   "expected_allowed": true,
+   "kind": "near_miss",
+   "path": "general",
+   "allowed": true,
+   "tools": [
+    "search_knowledge",
+    "search_records"
+   ],
+   "path_ok": true,
+   "allowed_ok": true
+  },
+  {
+   "id": "tu1-ca-30",
+   "profile": "clinic-assistant",
+   "role": "front_desk",
+   "text": "Why did the visit get moved last week?",
+   "expected_path": "general",
+   "expected_allowed": true,
+   "kind": "near_miss",
+   "path": "change:reschedule_appointment",
+   "allowed": true,
+   "tools": [
+    "reschedule_appointment"
+   ],
+   "path_ok": false,
+   "allowed_ok": true
+  },
+  {
+   "id": "tu1-ca-31",
+   "profile": "clinic-assistant",
+   "role": "nurse",
+   "text": "How long does a medication review appointment usually take?",
+   "expected_path": "general",
+   "expected_allowed": true,
+   "kind": "near_miss",
+   "path": "tool:medication_review",
+   "allowed": false,
+   "tools": [],
+   "path_ok": false,
+   "allowed_ok": false
+  },
+  {
+   "id": "tu1-ca-32",
+   "profile": "clinic-assistant",
+   "role": "clinician",
+   "text": "Did Harold Brinkley's interactions with the front desk go well?",
+   "expected_path": "general",
+   "expected_allowed": true,
+   "kind": "near_miss",
+   "path": "general",
+   "allowed": true,
+   "tools": [
+    "search_knowledge",
+    "search_records"
+   ],
+   "path_ok": true,
+   "allowed_ok": true
+  },
+  {
+   "id": "tu1-ca-33",
+   "profile": "clinic-assistant",
+   "role": "front_desk",
+   "text": "What is our policy when a patient asks to move an appointment online?",
+   "expected_path": "general",
+   "expected_allowed": true,
+   "kind": "near_miss",
+   "path": "change:reschedule_appointment",
+   "allowed": true,
+   "tools": [
+    "reschedule_appointment"
+   ],
+   "path_ok": false,
+   "allowed_ok": true
+  },
+  {
+   "id": "tu1-ce-01",
+   "profile": "clinic-epic",
+   "role": "clinician",
+   "text": "What medications is Camila Lopez (born 1987-09-12) taking?",
+   "expected_path": "tool:medication_list",
+   "expected_allowed": true,
+   "kind": "plain",
+   "path": "tool:medication_list",
+   "allowed": true,
+   "tools": [
+    "medication_list"
+   ],
+   "path_ok": true,
+   "allowed_ok": true
+  },
+  {
+   "id": "tu1-ce-02",
+   "profile": "clinic-epic",
+   "role": "nurse",
+   "text": "Show the current medications for Camila Lopez, born 1987-09-12.",
+   "expected_path": "tool:medication_list",
+   "expected_allowed": true,
+   "kind": "plain",
+   "path": "tool:medication_list",
+   "allowed": true,
+   "tools": [
+    "medication_list"
+   ],
+   "path_ok": true,
+   "allowed_ok": true
+  },
+  {
+   "id": "tu1-ce-03",
+   "profile": "clinic-epic",
+   "role": "front_desk",
+   "text": "What medications is Camila Lopez (born 1987-09-12) taking?",
+   "expected_path": "tool:medication_list",
+   "expected_allowed": false,
+   "kind": "role",
+   "path": "tool:medication_list",
+   "allowed": false,
+   "tools": [],
+   "path_ok": true,
+   "allowed_ok": true
+  },
+  {
+   "id": "tu1-ce-04",
+   "profile": "clinic-epic",
+   "role": "clinician",
+   "text": "Run a medication review for Camila Lopez, born 1987-09-12.",
+   "expected_path": "tool:medication_review",
+   "expected_allowed": true,
+   "kind": "plain",
+   "path": "tool:medication_review",
+   "allowed": true,
+   "tools": [
+    "medication_review"
+   ],
+   "path_ok": true,
+   "allowed_ok": true
+  },
+  {
+   "id": "tu1-ce-05",
+   "profile": "clinic-epic",
+   "role": "nurse",
+   "text": "Check Camila Lopez's (1987-09-12) drugs for interactions.",
+   "expected_path": "tool:medication_review",
+   "expected_allowed": false,
+   "kind": "role",
+   "path": "tool:medication_review",
+   "allowed": false,
+   "tools": [],
+   "path_ok": true,
+   "allowed_ok": true
+  },
+  {
+   "id": "tu1-ce-06",
+   "profile": "clinic-epic",
+   "role": "clinician",
+   "text": "When was Camila Lopez (born 1987-09-12) last seen?",
+   "expected_path": "general",
+   "expected_allowed": true,
+   "kind": "plain",
+   "path": "general",
+   "allowed": true,
+   "tools": [
+    "search_knowledge",
+    "search_records"
+   ],
+   "path_ok": true,
+   "allowed_ok": true
+  },
+  {
+   "id": "tu1-ce-07",
+   "profile": "clinic-epic",
+   "role": "front_desk",
+   "text": "What is our cancellation policy?",
+   "expected_path": "general",
+   "expected_allowed": true,
+   "kind": "plain",
+   "path": "general",
+   "allowed": true,
+   "tools": [
+    "search_knowledge",
+    "search_records"
+   ],
+   "path_ok": true,
+   "allowed_ok": true
+  },
+  {
+   "id": "tu1-ce-08",
+   "profile": "clinic-epic",
+   "role": "clinician",
+   "text": "Which prescriptions does Camila Lopez, born 1987-09-12, have on her list?",
+   "expected_path": "tool:medication_list",
+   "expected_allowed": true,
+   "kind": "plain",
+   "path": "tool:medication_list",
+   "allowed": true,
+   "tools": [
+    "medication_list"
+   ],
+   "path_ok": true,
+   "allowed_ok": true
+  },
+  {
+   "id": "tu1-ce-09",
+   "profile": "clinic-epic",
+   "role": "nurse",
+   "text": "Is Camila Lopez (1987-09-12) on anything right now?",
+   "expected_path": "tool:medication_list",
+   "expected_allowed": true,
+   "kind": "paraphrase",
+   "path": "general",
+   "allowed": true,
+   "tools": [
+    "search_knowledge",
+    "search_records"
+   ],
+   "path_ok": false,
+   "allowed_ok": true
+  },
+  {
+   "id": "tu1-ce-10",
+   "profile": "clinic-epic",
+   "role": "clinician",
+   "text": "What is she prescribed at the moment: Camila Lopez, born 1987-09-12?",
+   "expected_path": "tool:medication_list",
+   "expected_allowed": true,
+   "kind": "paraphrase",
+   "path": "general",
+   "allowed": true,
+   "tools": [
+    "search_knowledge",
+    "search_records"
+   ],
+   "path_ok": false,
+   "allowed_ok": true
+  },
+  {
+   "id": "tu1-ce-11",
+   "profile": "clinic-epic",
+   "role": "compliance",
+   "text": "What does our policy say about medication reconciliation?",
+   "expected_path": "general",
+   "expected_allowed": true,
+   "kind": "near_miss",
+   "path": "tool:medication_list",
+   "allowed": false,
+   "tools": [],
+   "path_ok": false,
+   "allowed_ok": false
+  },
+  {
+   "id": "tu1-cb-01",
+   "profile": "county-benefits",
+   "role": "intake_worker",
+   "text": "What documents are still missing for Dana Whitfield?",
+   "expected_path": "general",
+   "expected_allowed": true,
+   "kind": "plain",
+   "path": "general",
+   "allowed": true,
+   "tools": [
+    "search_knowledge",
+    "search_records"
+   ],
+   "path_ok": true,
+   "allowed_ok": true
+  },
+  {
+   "id": "tu1-cb-02",
+   "profile": "county-benefits",
+   "role": "eligibility_worker",
+   "text": "What income has Marcus Lee reported this year?",
+   "expected_path": "general",
+   "expected_allowed": true,
+   "kind": "plain",
+   "path": "general",
+   "allowed": true,
+   "tools": [
+    "search_knowledge",
+    "search_records"
+   ],
+   "path_ok": true,
+   "allowed_ok": true
+  },
+  {
+   "id": "tu1-cb-03",
+   "profile": "county-benefits",
+   "role": "intake_worker",
+   "text": "What is the status of Rosa Diaz's application?",
+   "expected_path": "general",
+   "expected_allowed": true,
+   "kind": "plain",
+   "path": "general",
+   "allowed": true,
+   "tools": [
+    "search_knowledge",
+    "search_records"
+   ],
+   "path_ok": true,
+   "allowed_ok": true
+  },
+  {
+   "id": "tu1-cb-04",
+   "profile": "county-benefits",
+   "role": "intake_worker",
+   "text": "What language does Rosa Diaz prefer?",
+   "expected_path": "general",
+   "expected_allowed": true,
+   "kind": "plain",
+   "path": "general",
+   "allowed": true,
+   "tools": [
+    "search_knowledge",
+    "search_records"
+   ],
+   "path_ok": true,
+   "allowed_ok": true
+  },
+  {
+   "id": "tu1-cb-05",
+   "profile": "county-benefits",
+   "role": "auditor",
+   "text": "What is our policy on how long payments can be held?",
+   "expected_path": "general",
+   "expected_allowed": true,
+   "kind": "plain",
+   "path": "general",
+   "allowed": true,
+   "tools": [
+    "search_knowledge"
+   ],
+   "path_ok": true,
+   "allowed_ok": true
+  },
+  {
+   "id": "tu1-cb-06",
+   "profile": "county-benefits",
+   "role": "eligibility_worker",
+   "text": "Which payments are scheduled for next month for Marcus Lee?",
+   "expected_path": "general",
+   "expected_allowed": true,
+   "kind": "plain",
+   "path": "general",
+   "allowed": true,
+   "tools": [
+    "search_knowledge",
+    "search_records"
+   ],
+   "path_ok": true,
+   "allowed_ok": true
+  },
+  {
+   "id": "tu1-cb-07",
+   "profile": "county-benefits",
+   "role": "supervisor",
+   "text": "Release the held payment for Dana Whitfield.",
+   "expected_path": "change:release_payment",
+   "expected_allowed": true,
+   "kind": "plain",
+   "path": "change:release_payment",
+   "allowed": true,
+   "tools": [
+    "release_payment"
+   ],
+   "path_ok": true,
+   "allowed_ok": true
+  },
+  {
+   "id": "tu1-cb-08",
+   "profile": "county-benefits",
+   "role": "eligibility_worker",
+   "text": "Can you release Marcus Lee's held payment from March?",
+   "expected_path": "change:release_payment",
+   "expected_allowed": true,
+   "kind": "plain",
+   "path": "change:release_payment",
+   "allowed": true,
+   "tools": [
+    "release_payment"
+   ],
+   "path_ok": true,
+   "allowed_ok": true
+  },
+  {
+   "id": "tu1-cb-09",
+   "profile": "county-benefits",
+   "role": "supervisor",
+   "text": "Lift the hold on Rosa Diaz's April payment.",
+   "expected_path": "change:release_payment",
+   "expected_allowed": true,
+   "kind": "plain",
+   "path": "change:release_payment",
+   "allowed": true,
+   "tools": [
+    "release_payment"
+   ],
+   "path_ok": true,
+   "allowed_ok": true
+  },
+  {
+   "id": "tu1-cb-10",
+   "profile": "county-benefits",
+   "role": "supervisor",
+   "text": "Unhold payment pay-1023 for Dana Whitfield.",
+   "expected_path": "change:release_payment",
+   "expected_allowed": true,
+   "kind": "plain",
+   "path": "change:release_payment",
+   "allowed": true,
+   "tools": [
+    "release_payment"
+   ],
+   "path_ok": true,
+   "allowed_ok": true
+  },
+  {
+   "id": "tu1-cb-11",
+   "profile": "county-benefits",
+   "role": "intake_worker",
+   "text": "Please release the payment that's on hold for Rosa Diaz.",
+   "expected_path": "change:release_payment",
+   "expected_allowed": false,
+   "kind": "role",
+   "path": "change:release_payment",
+   "allowed": false,
+   "tools": [],
+   "path_ok": true,
+   "allowed_ok": true
+  },
+  {
+   "id": "tu1-cb-12",
+   "profile": "county-benefits",
+   "role": "auditor",
+   "text": "Release the held payment for Marcus Lee.",
+   "expected_path": "change:release_payment",
+   "expected_allowed": false,
+   "kind": "role",
+   "path": "change:release_payment",
+   "allowed": false,
+   "tools": [],
+   "path_ok": true,
+   "allowed_ok": true
+  },
+  {
+   "id": "tu1-cb-13",
+   "profile": "county-benefits",
+   "role": "eligibility_worker",
+   "text": "Rosa Diaz's payment is stuck, can we get it issued?",
+   "expected_path": "change:release_payment",
+   "expected_allowed": true,
+   "kind": "paraphrase",
+   "path": "general",
+   "allowed": true,
+   "tools": [
+    "search_knowledge",
+    "search_records"
+   ],
+   "path_ok": false,
+   "allowed_ok": true
+  },
+  {
+   "id": "tu1-cb-14",
+   "profile": "county-benefits",
+   "role": "supervisor",
+   "text": "Send out the held benefit check for Dana Whitfield.",
+   "expected_path": "change:release_payment",
+   "expected_allowed": true,
+   "kind": "paraphrase",
+   "path": "general",
+   "allowed": true,
+   "tools": [
+    "search_knowledge",
+    "search_records"
+   ],
+   "path_ok": false,
+   "allowed_ok": true
+  },
+  {
+   "id": "tu1-cb-15",
+   "profile": "county-benefits",
+   "role": "supervisor",
+   "text": "Why was Dana Whitfield's payment held?",
+   "expected_path": "general",
+   "expected_allowed": true,
+   "kind": "near_miss",
+   "path": "general",
+   "allowed": true,
+   "tools": [
+    "search_knowledge",
+    "search_records"
+   ],
+   "path_ok": true,
+   "allowed_ok": true
+  },
+  {
+   "id": "tu1-cb-16",
+   "profile": "county-benefits",
+   "role": "eligibility_worker",
+   "text": "Has the payment for Marcus Lee been released yet?",
+   "expected_path": "general",
+   "expected_allowed": true,
+   "kind": "near_miss",
+   "path": "change:release_payment",
+   "allowed": true,
+   "tools": [
+    "release_payment"
+   ],
+   "path_ok": false,
+   "allowed_ok": true
+  },
+  {
+   "id": "tu1-cb-17",
+   "profile": "county-benefits",
+   "role": "auditor",
+   "text": "How many payments were released last month under our hold policy?",
+   "expected_path": "general",
+   "expected_allowed": true,
+   "kind": "near_miss",
+   "path": "change:release_payment",
+   "allowed": false,
+   "tools": [],
+   "path_ok": false,
+   "allowed_ok": false
+  }
+ ]
+}
