@@ -40,6 +40,8 @@
   .live .dot { background: var(--pass); }
   .pill.ok { color: var(--pass); background: var(--pass-bg); border-color: transparent; }
   .pill.bad { color: var(--block); background: var(--block-bg); border-color: transparent; }
+  .auditnote { margin: -6px 0 12px; padding: 8px 12px; border-radius: 8px; font-size: 13px;
+               background: var(--panel); border: 1px solid var(--line); }
   button { font: inherit; cursor: pointer; }
   .btn { border: 1px solid var(--line); background: var(--panel); color: var(--text);
          border-radius: 8px; padding: 5px 10px; font-size: 12px; }
@@ -82,6 +84,10 @@
   .masked { margin-top: 12px; font: 12px var(--mono); background: var(--bg); border-radius: 8px; padding: 10px;
             white-space: pre-wrap; word-break: break-word; }
   .label { font-size: 12px; color: var(--muted); margin-top: 12px; }
+  .usage { margin-top: 6px; font: 12px var(--mono); background: var(--bg); border-radius: 8px; padding: 10px;
+           white-space: pre-wrap; }
+  .outcomes { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .outcomes span { font-size: 11px; background: var(--bg); border-radius: 999px; padding: 2px 8px; }
   .timeline { margin-top: 6px; font: 12px var(--mono); }
   .timeline div { padding: 3px 0; border-bottom: 1px solid var(--line); display: flex; gap: 10px; }
   .timeline .t { color: var(--muted); min-width: 56px; }
@@ -147,6 +153,7 @@
       <a class="btn" id="openChat" href="/" target="_blank" style="text-decoration:none">Open chat</a>
     </div>
   </header>
+  <div class="auditnote" id="auditNote" hidden></div>
 
   <form class="send" id="sendForm">
     <select id="role" hidden title="Role for test messages (demo only)"><option value="">No role</option></select>
@@ -169,6 +176,8 @@
         <div class="label" id="traceLabel">Decision trace: each agent's steps, live from the agent.trace topic</div>
         <div class="lanes" id="lanes"></div>
         <div class="trace" id="trace"></div>
+        <div class="label" id="usageLabel">Cost and quality for this request (model calls, tokens, cost, toxicity)</div>
+        <div class="usage" id="usage">—</div>
         <div class="label" id="maskedLabel">What the model saw (after masking)</div>
         <div class="masked" id="masked">—</div>
         <div class="label">Audit events for this request</div>
@@ -192,6 +201,16 @@
       <div class="panel" style="margin-top:14px">
         <h2>Totals</h2>
         <div class="counters" id="counters"></div>
+      </div>
+      <div class="panel" style="margin-top:14px">
+        <h2>Cost and quality</h2>
+        <div class="counters" id="quality"></div>
+        <div class="outcomes" id="outcomes"></div>
+        <div class="note">Task success: the request ended as intended (an answer, a proposed change, or a
+          reply decided by policy, such as the crisis hand-off) and not withheld, failed or unanswered.
+          Iteration cost: model calls per request, including the safety checks. Cost: tokens × each model's
+          price in the profile; local models count as $0. Toxicity: Detoxify's model on each answer the model
+          wrote; measured, never used to block. Requests before this was added are not counted.</div>
       </div>
       <div class="panel" style="margin-top:14px">
         <h2>Recent requests</h2>
@@ -391,6 +410,7 @@ function renderSelected() {
       c.append(el("div", "n", `0${i + 1}`), el("div", "name", name), el("div", "state", "waiting"));
       stages.append(c);
     });
+    $("usage").textContent = "—";
     return;
   }
   const {s, mi, outcome, stages: list} = derive(req);
@@ -407,6 +427,7 @@ function renderSelected() {
     stages.append(c);
   });
   $("traceLabel").style.display = isEp(req) ? "none" : "";
+  for (const id of ["usageLabel", "usage"]) $(id).style.display = isEp(req) ? "none" : "";
   $("maskedLabel").textContent = isEp(req) ? "About this request" : "What the model saw (after masking)";
   if (isEp(req)) {
     $("masked").textContent = "An assistant's request through the governed endpoint. Its text is checked and recorded masked; "
@@ -414,6 +435,9 @@ function renderSelected() {
     $("lanes").replaceChildren();
     $("trace").replaceChildren();
   } else {
+    const resp = find(req, "chat.responses");
+    $("usage").textContent = resp && resp.data.metrics ? usageText(resp.data.metrics)
+      : resp ? "Not measured (sent before cost and quality were added)." : "Measured when the request ends.";
     $("masked").textContent = mi ? mi.data.model_input
       : (s.input[0] === "block" ? "Nothing. The request was stopped at the input guardrails, so it never reached masking, tools or the model." : "—");
     renderTrace(req);
@@ -519,6 +543,7 @@ function renderLists() {
   $("counters").replaceChildren(...counters.map(([k, v]) => {
     const c = el("div", "counter"); c.append(el("div", "v", String(v)), el("div", "k", k)); return c;
   }));
+  renderQuality(all);
 
   const list = $("reqs");
   if (!all.length) return;
@@ -537,6 +562,68 @@ function renderLists() {
     row.append(el("span", "t", clock(e.received_at) + "  "), el("span", "topic", e.topic), document.createTextNode(`  ${short(e.data.request_id)}  ${summarize(e).split(" · ").slice(1).join(" · ")}`));
     return row;
   }));
+}
+
+// --- cost and quality (ADR 018) -----------------------------------------------
+const OUTCOME_TEXT = {answered: "answered", proposed: "change proposed", declined: "declined by policy",
+                      withheld: "answer withheld", failed: "failed", noreply: "no reply after 2 min"};
+const SUCCESS = ["answered", "proposed", "declined"];
+const NO_REPLY_S = 120;
+const money = v => v == null ? "no price set" : v === 0 ? "$0" : v < 0.01 ? `$${v.toFixed(5)}` : `$${v.toFixed(3)}`;
+const mean = xs => xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0;
+
+function usageText(m) {
+  const purposes = Object.entries(m.by_purpose || {}).map(([p, n]) => `${p.replace("_", " ")} ${n}`).join(", ");
+  const tox = m.toxicity != null ? `${m.toxicity.toFixed(2)}${m.toxicity >= 0.5 ? " (high: review)" : ""}`
+            : m.toxicity_status ? m.toxicity_status : "no model answer to score";
+  return [`Outcome:      ${OUTCOME_TEXT[m.outcome] || m.outcome}`,
+          `Model calls:  ${m.model_calls}${purposes ? ` (${purposes})` : ""}${m.failed_calls ? `, ${m.failed_calls} failed` : ""}`,
+          `Tokens:       ${m.input_tokens} in, ${m.output_tokens} out${m.tokens_estimated ? " (some estimated)" : ""}`,
+          `Cost:         ${m.cost_usd == null ? "no price set for " + m.unpriced_models.join(", ") : money(m.cost_usd)}`,
+          `Time:         ${(m.model_ms / 1000).toFixed(1)}s in models, ${(m.total_ms / 1000).toFixed(1)}s in total`,
+          `Toxicity:     ${tox}`].join("\n");
+}
+
+function renderQuality(all) {
+  const now = Date.now() / 1000;
+  const ms = [];
+  let noreply = 0;
+  for (const r of all) {
+    if (isEp(r)) continue;
+    const resp = find(r, "chat.responses");
+    if (resp && resp.data.metrics) ms.push(resp.data.metrics);
+    else if (!resp && find(r, "chat.requests") && now - r.first > NO_REPLY_S) noreply++;
+  }
+  const total = ms.length + noreply;
+  if (!total) {
+    $("quality").replaceChildren(el("div", "empty", "Send a message to measure cost and quality."));
+    $("outcomes").replaceChildren();
+    return;
+  }
+  const count = {}; for (const m of ms) count[m.outcome] = (count[m.outcome] || 0) + 1;
+  if (noreply) count.noreply = noreply;
+  const ok = SUCCESS.reduce((a, k) => a + (count[k] || 0), 0);
+  const priced = ms.filter(m => m.cost_usd != null);
+  const unpriced = ms.length - priced.length;
+  const scored = ms.filter(m => m.toxicity != null);
+  const status = (ms.find(m => m.toxicity_status) || {}).toxicity_status;
+  const cards = [
+    [`${Math.round(100 * ok / total)}%`, `Task success (${ok} of ${total})`],
+    [priced.length ? money(mean(priced.map(m => m.cost_usd))) : "—",
+     `Cost per task${unpriced ? ` (${unpriced} with no price set)` : ""}`],
+    [mean(ms.map(m => m.model_calls)).toFixed(1), "Model calls per task (iteration cost)"],
+    [Math.round(mean(ms.map(m => m.input_tokens + m.output_tokens))).toLocaleString(), "Tokens per task"],
+    [`${(mean(ms.map(m => m.model_ms)) / 1000).toFixed(1)}s`, "Time in models per task"],
+    [priced.length ? money(priced.reduce((a, m) => a + m.cost_usd, 0)) : "—", "Total cost"],
+    [scored.length ? Math.max(...scored.map(m => m.toxicity)).toFixed(2) : "—",
+     scored.length ? `Highest toxicity (${scored.length} answers scored)` : `Toxicity: ${status || "no answers yet"}`],
+    [scored.length ? String(scored.filter(m => m.toxicity >= 0.5).length) : "—", "Answers with high toxicity (≥ 0.5)"],
+  ];
+  $("quality").replaceChildren(...cards.map(([v, k]) => {
+    const c = el("div", "counter"); c.append(el("div", "v", v), el("div", "k", k)); return c;
+  }));
+  $("outcomes").replaceChildren(...Object.keys(OUTCOME_TEXT).filter(k => count[k])
+    .map(k => el("span", "", `${OUTCOME_TEXT[k]}: ${count[k]}`)));
 }
 
 // --- approvals ---------------------------------------------------------------
@@ -598,18 +685,39 @@ function render() {
   requestAnimationFrame(() => { pending = false; renderSelected(); renderLists(); });
 }
 
-async function verifyAudit() {
+// manual: the button was pressed, so say what was checked (the automatic check every 15 s stays quiet).
+async function verifyAudit(manual = false) {
   const pill = $("auditPill");
+  if (manual) { pill.className = "pill"; pill.textContent = "Checking the audit chain…"; }
+  const at = new Date().toLocaleTimeString();
   try {
     const r = await (await fetch("/audit/verify")).json();
-    if (!r.events) { pill.className = "pill"; pill.textContent = "Audit chain: no chained events yet"; return; }
+    if (!r.events) {
+      pill.className = "pill"; pill.textContent = "Audit chain: no chained events yet";
+      if (manual) showNote("Nothing to check yet: send a message first, and its audit events will appear here.");
+      return;
+    }
     pill.className = "pill " + (r.intact ? "ok" : "bad");
     pill.textContent = r.intact
       ? `Audit chain intact · ${r.events} events${r.unkeyed_chains ? ` · ${r.unkeyed_chains} unkeyed` : ""}`
       : `Tampering detected · ${r.problems.length} problem(s)`;
-    pill.textContent += ` · ${r.scope}`;
+    pill.textContent += ` · ${r.scope} · checked ${at}`;
     pill.title = r.problems.join("\n");
-  } catch { pill.className = "pill bad"; pill.textContent = "Audit check failed"; }
+    if (manual) showNote(r.intact
+      ? `Checked ${r.events} audit events in ${r.chains} chain${r.chains === 1 ? "" : "s"} (${r.scope}) at ${at}. ` +
+        "Each event carries a keyed hash of the one before it, so changing, deleting or reordering any event " +
+        "would break the chain and show here. Result: intact."
+      : `Checked ${r.events} audit events at ${at}: ${r.problems.length} problem(s). ` + r.problems.slice(0, 3).join(" · "));
+  } catch {
+    pill.className = "pill bad"; pill.textContent = "Audit check failed";
+    if (manual) showNote("The audit check could not run: is the pipeline (port 8000) still running?");
+  }
+}
+
+function showNote(text) {
+  const note = $("auditNote");
+  note.textContent = text; note.hidden = false;
+  clearTimeout(showNote.t); showNote.t = setTimeout(() => { note.hidden = true; }, 12000);
 }
 
 function connect() {
@@ -643,9 +751,10 @@ const profileLoaded = fetch("/profile").then(r => r.json()).then(p => {
   }
 }).catch(() => {});
 $("sendForm").onsubmit = e => { e.preventDefault(); const t = $("sendInput").value.trim(); if (t) { send(t); $("sendInput").value = ""; } };
-$("verifyBtn").onclick = verifyAudit;
+$("verifyBtn").onclick = () => verifyAudit(true);
 setInterval(render, 1000);        // keeps "running" states and progress fresh
 setInterval(verifyAudit, 15000);
+setInterval(render, 20000);           // so "no reply after 2 min" is counted even when nothing new arrives
 setInterval(loadApprovals, 2000);
 render(); verifyAudit(); loadApprovals();
 profileLoaded.finally(connect);     // filter events by profile from the first one

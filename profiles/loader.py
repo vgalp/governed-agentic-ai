@@ -377,6 +377,14 @@ def _models(raw, where: str) -> dict[str, dict]:
                 raise ProfileError(f"{w}: provider {provider} is a third-party service; "
                                    "location must be external")
             _require(m, "api_key_env", w)
+        if "price" in m:                       # US dollars per million tokens, for cost per task (ADR 018)
+            price = m["price"]
+            keys = {"input_per_million", "output_per_million"}
+            if not isinstance(price, dict) or not price or set(price) - keys:
+                raise ProfileError(f"{w}: price takes input_per_million and output_per_million (US dollars)")
+            for k, v in price.items():
+                if isinstance(v, bool) or not isinstance(v, (int, float)) or v < 0:
+                    raise ProfileError(f"{w}: price {k} must be a number of dollars, 0 or more")
         models[key] = dict(m)
     return models
 

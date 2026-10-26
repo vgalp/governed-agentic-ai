@@ -35,10 +35,12 @@ from agents.trace import Trace, ids_text, masking_summary
 from audit.chain import get_audit_chain
 from gateway.gateway import ToolCallDenied, call_tool
 from gateway.opa import decide
+from guardrails import toxicity
 from guardrails.classifier import classifier_check, crisis_over_rule, input_check, input_engine_name, load_guard
 from guardrails.grounding import check_citations
 from guardrails.input_agent import review as agent_review
 from guardrails.rules import GuardrailDecision, check_input, check_output, classifier_exemption
+from llm import usage
 from llm.providers import ModelUnavailable, chat
 from privacy.masking import mask, unmask
 from profiles.loader import load_profile
@@ -69,13 +71,14 @@ if PROFILE.classifier.input_engine == "guard_model":
                          "Install it with: uv sync --group train, train it, or set the profile's "
                          "classifier input_engine to llamaguard.") from e
 AGENT_MODEL = PROFILE.models[PROFILE.classifier.input_agent] if PROFILE.classifier.input_agent else None
+toxicity.load()                               # now, so the first answer is not slowed by loading it
 DECISION_CATEGORY = PROFILE.classifier.decision_category or PROFILE.classifier.default_category
 GUARDS = {"question": input_engine_name(PROFILE), "answer": PROFILE.classifier.model,
           "input_agent": AGENT_MODEL["name"] if AGENT_MODEL else None}
 print(f"Planner agent listening on chat.requests (profile {PROFILE.name}, "
       f"local model {PROFILE.local_model['name']}, external model {_ext}, "
       f"question guard {input_engine_name(PROFILE)}, answer guard {PROFILE.classifier.model}, "
-      f"input agent {GUARDS['input_agent'] or 'off'})...")
+      f"input agent {GUARDS['input_agent'] or 'off'}, toxicity {toxicity.status()})...")
 
 
 def label_of(decision: GuardrailDecision) -> str:
@@ -121,9 +124,20 @@ def reply(decision, role: str | None) -> str:
     return decision.response        # e.g. the classifier was unavailable
 
 
+def metrics_summary(guardrail: dict | None, approval: dict | None) -> dict:
+    """The request's model calls, tokens, cost, time, toxicity and outcome (ADR 018). No text.
+    Sent with the response, not in the decision trace: it is a measurement, not a decision."""
+    meter = usage.current() or usage.Meter()
+    m = meter.summary(usage.outcome_of(guardrail, approval))
+    if m["toxicity"] is None and any(c.purpose == "answer" and c.ok for c in meter.calls):
+        m["toxicity_status"] = toxicity.status()       # the model wrote an answer, but it was not scored
+    return m
+
+
 def publish_response(request_id: str, answer: str, sources: list, guardrail: dict | None,
                      route_info: dict | None = None, access: dict | None = None,
                      approval: dict | None = None) -> None:
+    metrics = metrics_summary(guardrail, approval)
     producer.produce("chat.responses", key=request_id, value=json.dumps({
         "request_id": request_id,
         "profile": PROFILE.name,
@@ -135,6 +149,7 @@ def publish_response(request_id: str, answer: str, sources: list, guardrail: dic
         "access": access,                  # role and the data classes it may not see
         "approval": approval,              # a proposed change waiting for a person's approval
         "guards": GUARDS,                  # which models checked the question and the answer
+        "metrics": metrics,                # model calls, tokens, cost, toxicity, outcome: no text
     }))
     producer.flush()
     audit.producer.flush()
@@ -183,7 +198,7 @@ def propose(action, req: dict, request_id: str, role: str | None, notes: list[di
         "purpose": f"proposal: {action.name}",
     })
     try:
-        raw = chat(d.model, actions.extraction_messages(action, notes_text, req["message"], now))
+        raw = chat(d.model, actions.extraction_messages(action, notes_text, req["message"], now), purpose="proposal")
     except (requests.RequestException, ModelUnavailable):
         return unclear("the local model is unavailable")
     proposal = actions.parse_proposal(raw)
@@ -235,6 +250,7 @@ while True:
     req = json.loads(msg.value())
     request_id = req["request_id"]
     role = req.get("role")
+    usage.start()                             # count this request's model calls from here
     trace = Trace(producer, PROFILE.name, request_id, role)
     trace.step("intake", "received", "info",
                f"Question received ({len(req['message'])} characters, not shown)"
@@ -478,6 +494,7 @@ while True:
     #    If an external model fails, try the profile's fallback models in order (still
     #    masked), then the local model. Each switch is audited and traced.
     options = [decision, *fallbacks(PROFILE, decision)]
+    model_answer = None
     for i, option in enumerate(options):
         try:
             model_answer = ask(option)
@@ -485,7 +502,13 @@ while True:
             break
         except (requests.RequestException, ModelUnavailable) as e:
             if option.target != "external":
-                raise
+                # The local model (always last) failed too: say so and keep running for the next
+                # request. Before ADR 018 this stopped the planner.
+                trace.step("answer", "model", "error", f"{option.model['name']} ({option.model['provider']}) "
+                           f"failed: {e}; no model could answer")
+                print(f"Local model failed ({e}): {request_id}")
+                decision = option
+                break
             nxt = options[i + 1]               # the local model is always last
             print(f"{option.model['provider']}/{option.model['name']} failed ({e}); "
                   f"trying {nxt.model['provider']}/{nxt.model['name']}: {request_id}")
@@ -495,11 +518,27 @@ while True:
             audit_route(PROFILE, nxt, request_id, AGENT_NAME, role, fallback=True)
     route_info = {"target": decision.target, "model": decision.model["name"],
                   "provider": decision.model["provider"]}
+    if model_answer is None:
+        audit_guardrail(request_id, "model", "model", GuardrailDecision(False, "model_unavailable",
+                                                                          "no model could answer"), role)
+        publish_response(request_id, PROFILE.response("unavailable", role), [],
+                         {"stage": "model", "layer": "model", "category": "model_unavailable"}, route_info, access)
+        trace.step("answer", "reply", "info", "No model could answer; fixed reply sent")
+        consumer.commit(message=msg)
+        continue
     trace.step("answer", "model", "info", f"Draft answer ready ({len(model_answer)} characters, not shown)")
 
     # 6. Output guardrails on the RESTORED answer, so masked names can't hide anything:
     #    rules, then the grounding check, then the classifier (which sees the question too).
     restored_answer = unmask(model_answer, mapping) if decision.send_masked else model_answer
+    #    Toxicity of what the model wrote: measured and shown, never a reason to block (ADR 018).
+    tox = toxicity.score(restored_answer)
+    if tox is not None:
+        meter = usage.current()
+        meter.toxicity, meter.toxicity_model = tox, toxicity.MODEL
+        trace.step("answer", "toxicity", "info",
+                   f"Toxicity {tox:.2f} ({'high: shown for review' if tox >= toxicity.FLAG_AT else 'low'}); "
+                   "measured only, the checks below decide", toxicity=tox, high=tox >= toxicity.FLAG_AT)
     out_check = check_output(restored_answer, PROFILE)
     out_layer = "rules"
     trace.step("answer", "output_rules", "pass" if out_check.allowed else "block",

@@ -51,6 +51,7 @@ Every decision is written to an audit topic as a hash-chained, HMAC-signed event
 | Guardrails, layer 2 (classifier) | Llama Guard 3 8B with a custom policy (S1 self-harm risk, S2 medical advice); fails closed | Working |
 | Tamper-evident audit | Each audit event carries a sequence number, the previous event's hash and an HMAC-SHA256 signature; a verifier detects edits, deletions and reordering | Working |
 | Live dashboard | Shows each request moving through the pipeline in real time, without exposing personal information | Working |
+| Cost and quality metrics | Per request and in total: model calls, tokens, cost (from each model's price in the profile), task success by outcome, and answer toxicity (Detoxify's model, measured, never used to block); see ADR 018 | Working |
 | Grounding check | An answer may cite only sources the model was given; invented fill-in fields are blocked | Working |
 | Policy-based model routing | OPA decides whether a request may go to a local or an external model (OpenAI, Gemini or Claude, chosen in the profile, with fallback); the decision is audited | Working |
 | Human approval before changes | The assistant only proposes changes (e.g. moving an appointment); OPA decides who must approve; a person with an approver role approves, never the person who asked; only then does a separate executor agent make the change, once | Working |
@@ -231,6 +232,7 @@ docs/            Architecture notes and decision records
 - [x] Human approval before changes (propose, policy, approve, execute once; all audited)
 - [x] Tool registry and records mapping in the profile; a second use case (county benefits) from configuration only
 - [x] Changes from configuration (generic change tool): the county profile releases held payments with no code
+- [x] Cost and quality metrics on the dashboard: cost per task, iteration cost, task success, toxicity (ADR 018)
 - [ ] Signed audit checkpoints (truncation detection)
 - [ ] Fine-tuned safety classifier and grounding check (layer 3)
 - [ ] Clinician-reviewed knowledge base and fixed responses

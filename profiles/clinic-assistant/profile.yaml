@@ -23,16 +23,19 @@ models:
     provider: openai
     name: gpt-4.1-mini
     location: external
+    # price: {input_per_million: 0, output_per_million: 0}   # US$, from the provider's pricing page (ADR 018)
     api_key_env: OPENAI_API_KEY
   gemini:
     provider: gemini
     name: gemini-2.5-flash
     location: external
+    # price: {input_per_million: 0, output_per_million: 0}   # US$, from the provider's pricing page (ADR 018)
     api_key_env: GEMINI_API_KEY
   claude:
     provider: anthropic
     name: claude-haiku-4-5-20251001
     location: external
+    # price: {input_per_million: 0, output_per_million: 0}   # US$, from the provider's pricing page (ADR 018)
     api_key_env: ANTHROPIC_API_KEY
 
 routing:

@@ -12,11 +12,17 @@ Providers:
 Which provider answers is decided by the router (router/router.py), never by the user.
 API keys are read from the environment variable named in the profile (api_key_env)
 and are never logged or audited.
+
+Every call records its tokens, time and cost on the current request's meter (llm/usage.py,
+ADR 018): the provider's own token counts where it returns them, else an estimate, marked so.
 """
 
 import os
+import time
 
 import requests
+
+from llm import usage
 
 OLLAMA_URL = "http://localhost:11434/v1/chat/completions"
 TIMEOUT = 120
@@ -82,7 +88,7 @@ def no_think(messages: list[dict]) -> list[dict]:
     return out
 
 
-def _openai_chat(url: str, model: dict, messages: list[dict], key: str | None = None) -> str:
+def _openai_chat(url: str, model: dict, messages: list[dict], key: str | None = None) -> tuple[str, dict]:
     headers = {"Authorization": f"Bearer {key}"} if key else {}
     if model.get("no_think"):
         messages = no_think(messages)
@@ -92,12 +98,14 @@ def _openai_chat(url: str, model: dict, messages: list[dict], key: str | None = 
         "messages": messages,
     })
     try:
-        return data["choices"][0]["message"]["content"]
+        text = data["choices"][0]["message"]["content"]
     except (KeyError, IndexError, TypeError) as e:
         raise ModelUnavailable("model response has no answer text") from e
+    u = data.get("usage") or {}
+    return text, {"input": u.get("prompt_tokens"), "output": u.get("completion_tokens")}
 
 
-def _anthropic_chat(model: dict, messages: list[dict]) -> str:
+def _anthropic_chat(model: dict, messages: list[dict]) -> tuple[str, dict]:
     """Claude's Messages API takes the system prompt separately from the conversation."""
     system = "\n\n".join(m["content"] for m in messages if m["role"] == "system")
     data = _post(_base_url(model) + "/messages", {
@@ -114,10 +122,11 @@ def _anthropic_chat(model: dict, messages: list[dict]) -> str:
     text = "".join(b.get("text", "") for b in data.get("content") or [] if b.get("type") == "text")
     if not text:
         raise ModelUnavailable("model response has no answer text")
-    return text
+    u = data.get("usage") or {}
+    return text, {"input": u.get("input_tokens"), "output": u.get("output_tokens")}
 
 
-def chat(model: dict, messages: list[dict]) -> str:
+def _call(model: dict, messages: list[dict]) -> tuple[str, dict]:
     provider = model["provider"]
     if provider == "ollama":
         return _openai_chat(OLLAMA_URL, model, messages)
@@ -129,5 +138,24 @@ def chat(model: dict, messages: list[dict]) -> str:
         return _openai_chat(model["base_url"].rstrip("/") + "/chat/completions", model, messages, _key(model))
     if provider == "mock":
         last = next((m["content"] for m in reversed(messages) if m["role"] == "user"), "")
-        return model.get("answer", "Here is one small next step: write down the first task. ({chars} characters received)").format(chars=len(last))
+        text = model.get("answer", "Here is one small next step: write down the first task. "
+                                   "({chars} characters received)").format(chars=len(last))
+        return text, {}
     raise ModelUnavailable(f"unknown provider {provider!r}")
+
+
+def chat(model: dict, messages: list[dict], purpose: str = "answer") -> str:
+    """The model's answer. purpose says what the call is for, on the request's meter."""
+    t0 = time.monotonic()
+    try:
+        text, tokens = _call(model, messages)
+    except ModelUnavailable:
+        usage.record(purpose, model, 0, 0, (time.monotonic() - t0) * 1000, ok=False)
+        raise
+    tin, tout = tokens.get("input"), tokens.get("output")
+    estimated = tin is None or tout is None
+    if estimated:
+        tin = usage.estimate_tokens(" ".join(m["content"] for m in messages)) if tin is None else tin
+        tout = usage.estimate_tokens(text) if tout is None else tout
+    usage.record(purpose, model, tin, tout, (time.monotonic() - t0) * 1000, estimated=estimated)
+    return text

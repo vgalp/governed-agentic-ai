@@ -24,7 +24,7 @@ EVENT_TOPICS = ["chat.requests", "chat.responses", *AUDIT_TOPICS, TRACE_TOPIC, *
 def sanitize(topic: str, value: dict) -> dict:
     """Keep only what an operator may see."""
     if topic == "chat.requests":
-        return {"request_id": value.get("request_id"), "role": value.get("role"),
+        return {"request_id": value.get("request_id"), "role": value.get("role"), "profile": value.get("profile"),
                 "message_chars": len(value.get("message", ""))}
     if topic == "chat.responses":
         return {
@@ -35,6 +35,8 @@ def sanitize(topic: str, value: dict) -> dict:
             "access": value.get("access"),
             "approval": value.get("approval"),
             "answer_chars": len(value.get("answer", "")),
+            "profile": value.get("profile"),
+            "metrics": value.get("metrics"),       # counts, tokens, cost, scores, model names: no text (ADR 018)
         }
     return value  # audit, trace and approval events already hold masked text, IDs and decisions only
 

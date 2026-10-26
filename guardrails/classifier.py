@@ -17,11 +17,13 @@ It runs locally, so the original (unmasked) text never leaves the system.
 It fails CLOSED: if the classifier can't be reached, the request is blocked.
 """
 
+import time
 from dataclasses import dataclass, field
 
 import requests
 
 from guardrails.rules import GuardrailDecision
+from llm import usage
 from profiles.loader import Profile, load_profile
 
 OLLAMA_GENERATE_URL = "http://localhost:11434/api/generate"
@@ -83,15 +85,26 @@ def build_prompt(user_text: str, assistant_text: str | None = None,
 def classify(user_text: str, assistant_text: str | None = None, model: str | None = None,
              profile: Profile | None = None) -> GuardOutput:
     profile = profile or load_profile()
-    resp = requests.post(OLLAMA_GENERATE_URL, json={
-        "model": model or profile.classifier.model,
-        "prompt": build_prompt(user_text, assistant_text, profile),
-        "raw": True,                      # we supply the full Llama Guard template
-        "stream": False,
-        "options": {"temperature": 0},
-    }, timeout=120)
-    resp.raise_for_status()
-    return parse_guard_output(resp.json()["response"])
+    name = model or profile.classifier.model
+    meter = {"name": name, "provider": "ollama", "location": "local"}
+    purpose = "question_check" if assistant_text is None else "answer_check"
+    t0 = time.monotonic()
+    try:
+        resp = requests.post(OLLAMA_GENERATE_URL, json={
+            "model": name,
+            "prompt": build_prompt(user_text, assistant_text, profile),
+            "raw": True,                      # we supply the full Llama Guard template
+            "stream": False,
+            "options": {"temperature": 0},
+        }, timeout=120)
+        resp.raise_for_status()
+        data = resp.json()
+    except requests.RequestException:
+        usage.record(purpose, meter, 0, 0, (time.monotonic() - t0) * 1000, ok=False)
+        raise
+    usage.record(purpose, meter, data.get("prompt_eval_count"), data.get("eval_count"),
+                 (time.monotonic() - t0) * 1000, estimated=False)
+    return parse_guard_output(data["response"])
 
 
 def to_decision(result: GuardOutput, profile: Profile | None = None) -> GuardrailDecision:
@@ -139,11 +152,15 @@ def load_guard(profile: Profile):
 def guard_check(user_text: str, profile: Profile) -> GuardrailDecision:
     """The guard classifier on a question: allow, decision (the profile's decision_category) or crisis.
     Fails closed, like Llama Guard: if the model cannot run, the question is blocked."""
+    meter = {"name": profile.classifier.guard_model, "provider": "guard classifier", "location": "local"}
+    t0 = time.monotonic()
     try:
         label, probs = load_guard(profile).label(profile.classifier.guard_policy, user_text)
     except Exception as e:  # noqa: BLE001 - any failure to label must block, never allow
+        usage.record("question_check", meter, None, None, (time.monotonic() - t0) * 1000, ok=False)
         return GuardrailDecision(False, "guardrail_unavailable", f"guard classifier error: {e}",
                                  profile.response("unavailable"))
+    usage.record("question_check", meter, None, None, (time.monotonic() - t0) * 1000)
     reason = (f"guard classifier {profile.classifier.guard_model}: {label} "
               f"(crisis {probs['crisis']:.2f}, decision {probs['decision']:.2f})")
     if label == "allow":

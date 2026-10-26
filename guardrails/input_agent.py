@@ -27,6 +27,7 @@ import json
 import re
 from collections.abc import Callable
 
+from llm import usage
 from llm.providers import chat
 
 RANK = {"allow": 0, "decision": 1, "crisis": 2}
@@ -85,8 +86,9 @@ def views(text: str, model: dict, ask: Callable | None = None) -> tuple[list[tup
     info = {"agent_model": model.get("name"), "manipulation": False, "agent_error": None}
     found = [("sentence", s) for s in sentences(text)]
     try:
-        reply = ask(model, [{"role": "system", "content": SYSTEM},
-                            {"role": "user", "content": USER.format(text=text)}])
+        with usage.purpose("input_agent"):          # metered as the input agent's call (ADR 018)
+            reply = ask(model, [{"role": "system", "content": SYSTEM},
+                                {"role": "user", "content": USER.format(text=text)}])
         data = parse(reply)
         if data["plain"]:
             found.append(("plain", data["plain"]))

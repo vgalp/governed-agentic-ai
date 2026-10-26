@@ -148,7 +148,8 @@ def health():
 @app.post("/chat")
 def send_chat(req: ChatRequest):
     request_id = str(uuid.uuid4())
-    event = {"request_id": request_id, "user_id": req.user_id, "message": req.message, "role": req.role}
+    event = {"request_id": request_id, "user_id": req.user_id, "message": req.message, "role": req.role,
+             "profile": PROFILE.name}
     producer.produce("chat.requests", key=request_id, value=json.dumps(event))
     producer.flush()
     return {"request_id": request_id}
