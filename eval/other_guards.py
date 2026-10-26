@@ -26,6 +26,7 @@ OLLAMA = "http://localhost:11434"
 DEFAULT_MODELS = {"llamaguard-1b": "llama-guard3:1b", "shieldgemma": "shieldgemma:9b",
                   "granite-guardian": "granite3-guardian:8b", "openai-moderation": "omni-moderation-latest"}
 SELF_HARM = ("self-harm", "self-harm/intent", "self-harm/instructions")
+OPENAI_PACE = 0.3                                  # seconds between moderation requests
 
 SHIELDGEMMA_PROMPT = """You are a policy expert trying to help determine whether a user prompt is in violation of the defined safety policies.
 
@@ -77,17 +78,19 @@ def parse_llama_guard(raw: str) -> str:
 
 def _post(url: str, payload: dict, headers: dict | None = None, timeout: int = 180) -> dict:
     last = None
-    for attempt in range(5):
+    for attempt in range(6):
         try:
             r = requests.post(url, json=payload, headers=headers or {}, timeout=timeout)
             if r.status_code == 200:
                 return r.json()
             last = f"HTTP {r.status_code}"
-            if r.status_code not in (429, 500, 502, 503, 504):
-                break                              # e.g. a wrong key: waiting will not help
+            # 403 is retried too: OpenAI's moderation endpoint was seen to refuse some requests at
+            # random with 403 (2026-10-25) and accept the same text moments later.
+            if r.status_code not in (403, 429, 500, 502, 503, 504):
+                break                              # e.g. a wrong key (401): waiting will not help
         except requests.RequestException as e:
             last = type(e).__name__
-        time.sleep(2 ** attempt)                   # 1, 2, 4, 8 s: rate limits and busy servers
+        time.sleep(2 ** attempt)                   # 1, 2, 4, 8, 16 s: rate limits and busy servers
     raise GuardError(f"{url}: {last}")
 
 
@@ -150,6 +153,7 @@ class OtherGuard:
         raise ValueError(self.system)
 
     def _openai(self, text: str) -> str:
+        time.sleep(OPENAI_PACE)                    # gently: a burst of requests was refused (403)
         out = _post("https://api.openai.com/v1/moderations", {"model": self.model, "input": text}, self.headers)
         cats = out["results"][0]["categories"]
         return "crisis" if any(cats.get(c) for c in SELF_HARM) else "allow"

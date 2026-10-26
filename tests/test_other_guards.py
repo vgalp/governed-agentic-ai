@@ -143,3 +143,20 @@ def test_paired_tests_count_only_disagreements():
     assert (nf["only_reference"], nf["only_other"]) == (0, 8) and nf["significant"] and nf["better"] == "LG"
     md = "\n".join(cmp.tests_markdown(list(t.values()), "ours"))
     assert "**LG better**" in md and "no significant difference" in md
+
+
+def test_a_refused_request_is_retried_then_succeeds(monkeypatch):
+    replies = [403, 403, 200]
+
+    class R:
+        def __init__(self, code):
+            self.status_code = code
+
+        def json(self):
+            return {"ok": True}
+    monkeypatch.setattr(og.requests, "post", lambda *a, **k: R(replies.pop(0)))
+    monkeypatch.setattr(og.time, "sleep", lambda s: None)
+    assert og._post("https://x", {}) == {"ok": True}
+    monkeypatch.setattr(og.requests, "post", lambda *a, **k: R(401))
+    with pytest.raises(og.GuardError, match="401"):
+        og._post("https://x", {})                  # a wrong key is not retried
