@@ -10,7 +10,7 @@ from typing import Literal
 from confluent_kafka import Consumer, Producer
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, StreamingResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from agents import actions
 from api.events import buffer, consume_events, event_stream
@@ -78,10 +78,16 @@ class Decision(BaseModel):
     note: str | None = None
 
 
+class Turn(BaseModel):
+    role: Literal["user", "assistant"]
+    content: str = Field(max_length=4000)
+
+
 class ChatRequest(BaseModel):
     user_id: str
     message: str
     role: str | None = None     # demo only: a real deployment takes the role from sign-in
+    history: list[Turn] = Field(default_factory=list, max_length=40)   # earlier turns, oldest first (ADR 019)
 
 
 @app.get("/", include_in_schema=False)
@@ -165,7 +171,7 @@ def health():
 def send_chat(req: ChatRequest):
     request_id = str(uuid.uuid4())
     event = {"request_id": request_id, "user_id": req.user_id, "message": req.message, "role": req.role,
-             "profile": PROFILE.name}
+             "profile": PROFILE.name, "history": [t.model_dump() for t in req.history]}
     producer.produce("chat.requests", key=request_id, value=json.dumps(event))
     producer.flush()
     return {"request_id": request_id}

@@ -44,3 +44,14 @@ def test_medication_allowed_but_real_name_still_masked():
 
     assert "Concerta" in masked
     assert "Sarah Lee" not in masked
+
+def test_a_conversation_is_masked_with_one_mapping_and_turns_kept_apart():
+    """ADR 019: Presidio must leave the turn separator alone, and a name keeps its token across turns."""
+    from agents.conversation import mask_all
+    history = [{"role": "user", "content": "Did John Smith call?"},
+               {"role": "assistant", "content": "Yes, John Smith called at 9."}]
+    masked, message, mapping = mask_all(history, "Call John Smith back at 416-555-0199.", mask)
+    assert len(masked) == 2
+    assert all("John Smith" not in t["content"] for t in masked) and "John Smith" not in message
+    assert "[PERSON_1]" in masked[0]["content"] and "[PERSON_1]" in message
+    assert unmask(message, mapping) == "Call John Smith back at 416-555-0199."

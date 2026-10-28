@@ -152,8 +152,12 @@ async function followApproval(div, badge, id) {
   }
 }
 
+// The conversation so far, sent with each message so the checks and the model see earlier turns (ADR 019).
+const history = [];
+
 async function ask(text) {
   add("user", text);
+  const earlier = history.slice(-8);
   const bot = add("bot pending", "Checking and thinking…");
   send.disabled = true;
   const started = performance.now();
@@ -161,7 +165,7 @@ async function ask(text) {
     const r = await fetch("/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ user_id: "ui", message: text, role: roleSelect.value || null }),
+      body: JSON.stringify({ user_id: "ui", message: text, role: roleSelect.value || null, history: earlier }),
     });
     const { request_id } = await r.json();
     for (let i = 0; i < 180; i++) {
@@ -170,6 +174,7 @@ async function ask(text) {
         bot.className = "msg bot";
         bot.textContent = data.answer;
         meta(bot, data, (performance.now() - started) / 1000);
+        history.push({ role: "user", content: text }, { role: "assistant", content: data.answer });
         return;
       }
       await new Promise(res => setTimeout(res, 1000));

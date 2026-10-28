@@ -87,7 +87,8 @@ def held_out() -> list[str]:
     for path in [*HELD_OUT, *([FOUND_HOLDOUT] if FOUND_HOLDOUT.exists() else [])]:
         for line in path.read_text(encoding="utf-8").splitlines():
             if line.strip():
-                out.append(norm(json.loads(line)["text"]))
+                row = json.loads(line)
+                out += [norm(t) for t in row["turns"]] if "turns" in row else [norm(row["text"])]   # conversations: every turn
     return out
 
 

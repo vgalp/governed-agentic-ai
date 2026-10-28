@@ -95,6 +95,9 @@ def _openai_chat(url: str, model: dict, messages: list[dict], key: str | None = 
     data = _post(url, headers, {
         "model": model["name"],
         "temperature": model.get("temperature", 0),
+        # A cap on the answer's length, as for Claude: without it a local model can repeat itself
+        # until the request times out (seen in the chatbot comparison, 2026-10-26).
+        "max_tokens": model.get("max_tokens", 1024),
         "messages": messages,
     })
     try:
