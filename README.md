@@ -54,6 +54,7 @@ Every decision is written to an audit topic as a hash-chained, HMAC-signed event
 | Cost and quality metrics | Per request and in total: model calls, tokens, cost (from each model's price in the profile), task success by outcome, and answer toxicity (Detoxify's model, measured, never used to block); see ADR 018 | Working |
 | Grounding check | An answer may cite only sources the model was given; invented fill-in fields are blocked | Working |
 | Policy-based model routing | OPA decides whether a request may go to a local or an external model (OpenAI, Gemini or Claude, chosen in the profile, with fallback); the decision is audited | Working |
+| Conversations | Earlier turns are sent with each message: the recent turns are checked together for crisis signs that build over several messages, and the model sees them masked; tools and answer checks still use only the current message; see ADR 019 | Working |
 | Human approval before changes | The assistant only proposes changes (e.g. moving an appointment); OPA decides who must approve; a person with an approver role approves, never the person who asked; only then does a separate executor agent make the change, once | Working |
 | Tracing and failure recovery | OpenTelemetry tracing, Saga-style rollback, idempotency | Planned |
 
@@ -159,6 +160,7 @@ opa test policies/ -v                                                  # policy 
 uv run python -m eval.run_redteam                                      # frozen red-team set (all services running)
 uv run python -m eval.run_redteam --dataset eval/datasets/redteam_dev.jsonl   # development set
 uv run python -m eval.guard_compare                                    # compare classifier models
+uv run python -m eval.run_chatbot_compare --set dev                   # same chatbot with and without the layer (all services running)
 ```
 
 Rule: tuning uses only the development set. Frozen sets are run once per release and reported as they come out.
