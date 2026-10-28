@@ -52,19 +52,25 @@ class EventBuffer:
         self.lock = threading.Lock()
         self._seen: dict[tuple, int] = {}      # (topic, partition) -> last offset added
 
-    def add(self, topic: str, value: dict, partition: int | None = None, offset: int | None = None) -> bool:
+    def add(self, topic: str, value: dict, partition: int | None = None, offset: int | None = None,
+            at: float | None = None) -> bool:
         """Add one message. A message already seen (same topic, partition and offset) is skipped:
         the consumer commits no offsets, so after a rebalance (for example when the laptop
         sleeps) Kafka hands it everything again from the start. Without this, every audit
-        event would be counted again and look like a duplicated, tampered chain."""
+        event would be counted again and look like a duplicated, tampered chain.
+
+        `at` is when the event happened (the Kafka message's own timestamp). The dashboard shows
+        that, not the time this API happened to read it: after a restart the API reads older
+        events again, and stamping them "now" made events from different days look like today's."""
         with self.lock:
             if offset is not None:
                 key = (topic, partition)
                 if offset <= self._seen.get(key, -1):
                     return False
                 self._seen[key] = offset
-            self.events.append({"id": self.next_id, "topic": topic, "received_at": time.time(),
-                                "data": sanitize(topic, value)})
+            now = time.time()
+            self.events.append({"id": self.next_id, "topic": topic, "received_at": now,
+                                "at": at if at else now, "data": sanitize(topic, value)})
             self.next_id += 1
             if len(self.events) > self.maxlen:
                 self.events = self.events[-self.maxlen:]
@@ -94,9 +100,19 @@ def consume_events(bootstrap: str) -> None:
         if msg is None or msg.error():
             continue
         try:
-            buffer.add(msg.topic(), json.loads(msg.value()), msg.partition(), msg.offset())
+            buffer.add(msg.topic(), json.loads(msg.value()), msg.partition(), msg.offset(),
+                       at=message_time(msg))
         except (ValueError, TypeError):
             continue
+
+
+def message_time(msg) -> float | None:
+    """When the message was produced, in seconds, from its Kafka timestamp; None if it has none."""
+    try:
+        kind, ms = msg.timestamp()
+    except (AttributeError, TypeError, ValueError):
+        return None
+    return ms / 1000 if kind and ms and ms > 0 else None      # kind 0: no timestamp available
 
 
 async def event_stream(last_id: int = 0):

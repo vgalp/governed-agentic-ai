@@ -102,3 +102,24 @@ def test_events_read_again_after_a_rebalance_are_not_counted_twice():
     assert len(buf.audit_records) == 4 and verify_chain(buf.audit_records, KEY) == []
     assert len(buf.events) == 4
     assert buf.add("audit.guardrails", records[0], partition=1, offset=0)    # another partition is new
+
+
+def test_events_keep_the_time_they_happened_not_when_the_api_read_them():
+    """After a restart the API reads older events again; they must keep their own time, or events
+    from different days look like today's (reviewer, 2026-10-28)."""
+    from api.events import EventBuffer, message_time
+
+    class Msg:
+        def __init__(self, kind, ms):
+            self._ts = (kind, ms)
+
+        def timestamp(self):
+            return self._ts
+    assert message_time(Msg(1, 1_793_000_000_000)) == 1_793_000_000.0      # producer time, in seconds
+    assert message_time(Msg(0, -1)) is None                                 # no timestamp available
+    buf = EventBuffer()
+    buf.add("agent.trace", {"request_id": "r1"}, partition=0, offset=0, at=1_793_000_000.0)
+    buf.add("agent.trace", {"request_id": "r2"}, partition=0, offset=1)
+    old, new = buf.events
+    assert old["at"] == 1_793_000_000.0 and old["received_at"] > old["at"]
+    assert new["at"] == new["received_at"]                                  # no Kafka time: when read

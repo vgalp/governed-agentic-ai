@@ -254,7 +254,11 @@ let selected = null;
 const $ = id => document.getElementById(id);
 const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
 const short = id => (id || "").slice(0, 8);
-const clock = ts => new Date(ts * 1000).toLocaleTimeString([], {hour: "2-digit", minute: "2-digit", second: "2-digit"});
+// When an event happened: its own Kafka time ("at"), not when this page or the API read it.
+const when = e => e.at ?? e.received_at;
+// Date and time, so events from different days are never confused (reviewer's request, 2026-10-28).
+const clock = ts => new Date(ts * 1000).toLocaleString([], {month: "short", day: "numeric",
+  hour: "2-digit", minute: "2-digit", second: "2-digit"});
 
 function addEvent(ev) {
   const prof = ev.data && ev.data.profile;
@@ -268,8 +272,10 @@ function addEvent(ev) {
   feed.push(ev);
   if (feed.length > 200) feed = feed.slice(-200);
   if (!rid) return;
-  if (!requests.has(rid)) requests.set(rid, {id: rid, events: [], first: ev.received_at});
-  requests.get(rid).events.push(ev);
+  if (!requests.has(rid)) requests.set(rid, {id: rid, events: [], first: when(ev)});
+  const req = requests.get(rid);
+  req.first = Math.min(req.first, when(ev));      // an older event can arrive after a newer one
+  req.events.push(ev);
   if ($("follow").checked || !selected) selected = rid;
 }
 
@@ -448,7 +454,7 @@ function renderSelected() {
   tl.replaceChildren();
   for (const e of req.events.filter(e => e.topic !== "agent.trace")) {
     const row = el("div");
-    row.append(el("span", "t", `+${(e.received_at - req.first).toFixed(1)}s`), el("span", "", summarize(e)));
+    row.append(el("span", "t", `+${(when(e) - req.first).toFixed(1)}s`), el("span", "", summarize(e)));
     tl.append(row);
   }
 }
@@ -549,7 +555,7 @@ function renderLists() {
 
   const list = $("reqs");
   if (!all.length) return;
-  list.replaceChildren(...all.slice(-60).reverse().map(r => {
+  list.replaceChildren(...[...all].sort((a, b) => a.first - b.first).slice(-60).reverse().map(r => {
     const {outcome} = derive(r);
     const row = el("div", "req" + (r.id === selected ? " sel" : ""));
     const left = el("div");
@@ -559,9 +565,9 @@ function renderLists() {
     return row;
   }));
 
-  $("feed").replaceChildren(...feed.slice(-60).reverse().map(e => {
+  $("feed").replaceChildren(...[...feed].sort((a, b) => when(a) - when(b)).slice(-60).reverse().map(e => {
     const row = el("div");
-    row.append(el("span", "t", clock(e.received_at) + "  "), el("span", "topic", e.topic), document.createTextNode(`  ${short(e.data.request_id)}  ${summarize(e).split(" · ").slice(1).join(" · ")}`));
+    row.append(el("span", "t", clock(when(e)) + "  "), el("span", "topic", e.topic), document.createTextNode(`  ${short(e.data.request_id)}  ${summarize(e).split(" · ").slice(1).join(" · ")}`));
     return row;
   }));
 }
