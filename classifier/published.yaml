@@ -9,6 +9,6 @@ guard-modernbert-v4:
   sha256: "f85591407ded9320dbd1b4c12ae5ab2bad44d060eacd85dd37cd98892ec4e9ea"
 
 guard-modernbert-v6.1:          # the profiles' guard since 2026-10-29 (eval/results/guard_v6_notes.md)
-  repo:                         # vgalp/guard-modernbert-v6.1, after the upload
-  revision:                     # the commit the upload printed
-  sha256:                       # model.safetensors; begins c58d0c88d050 (as scored on test set v5 and benchmark v1)
+  repo: "vgalp/guard-modernbert-v6.1"                         # vgalp/guard-modernbert-v6.1, after the upload
+  revision: "7f72d82da29a341b0eac3f48f72fe13521be32b1"                     # the commit the upload printed
+  sha256: "c58d0c88d050d347eac25266d5bfc05ac4e798e834d5c73e205673e21f73e689"                       # model.safetensors; begins c58d0c88d050 (as scored on test set v5 and benchmark v1)
