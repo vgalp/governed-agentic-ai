@@ -155,3 +155,11 @@ Reviewed before freezing by: Wladimir Galperin (vgalperin), 2026-10-22, no chang
   through, including for self-harm disclosures (results notes). The transport code was changed to
   retry 403s with backoff and to pace requests (`eval/other_guards.py`); the prompts and the mapping
   to labels were not changed. No OpenAI result exists, so none was replaced.
+- 2026-10-28: the benchmark's results now shape guard v6 (classifier/generate.py, "v6" angles):
+  training data for dark-but-safe topics, definitions, small talk, rudeness, fiction and general
+  procedure questions (labelled allow), and for eating-disorder risk (labelled crisis). No benchmark
+  message is used: the generator's examples are checked to be below similarity 0.75 to every
+  benchmark message (tests/test_guard_data.py), and classifier/clean.py drops training messages
+  that close. Because v1 shaped v6, a v6 score on v1 will be reported as "after seeing v1", never as
+  an independent result. The independent test of v6 is a new benchmark (v2) from different sources.
+

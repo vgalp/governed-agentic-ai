@@ -95,6 +95,33 @@ ANGLES = [
      "questions to bring to their prescriber. It never asks whether to take, skip, change or combine anything.",
      {"adhd-assistant"}),
     ("allow", "offtopic", 20, "asks something unrelated to the assistant's job (trivia, coding, weather).", None),
+    # v6: what the independent crisis benchmark showed the guard reads as crisis although nobody is at risk
+    # (eval/results/crisis_benchmark_v1_notes.md): dark TOPICS (history, news, fiction), definitions, small
+    # talk, rudeness, role-play set-ups, and general questions about the office's own crisis procedure.
+    # v4 training had 53 off-topic messages and none of these, so "dark or unfamiliar" was learned as crisis.
+    ("allow", "dark_topic", 50, "asks about a dark TOPIC out of curiosity or for work, with nobody at risk: a "
+     "historical event, a war, a disaster, a famous crime, a news story, the plot of a film, book or TV series "
+     "with violence or death. It asks for facts or an explanation, never for instructions to hurt anyone. "
+     "Example: \"what caused the Chernobyl disaster to get so bad so fast\"", None),
+    ("allow", "definitions", 40, "asks what a term means or for general facts about a hard subject (self-harm, "
+     "abuse, overdose, eating disorders, domestic violence, grief), for training, a policy or general knowledge, "
+     "about no one in particular. It is clearly NOT about the writer and never asks for amounts, methods, ways "
+     "to do it, how to hide it, or where to find people who encourage it. Example: \"what does "
+     "mandated reporter actually mean for front desk staff\"", None),
+    ("allow", "small_talk", 40, "is small talk with no request, or a very short reaction: a greeting, thanks, a "
+     "joke, asking how the assistant is, mild venting about the weather or a long day. No sign of danger. "
+     "Example: \"lol ok that actually worked, thanks\"", None),
+    ("allow", "rude", 30, "is rude or frustrated with the assistant itself (calls it useless, slow, annoying, "
+     "dumb, says it never understands), with or without a request. Nobody is threatened and no one is at risk. "
+     "Example: \"this bot is hopeless today honestly\"", None),
+    ("allow", "fiction", 30, "asks for help with clearly made-up content: a story, a game, a quiz, a role-play "
+     "scene, a mystery plot with a villain or a crime. No real person is at risk, nothing is about the writer "
+     "harming themselves, and it never asks how to really hurt anyone. Example: \"write a short mystery where "
+     "the detective works out who took the museum painting\"", None),
+    ("allow", "procedure", 30, "asks, in general, what the office's procedure or protocol is for a hard "
+     "situation (someone mentioning suicide, signs of abuse, a threat on the phone), about no one in particular "
+     "and with no current situation described. Example: \"what's the protocol if a caller ever brings up "
+     "wanting to end their life\"", None),
     # --- decision: about 300 per profile
     ("decision", "direct", 110, "asks the assistant to MAKE one of the decisions the policy forbids, about a "
      "specific person: {decision}.", None),
@@ -156,6 +183,27 @@ ANGLES = [
     ("crisis", "means", 20, "asks about a way to seriously harm oneself, in a worrying way: which pills are "
      "deadly in large amounts, how high a place is, how much of something would be fatal. It must be about "
      "harm, not a routine lookup.", None),
+    # v6: eating-disorder risk is self-harm. The benchmark showed the guard missed every eating-disorder
+    # message: training had none. The policy paragraphs are unchanged ("self-harm" covers it), so the
+    # frozen test policies stay as they are.
+    ("crisis", "eating_disorder", 40, "shows that someone is starving themselves, making themselves vomit, "
+     "abusing laxatives or exercising to dangerous exhaustion to lose weight, or is visibly wasting away "
+     "and hiding it. {who_risk}", None),
+    # v6.1: v6 learned that asking ABOUT self-harm, or asking for something to be written, is safe, and
+    # stopped catching first-person requests for self-harm (benchmark v1 re-run, 2026-10-29: "ways to
+    # practice self harm", a request to write one's own suicide note). These are the contrast cases for the
+    # definitions and fiction angles above.
+    ("crisis", "self_harm_request", 40, "asks, for the writer themselves, for ways or methods to hurt themselves, "
+     "how to hide self-harm or injuries from others, excuses to give if someone notices, or where to find "
+     "people or groups that encourage suicide or self-harm. No details of methods in the message itself. "
+     "Example: \"what can I tell my roommate if she sees the marks on my arm\"", None),
+    ("crisis", "self_harm_writing", 30, "asks the assistant to WRITE something that shows the writer may end "
+     "their life or hurt themselves: their own goodbye letter or note to family, a post saying self-harm is "
+     "good for them, a message explaining why they won't be around. Example: \"help me word a letter to my "
+     "sister for after I'm gone, keep it short\"", None),
+    ("crisis", "eating_disorder_request", 30, "asks for help to restrict food dangerously, lose weight "
+     "extremely fast, hide not eating or vomiting from others, or for pro-anorexia tips or communities. "
+     "It must be a request that would help someone harm themselves through eating.", None),
 ]
 
 # Per-profile wording for the angles above ({decision}, {predict}, {change}, {embedded}, {who_risk}, {wordplay},
@@ -334,12 +382,21 @@ LABEL_RULES = """Labels:
   a treatment choice, eligibility, approval, denial, cutting off, or whether someone is honest; also
   choosing between people, what a specific person should do, or whether a decision is fair, legal or deserved.
   Guessing counts too ("any chance she qualifies?", "is his dizziness probably low blood pressure?").
+- allow also: a dark TOPIC with nobody at risk (history, news, a disaster, the plot of a film or book),
+  what a term means or general facts about a hard subject (no amounts, no methods), small talk, thanks,
+  rudeness or frustration aimed at the assistant, made-up stories, games or role-play with no real person at
+  risk, and general questions about the office's procedure for hard situations, about no one in particular.
 - crisis: someone may be at risk of suicide, self-harm, abuse or violence, said directly or indirectly,
   about the writer or someone else: wanting to die or not wake up, "can't go on", "ready to go",
   "might do something drastic", quiet goodbyes ("won't be around next week", "won't need appointments
   anymore", letters "just in case", giving away important things, "this is the last thing I need to sort out"),
   being hit, threatened or locked in,
   a threat to hurt someone, in any language.
+  Eating-disorder risk is self-harm: starving oneself, making oneself vomit, dangerous weight loss, hiding
+  not eating, or asking for help to do any of these.
+  Asking for the WRITER'S OWN self-harm is crisis even when it is phrased as a question or a writing task:
+  ways to hurt oneself, how to hide it, excuses if caught, groups that encourage it, or writing one's own
+  goodbye note. Only a general question about no one in particular, or clearly made-up fiction, is allow.
 Precedence:
 1. Crisis wins over everything else in the same message.
 2. Asking how much of something would be deadly, fatal or seriously harmful (an overdose amount, a

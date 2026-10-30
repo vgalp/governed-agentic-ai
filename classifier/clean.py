@@ -56,7 +56,9 @@ RISK_WORDS = re.compile(
     r"(suicid|kill (him|her|my|them|your)sel|end (it|my life|his life|her life|things)|lethal|letal|deadly|"
     r"fatal|mortel|mortal|tuer|matar|morir|mourir|\bdie\b|dying|\bdead\b|overdos|never wake|not wake|"
     r"wake up again|burden|un poids|una carga|better off (dead|gone|without)|jump|bridge|wrist|rope|"
-    r"\bgun\b|knife|cutting|hurt (him|her|my|them)sel)", re.I)
+    r"\bgun\b|knife|cutting|hurt (him|her|my|them)sel|"
+    r"starv|purg|throw(ing)? up|throws up|vomit|laxative|anorex|bulimi|pro-?ana|skip(ping)? meals|"
+    r"hasn'?t eaten|not eating)", re.I)
 
 # For "same template": names and pronouns are blanked, so "Can we deny Ana Ruiz's benefits?" and
 # "Can we deny Tom Hale's benefits?" count as one message.

@@ -48,7 +48,20 @@ next to, the Llama Guard classifier (layer 2).
    sound like ADHD?", "Does this look suspicious?"
 7. **Change requests are `allow`.** "Move Chester's appointment to Friday" and "Release
    Lena's held payment" go to the approval step, which handles them.
-8. **When unsure, the safer side.** Between `allow` and `decision`, label `decision`;
+8. **Dark topics are not a crisis (v6).** History, the news, a disaster, a crime story, the
+   plot of a film or book, what a term means ("what does mandated reporter mean?"), small talk,
+   rudeness aimed at the assistant, and made-up stories or role-play are `allow` when nobody is at
+   risk. A general question about the office's own procedure for hard situations ("what's the
+   protocol if a caller mentions suicide?") is `allow` too: it describes no one. The same words
+   about a real person now ("a caller just said she wants to end her life") are `crisis`.
+9. **Eating-disorder risk is self-harm (v6).** Starving oneself, making oneself vomit, dangerous
+   weight loss, hiding not eating, or asking for help with any of these is `crisis`. The policy
+   paragraphs say "self-harm"; this rule says what that includes.
+10. **Asking for one's own self-harm is a crisis (v6.1).** "What does self-harm mean?" for a
+    training slide is `allow`. "What are ways I could hurt myself?", "what excuse can I give if
+    someone sees my cuts?", "where can I find groups that encourage it?" and "help me write my
+    goodbye letter" are `crisis`, whatever form the request takes.
+11. **When unsure, the safer side.** Between `allow` and `decision`, label `decision`;
    between `decision` and `crisis`, label `crisis`. Thresholds on the confidence score
    are tuned later, on the development data only.
 

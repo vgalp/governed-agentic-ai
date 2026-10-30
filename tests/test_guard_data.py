@@ -29,7 +29,7 @@ def test_the_plan_covers_every_label_for_every_profile():
     cells = generate.plan(1.0)
     for profile in generate.POLICIES:
         assert {label for p, label, *_ in cells if p == profile} == set(clean.LABELS)
-    assert 2500 <= sum(c[4] for c in cells) <= 4500
+    assert 2500 <= sum(c[4] for c in cells) <= 5500        # v6 added about 870
 
 
 def test_the_prompt_never_shows_test_names_and_asks_for_json():
@@ -326,3 +326,41 @@ def test_the_v4_angles_target_the_false_alarms():
     assert {labels[a] for a in ("misplacing", "overwhelm", "possessions", "medication_routine")} == {"allow"}
     assert labels["plan_end"] == labels["short_report"] == "crisis"
     assert "losing or misplacing things" in generate.LABEL_RULES
+
+def test_the_v6_angles_target_what_the_crisis_benchmark_found():
+    """Benchmark v1 (2026-10-22): dark topics, definitions, small talk, rudeness and role-play read as crisis;
+    every eating-disorder message missed."""
+    cells = {(p, a) for p, _, a, _, _ in generate.plan(1.0)}
+    labels = {a: lab for lab, a, *_ in generate.ANGLES}
+    allow = ("dark_topic", "definitions", "small_talk", "rude", "fiction", "procedure")
+    crisis = ("eating_disorder", "eating_disorder_request")
+    for profile in generate.POLICIES:
+        for angle in allow + crisis:
+            assert (profile, angle) in cells, (profile, angle)
+    assert {labels[a] for a in allow} == {"allow"} and {labels[a] for a in crisis} == {"crisis"}
+    assert "Eating-disorder risk is self-harm" in generate.LABEL_RULES
+    assert "dark TOPIC" in generate.LABEL_RULES
+    assert clean.RISK_WORDS.search("she makes herself throw up after every meal")
+
+
+def test_examples_in_the_prompts_are_not_crisis_benchmark_messages():
+    """The fix was shaped by benchmark v1, so its messages must not leak into the prompts either."""
+    import difflib
+    bench = [json.loads(line)["text"].lower() for line in
+             (generate.TEST_SET.parent / "crisis_benchmark_v1.jsonl").read_text(encoding="utf-8").splitlines()
+             if line.strip()]
+    for profile, label, angle, text, _ in generate.plan(1.0):
+        for example in generate.instruction(profile, text).lower().split('"')[1::2]:
+            if len(example.split()) >= 4:
+                best = max(difflib.SequenceMatcher(None, example, b).ratio() for b in bench)
+                assert best < 0.75, (angle, example)
+
+
+def test_the_v6_1_angles_restore_first_person_self_harm_requests():
+    """Benchmark v1 re-run of v6 (2026-10-29): first-person self-harm requests were missed."""
+    labels = {a: lab for lab, a, *_ in generate.ANGLES}
+    cells = {(p, a) for p, _, a, _, _ in generate.plan(1.0)}
+    for profile in generate.POLICIES:
+        for angle in ("self_harm_request", "self_harm_writing"):
+            assert (profile, angle) in cells and labels[angle] == "crisis"
+    assert "WRITER'S OWN self-harm is crisis" in generate.LABEL_RULES
