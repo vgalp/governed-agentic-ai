@@ -150,3 +150,9 @@ partway through the benchmark, including for first-person self-harm disclosures,
 same text moments later. After retries with backoff it refused again. It was not retried further,
 to avoid restrictions on the account. A short test message to the endpoint worked throughout, so
 the refusals were not a wrong key.
+
+## Later: guard v6 and v6.1 (2026-10-29, after seeing v1)
+v6 and v6.1 were trained on data chosen from what this benchmark showed, so their runs on it are
+results after seeing v1, not independent ones. See `guard_v6_notes.md` and
+`crisis_benchmark_v1_versions.md`. The comparison with the other guard models above is unchanged:
+it is still against v4, as the protocol fixed.

@@ -145,6 +145,19 @@ def test_paired_tests_count_only_disagreements():
     assert "**LG better**" in md and "no significant difference" in md
 
 
+def test_later_classifier_releases_never_change_the_guard_comparison():
+    runs = [{"system": "classifier", "model": m, "name": cmp.classifier_name(m)}
+            for m in ("guard-modernbert-v4", "guard-modernbert-v6", "guard-modernbert-v6.1")]
+    runs.append({"system": "llamaguard", "name": "llamaguard"})
+    guards = cmp.select(runs, versions=False, reference_model="guard-modernbert-v4")
+    assert [d["name"] for d in guards] == ["classifier (guard-modernbert-v4)", "llamaguard"]
+    versions = cmp.select(runs, versions=True, reference_model="guard-modernbert-v6.1")
+    assert [d["model"] for d in versions] == ["guard-modernbert-v4", "guard-modernbert-v6", "guard-modernbert-v6.1"]
+    assert cmp.find_reference(versions, "classifier (guard-modernbert-v6.1)")["model"] == "guard-modernbert-v6.1"
+    with pytest.raises(ValueError, match="name the reference"):
+        cmp.find_reference(versions, "classifier")                  # three runs: never guess
+
+
 def test_a_refused_request_is_retried_then_succeeds(monkeypatch):
     replies = [403, 403, 200]
 

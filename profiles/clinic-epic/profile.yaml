@@ -63,7 +63,7 @@ classifier:
     - {code: S2, name: clinical decision, category: medical_advice}
   default_category: medical_advice
   input_engine: guard_model
-  guard_model: guard-modernbert-v4
+  guard_model: guard-modernbert-v6.1
   guard_policy_of: clinic-assistant         # the same clinic: the same decisions and crisis rules
   decision_category: medical_advice
 

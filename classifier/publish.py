@@ -4,10 +4,16 @@
         --results eval/results/guard_test_v4_classifier_f85591407ded.json
     uv run --group train python -m classifier.publish --model guard-modernbert-v4 \\
         --results eval/results/guard_test_v4_classifier_f85591407ded.json --upload vgalp/guard-modernbert-v4
+    uv run python -m classifier.publish --model guard-modernbert-v6.1 \\
+        --results eval/results/guard_test_v5_classifier_c58d0c88d050.json \\
+        --benchmark eval/results/crisis_benchmark_v1_classifier_c58d0c88d050.json --benchmark-seen
 
 1. Checks the model folder is complete (weights, config, tokenizer, thresholds, training_info.json).
 2. Checks that every results file was scored on THESE weights: the SHA-256 of model.safetensors must
    equal the model_sha256 the frozen-test run recorded. A results file from another model is refused.
+   Crisis benchmark results (--benchmark) are checked the same way, by the config the run recorded.
+   --benchmark-seen says the benchmark shaped this model's training data; the card then says the
+   numbers are not independent. Leave it off only if the benchmark played no part in this release.
 3. Builds release/<model>/: the model files, LICENSE (Apache-2.0, as the base model and the
    generator), README.md (the model card) and MANIFEST.json (SHA-256 of every file).
    Every number in the card is read from training_info.json, the training data files, the review
@@ -23,6 +29,7 @@ classifier/published.yaml so `python -m classifier.fetch` can download exactly t
 import argparse
 import hashlib
 import json
+import re
 import shutil
 from collections import Counter
 from pathlib import Path
@@ -86,6 +93,88 @@ def load_results(paths: list[Path], weights_sha: str) -> list[dict]:
     return out
 
 
+def load_benchmarks(paths: list[Path], weights_sha: str) -> list[dict]:
+    """Crisis benchmark results (eval/run_crisis_benchmark.py) of this classifier, and only this one:
+    the run records the first 12 characters of the weights' SHA-256 as its config."""
+    out = []
+    for p in paths:
+        r = json.loads(p.read_text())
+        if r.get("system") != "classifier" or r.get("config") != weights_sha[:12]:
+            raise PublishError(f"{p.name} is a run of {r.get('system')} {r.get('config')}, not of these weights "
+                               f"({weights_sha[:12]}). Use the classifier's own benchmark results only.")
+        m = re.search(r"crisis_benchmark_(v\d+)", p.name)
+        out.append({**r, "_file": p.name, "_version": m.group(1) if m else "?"})
+    return out
+
+
+def rate(s: dict) -> str:
+    lo, hi = s["ci95"]
+    return f"{s['k']:,} / {s['n']:,} ({pct(s['rate'])}, 95% CI {pct(lo)}–{pct(hi)})"
+
+
+def count(rows: list[dict], keep) -> dict:
+    """k of n, with a Wilson interval, for rows chosen by `keep` (row -> None to skip, True/False)."""
+    marks = [m for m in (keep(r) for r in rows) if m is not None]
+    k, n = sum(marks), len(marks)
+    if not n:
+        return {"k": 0, "n": 0, "rate": 0.0, "ci95": [0.0, 0.0]}
+    z, p = 1.96, k / n
+    centre = (p + z * z / (2 * n)) / (1 + z * z / n)
+    half = z * ((p * (1 - p) / n + z * z / (4 * n * n)) ** 0.5) / (1 + z * z / n)
+    return {"k": k, "n": n, "rate": p, "ci95": [max(0.0, centre - half), min(1.0, centre + half)]}
+
+
+def benchmark_section(benchmarks: list[dict], seen: bool) -> str:
+    if not benchmarks:
+        return ""
+    parts = []
+    for b in benchmarks:
+        s, v, rows = b["summary"], b["_version"], b.get("rows", [])
+        n_policies = len(s.get("policies", []))
+        lines = ["| Messages | Crisis messages caught | Not-crisis messages given the crisis reply |",
+                 "| --- | --- | --- |",
+                 f"| All {n_policies} policies | {rate(s['all']['crisis_caught'])} | {rate(s['all']['false_crisis'])} |"]
+        for key, label in (("seen_policies", "Policies seen in training"),
+                           ("unseen_policies", "Policies never seen in training")):
+            if key in s:
+                lines.append(f"| {label} | {rate(s[key]['crisis_caught'])} | {rate(s[key]['false_crisis'])} |")
+        for source, label in (("sst", "SimpleSafetyTests (crisis only)"),
+                              ("xstest", "XSTest (safe prompts that sound unsafe)")):
+            mine = [r for r in rows if r.get("source") == source]
+            if not mine:
+                continue
+            caught = count(mine, lambda r: r["predicted"] == "crisis" if r["expected"] == "crisis" else None)
+            false = count(mine, lambda r: r["predicted"] == "crisis" if r["expected"] != "crisis" else None)
+            lines.append(f"| {label} | {rate(caught) if caught['n'] else '–'} | "
+                         f"{rate(false) if false['n'] else '–'} |")
+        across = s.get("across_policies", {})
+        extra = ""
+        if across:
+            extra = (f"\n\nCrisis messages missed under every policy: "
+                     f"{rate(across['crisis_missed_under_every_policy'])}. Not-crisis messages given the crisis "
+                     f"reply under at least one policy: {rate(across['false_crisis_under_any_policy'])}.")
+        independence = (
+            f"**Not independent of this release.** The kinds of message earlier models missed or wrongly flagged "
+            f"on benchmark {v} (never its messages) were used to decide what new training data to generate. "
+            f"Read these numbers as results after seeing benchmark {v}. A new benchmark from different public "
+            f"sources is needed for an independent measure."
+            if seen else
+            f"Run once. Nothing in benchmark {v} was used to train or tune this model.")
+        parts.append(f"""### Crisis benchmark {v} (public data written outside this project)
+
+Messages and labels from Aegis 2.0, SimpleSafetyTests and XSTest, each read under every policy
+paragraph (`{b['_file']}`, benchmark `{str(b.get('benchmark_sha256', ''))[:12]}`, run {b.get('run_at', 'n/a')}).
+These messages are not about any office's work: many are deliberately edgy, dark or off-topic, so
+false alarms here are far higher than on everyday office messages. Counts are message and policy
+pairs: each message is counted once under each policy.
+
+{chr(10).join(lines)}{extra}
+
+{independence}
+""")
+    return "\n".join(parts)
+
+
 def data_facts(data_dir: Path) -> dict:
     """What the card says about the training data, counted from the files themselves."""
     rows = read_jsonl(data_dir / "train.jsonl") + read_jsonl(data_dir / "dev.jsonl")
@@ -125,7 +214,9 @@ def results_table(results: list[dict]) -> str:
     return "\n".join(lines)
 
 
-def card(model: str, info: dict, thresholds: dict, weights_sha: str, facts: dict, results: list[dict]) -> str:
+def card(model: str, info: dict, thresholds: dict, weights_sha: str, facts: dict, results: list[dict],
+         benchmarks: list[dict] | None = None, benchmark_seen: bool = False) -> str:
+    benchmarks = benchmarks or []
     labels = ", ".join(f"{k} {v:,}" for k, v in sorted(facts["labels"].items()))
     profiles = ", ".join(f"{k} {v:,}" for k, v in sorted(facts["profiles"].items()))
     generators = ", ".join(f"{k} ({v:,})" for k, v in facts["generators"].most_common())
@@ -134,7 +225,20 @@ def card(model: str, info: dict, thresholds: dict, weights_sha: str, facts: dict
     headline = (f"On frozen test set {results[0]['test_set']} ({first['n']} messages, scored once), it missed "
                 f"{first['crisis_missed']} of {first['crisis_total']} crisis messages and wrongly blocked "
                 f"{first['wrong_blocks']} of {first['allow_total']} everyday messages.") if first else ""
+    if benchmarks:
+        b = benchmarks[0]["summary"]["all"]
+        headline += (f" On public crisis benchmark {benchmarks[0]['_version']} it caught "
+                     f"{pct(b['crisis_caught']['rate'])} of crisis messages and gave the crisis reply to "
+                     f"{pct(b['false_crisis']['rate'])} of the others"
+                     + (" (after seeing that benchmark: see Evaluation)." if benchmark_seen else "."))
     files = ", ".join(f"`{r['_file']}`" for r in results)
+    false_alarms = ""
+    if benchmarks:
+        b = benchmarks[0]["summary"]["all"]["false_crisis"]
+        false_alarms = (f"\n- **False alarms on dark or off-topic messages.** On public benchmark messages that sound "
+                        f"alarming but are safe (history, fiction, definitions, rudeness), {pct(b['rate'])} got the "
+                        f"crisis reply. On everyday office messages the rate is far lower, but a deployment will "
+                        f"see some such hand-overs.")
     return f"""---
 license: apache-2.0
 base_model: {info.get('base_model', 'answerdotai/ModernBERT-base')}
@@ -209,6 +313,7 @@ new office can use the model through its policy paragraph alone. Results ({files
 
 {results_table(results)}
 
+{benchmark_section(benchmarks, benchmark_seen)}
 Development set (used to choose thresholds and when to stop training, not a test):
 macro F1 {dev.get('macro_f1', 'n/a')}, crisis recall {dev.get('crisis', {}).get('recall', 'n/a')}.
 
@@ -253,7 +358,7 @@ repository, with notes on each mistake.
   after a plan) can be labelled allow with high confidence; no threshold catches them. Commands to
   make a decision ("go ahead and end the lease") can pass as allow in profiles not seen in training.
   This is why the pipeline runs fixed rules first and checks answers again.
-- **Policy-dependent.** The model reads the policy paragraph: a vague policy gives weaker labels.
+- **Policy-dependent.** The model reads the policy paragraph: a vague policy gives weaker labels.{false_alarms}
 
 ## Files and integrity
 
@@ -271,11 +376,13 @@ blocked decisions in AI assistants.* {REPO_URL}
 
 
 def build(model: str, result_paths: list[Path], models_dir: Path = MODELS, data_dir: Path = DATA,
-          release_dir: Path = RELEASE) -> Path:
+          release_dir: Path = RELEASE, benchmark_paths: list[Path] | None = None,
+          benchmark_seen: bool = False) -> Path:
     model_dir = models_dir / model
     check_model(model_dir)
     weights_sha = sha256(model_dir / "model.safetensors")
     results = load_results(result_paths, weights_sha)
+    benchmarks = load_benchmarks(benchmark_paths or [], weights_sha)
     info = json.loads((model_dir / "training_info.json").read_text())
     thresholds = json.loads((model_dir / "thresholds.json").read_text())["thresholds"]
 
@@ -287,7 +394,8 @@ def build(model: str, result_paths: list[Path], models_dir: Path = MODELS, data_
         if (model_dir / f).exists():
             shutil.copy2(model_dir / f, out / f)
     (out / "LICENSE").write_text(LICENSE_TEXT)
-    (out / "README.md").write_text(card(model, info, thresholds, weights_sha, data_facts(data_dir), results))
+    (out / "README.md").write_text(card(model, info, thresholds, weights_sha, data_facts(data_dir), results,
+                                          benchmarks, benchmark_seen))
     manifest = {p.name: sha256(p) for p in sorted(out.iterdir()) if p.is_file()}
     (out / "MANIFEST.json").write_text(json.dumps({"model": model, "files": manifest}, indent=2))
     return out
@@ -308,10 +416,15 @@ def main() -> None:
     ap.add_argument("--results", nargs="+", type=Path, required=True,
                     help="frozen-test results file(s) scored on this model")
     ap.add_argument("--upload", metavar="REPO", help="Hugging Face repo id, e.g. vgalp/guard-modernbert-v4")
+    ap.add_argument("--benchmark", nargs="+", type=Path, default=[],
+                    help="crisis benchmark results file(s) of this model (eval/run_crisis_benchmark.py)")
+    ap.add_argument("--benchmark-seen", action="store_true",
+                    help="the benchmark shaped this model's training data: the card says it is not independent")
     ap.add_argument("--private", action="store_true", help="create the Hugging Face repo as private")
     args = ap.parse_args()
     try:
-        out = build(args.model, args.results)
+        out = build(args.model, args.results, benchmark_paths=args.benchmark,
+                    benchmark_seen=args.benchmark_seen)
     except PublishError as e:
         raise SystemExit(f"Not published: {e}")
     print(f"Release ready: {out}  (read README.md before uploading)")

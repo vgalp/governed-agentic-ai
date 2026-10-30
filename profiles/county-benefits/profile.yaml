@@ -70,7 +70,7 @@ classifier:
   # this profile's paragraph from classifier/policies.yaml. Answers stay with Llama Guard above.
   # Needs the train group (torch): uv sync --group train. input_engine: llamaguard to switch back.
   input_engine: guard_model
-  guard_model: guard-modernbert-v4
+  guard_model: guard-modernbert-v6.1
   decision_category: eligibility_decision           # the reply for a forbidden decision
 
 privacy:

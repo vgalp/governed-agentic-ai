@@ -2,10 +2,19 @@
 
     uv run python -m eval.compare_crisis_benchmark                       # clinic-assistant, education-staff
     uv run python -m eval.compare_crisis_benchmark --policies all
+    uv run python -m eval.compare_crisis_benchmark --versions --reference guard-modernbert-v6.1 --policies all
 
-Only the policies every result has in common are compared, so each system answers the same
-messages. Writes eval/results/crisis_benchmark_v1_comparison.md (commit it): a table of scores, the
-paired tests, and which crisis messages each system missed.
+Two comparisons, each in its own file:
+- **Guards** (default): the other guard models against one guard classifier, as fixed in the protocol
+  (`--reference`, default guard-modernbert-v4, the classifier the protocol was written for). Other
+  versions of the classifier are left out, so later releases never change this file's tests.
+  Writes eval/results/crisis_benchmark_v1_comparison.md.
+- **Versions** (`--versions`): the guard classifier's own releases, each against `--reference`.
+  Writes eval/results/crisis_benchmark_v1_versions.md.
+
+Only the policies every compared result has in common are compared, so each system answers the
+same messages. Each file (commit it) has a table of scores, the paired tests, and which crisis
+messages each system missed.
 
 Paired tests (fixed in the protocol before the other guards were run): each system against the
 reference (the guard classifier), one policy at a time so each message counts once, on two
@@ -25,6 +34,7 @@ from eval.run_guard_test import RESULTS
 
 DEFAULT_POLICIES = ("clinic-assistant", "education-staff")
 REFERENCE = "classifier"           # the system everything is tested against
+PROTOCOL_MODEL = "guard-modernbert-v4"   # the classifier the guard comparison was fixed for
 ALPHA = 0.05
 
 
@@ -50,7 +60,7 @@ def holm(pvalues: list[float]) -> list[float]:
 
 def paired_tests(runs: list[dict], policies: list[str], reference: str = REFERENCE) -> list[dict]:
     """For each other system, policy and question: who got which messages right, and McNemar's p."""
-    ref = next((d for d in runs if d["system"] == reference), None)
+    ref = find_reference(runs, reference)
     if ref is None:
         return []
     def right(d, policy, expected):
@@ -74,6 +84,29 @@ def paired_tests(runs: list[dict], policies: list[str], reference: str = REFEREN
         t["better"] = None if not t["significant"] else (reference if t["only_reference"] > t["only_other"]
                                                          else t["system"])
     return tests
+
+
+def find_reference(runs: list[dict], reference: str) -> dict | None:
+    """The run named `reference`, or the only run of that system. Never a guess between several."""
+    named = [d for d in runs if d["name"] == reference]
+    if named:
+        return named[0]
+    of_system = [d for d in runs if d["system"] == reference]
+    if len(of_system) > 1:
+        raise ValueError(f"{len(of_system)} runs of {reference}: name the reference, e.g. "
+                         f"{of_system[0]['name']!r}")
+    return of_system[0] if of_system else None
+
+
+def classifier_name(model: str) -> str:
+    return f"{REFERENCE} ({model})"
+
+
+def select(runs: list[dict], versions: bool, reference_model: str) -> list[dict]:
+    """Guards: every other guard and one classifier run. Versions: every classifier run."""
+    if versions:
+        return [d for d in runs if d["system"] == REFERENCE]
+    return [d for d in runs if d["system"] != REFERENCE or d.get("model") == reference_model]
 
 
 def load_runs() -> list[dict]:
@@ -125,8 +158,9 @@ def tests_markdown(tests: list[dict], reference_name: str) -> list[str]:
 
 
 def markdown(scores: list[dict], missed: dict, policies: list[str], texts: dict[str, str], names: list[str],
-             tests: list[dict] | None = None, reference_name: str = REFERENCE) -> str:
-    out = [f"# Crisis benchmark v1: all systems compared\n",
+             tests: list[dict] | None = None, reference_name: str = REFERENCE,
+             title: str = "all systems compared") -> str:
+    out = [f"# Crisis benchmark v1: {title}\n",
            f"Policies compared: {', '.join(policies)} (each message labelled once per policy).\n",
            "| System | Crisis messages caught | Safe messages given the crisis reply | XSTest safe prompts given the crisis reply |",
            "|---|---|---|---|"]
@@ -144,8 +178,13 @@ def markdown(scores: list[dict], missed: dict, policies: list[str], texts: dict[
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--policies", default=",".join(DEFAULT_POLICIES), help="comma-separated, or 'all'")
+    ap.add_argument("--versions", action="store_true", help="compare the guard classifier's own releases")
+    ap.add_argument("--reference", default=PROTOCOL_MODEL, help="the classifier model tested against")
     args = ap.parse_args()
-    runs = load_runs()
+    ref_name = classifier_name(args.reference)
+    runs = select(load_runs(), args.versions, args.reference)
+    if not any(d["name"] == ref_name for d in runs):
+        raise SystemExit(f"No benchmark result for {ref_name}.")
     common = set.intersection(*({r["policy"] for r in d["rows"]} for d in runs)) if runs else set()
     policies = sorted(common) if args.policies == "all" else [p for p in args.policies.split(",") if p in common]
     if not policies:
@@ -153,10 +192,10 @@ def main() -> None:
     texts = {json.loads(line)["id"]: json.loads(line)["text"]
              for line in BENCHMARK.read_text(encoding="utf-8").splitlines() if line.strip()}
     scores, missed = compare(runs, policies)
-    tests = paired_tests(runs, policies)
-    ref_name = next((d["name"] for d in runs if d["system"] == REFERENCE), REFERENCE)
-    md = markdown(scores, missed, policies, texts, [d["name"] for d in runs], tests, ref_name)
-    out = RESULTS / "crisis_benchmark_v1_comparison.md"
+    tests = paired_tests(runs, policies, ref_name)
+    md = markdown(scores, missed, policies, texts, [d["name"] for d in runs], tests, ref_name,
+                  title="the guard classifier's releases compared" if args.versions else "all systems compared")
+    out = RESULTS / ("crisis_benchmark_v1_versions.md" if args.versions else "crisis_benchmark_v1_comparison.md")
     out.write_text(md)
     print(md)
     print(f"Saved {out.relative_to(RESULTS.parent.parent)}.")

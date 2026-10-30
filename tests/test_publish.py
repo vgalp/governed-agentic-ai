@@ -55,6 +55,51 @@ def test_the_release_and_card_come_from_the_record(tmp_path, model_dir):
     assert manifest["model.safetensors"] == weights and "LICENSE" in manifest and "README.md" in manifest
 
 
+def benchmark_file(tmp_path, config, system="classifier"):
+    def s(k, n):
+        return {"k": k, "n": n, "rate": k / n, "ci95": [0.0, 1.0]}
+    part = {"crisis_caught": s(9, 10), "false_crisis": s(2, 20), "any_block": s(3, 20)}
+    rows = [{"id": "sst_1", "source": "sst", "expected": "crisis", "policy": "a", "predicted": "crisis"},
+            {"id": "x_1", "source": "xstest", "expected": "not_crisis", "policy": "a", "predicted": "crisis"},
+            {"id": "x_2", "source": "xstest", "expected": "not_crisis", "policy": "a", "predicted": "allow"}]
+    summary = {"policies": ["a", "b"], "all": part, "seen_policies": part, "unseen_policies": part,
+               "across_policies": {"crisis_missed_under_every_policy": s(1, 5),
+                                   "false_crisis_under_any_policy": s(3, 10)}}
+    p = tmp_path / "crisis_benchmark_v1_classifier_abc.json"
+    p.write_text(json.dumps({"system": system, "config": config, "benchmark_sha256": "f" * 64,
+                             "run_at": "2026-10-29T22:50:38", "summary": summary, "rows": rows}))
+    return p
+
+
+def test_the_card_reports_the_crisis_benchmark_and_whether_it_shaped_training(tmp_path, model_dir):
+    weights = sha256(model_dir / "model.safetensors")
+    args = dict(models_dir=model_dir.parent, data_dir=tmp_path / "data", release_dir=tmp_path / "release",
+                benchmark_paths=[benchmark_file(tmp_path, weights[:12])])
+    seen = (publish.build("guard-test", [results_file(tmp_path, weights)], benchmark_seen=True, **args)
+            / "README.md").read_text()
+    assert "### Crisis benchmark v1" in seen and "| All 2 policies | 9 / 10 (90.0%" in seen
+    assert "| XSTest (safe prompts that sound unsafe) | – | 1 / 2 (50.0%" in seen
+    assert "caught 90.0% of crisis messages and gave the crisis reply to 10.0% of the others (after seeing" in seen
+    assert "**Not independent of this release.**" in seen and "False alarms on dark or off-topic" in seen
+    unseen = (publish.build("guard-test", [results_file(tmp_path, weights)], **args) / "README.md").read_text()
+    assert "Not independent" not in unseen and "Nothing in benchmark v1 was used to train or tune" in unseen
+
+
+def test_benchmark_results_of_other_weights_or_systems_are_refused(tmp_path, model_dir):
+    weights = sha256(model_dir / "model.safetensors")
+    for bad in (benchmark_file(tmp_path, "0" * 12), benchmark_file(tmp_path, weights[:12], system="llamaguard")):
+        with pytest.raises(PublishError, match="not of these weights"):
+            publish.build("guard-test", [results_file(tmp_path, weights)], models_dir=model_dir.parent,
+                          data_dir=tmp_path / "data", release_dir=tmp_path / "release", benchmark_paths=[bad])
+
+
+def test_without_a_benchmark_the_card_is_as_before(tmp_path, model_dir):
+    weights = sha256(model_dir / "model.safetensors")
+    card = (publish.build("guard-test", [results_file(tmp_path, weights)], models_dir=model_dir.parent,
+                          data_dir=tmp_path / "data", release_dir=tmp_path / "release") / "README.md").read_text()
+    assert "Crisis benchmark" not in card and "False alarms on dark" not in card
+
+
 def test_results_scored_on_other_weights_are_refused(tmp_path, model_dir):
     with pytest.raises(PublishError, match="not on these"):
         publish.build("guard-test", [results_file(tmp_path, "0" * 64)], models_dir=model_dir.parent,
