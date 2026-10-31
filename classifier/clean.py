@@ -40,7 +40,9 @@ DATA = ROOT / "data"
 RAW, TRAIN, DEV, REVIEW = DATA / "raw.jsonl", DATA / "train.jsonl", DATA / "dev.jsonl", DATA / "review.csv"
 REJECTED = DATA / "rejected.jsonl"
 REVIEWED = DATA / "reviewed.csv"
-HELD_OUT = sorted((ROOT.parent / "eval" / "datasets").glob("*.jsonl"))   # test set + red-team sets
+# Test sets, red-team sets and benchmarks. A "_ids.jsonl" file lists ids and text hashes only (benchmark v2,
+# whose texts are not redistributed); its texts are in the benchmark file itself, once built on this machine.
+HELD_OUT = sorted(p for p in (ROOT.parent / "eval" / "datasets").glob("*.jsonl") if not p.name.endswith("_ids.jsonl"))
 FOUND_HOLDOUT = DATA / "found" / "holdout.jsonl"   # confirmed guard mistakes kept out of training (improve.py)
 LABELS = ("allow", "decision", "crisis")
 TOO_CLOSE = 0.75
@@ -90,8 +92,21 @@ def held_out() -> list[str]:
         for line in path.read_text(encoding="utf-8").splitlines():
             if line.strip():
                 row = json.loads(line)
-                out += [norm(t) for t in row["turns"]] if "turns" in row else [norm(row["text"])]   # conversations: every turn
+                if "turns" in row:                                   # conversations: every turn
+                    out += [norm(t) for t in row["turns"]]
+                elif "text" in row:
+                    out.append(norm(row["text"]))
+                else:
+                    raise ValueError(f"{path.name}: a row with neither 'text' nor 'turns' ({row.get('id')}). "
+                                     "Training cannot be kept away from it.")
     return out
+
+
+def unbuilt_benchmarks(datasets: Path = ROOT.parent / "eval" / "datasets") -> list[str]:
+    """Benchmarks whose texts are not on this machine (only their _ids.jsonl): training here cannot be
+    checked against them. Build them first (e.g. python -m eval.build_crisis_benchmark_v2)."""
+    return sorted(p.name.replace("_ids.jsonl", ".jsonl") for p in datasets.glob("*_ids.jsonl")
+                  if not (datasets / p.name.replace("_ids.jsonl", ".jsonl")).exists())
 
 
 def too_close(text: str, others: list[tuple[str, set[str]]]) -> float:
@@ -258,6 +273,10 @@ def main() -> None:
     if args.apply_review:
         apply_review(args.reviewer)
         return
+    missing = unbuilt_benchmarks()
+    if missing:
+        raise SystemExit(f"Not cleaned: {', '.join(missing)} is not built on this machine, so training could not be "
+                         "kept away from its messages. Build it first (python -m eval.build_crisis_benchmark_v2).")
     rescued = rescue(read_jsonl(REJECTED)) if REJECTED.exists() else []
     rows, dropped = clean(read_jsonl(RAW) + rescued, held_out(), test_names())
     rows, n_drop = apply_decisions(rows, read_reviewed())

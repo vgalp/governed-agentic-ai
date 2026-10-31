@@ -421,6 +421,12 @@ def main() -> None:
     k.add_argument("--model", required=True)
     sub.add_parser("history", help="every round so far")
     args = ap.parse_args()
+    if args.command in ("attack", "accept"):
+        from classifier.clean import unbuilt_benchmarks
+        missing = unbuilt_benchmarks()
+        if missing:
+            raise SystemExit(f"Not run: {', '.join(missing)} is not built on this machine, so new training data "
+                             "could not be kept away from it. Build it first (python -m eval.build_crisis_benchmark_v2).")
     t0 = time.time()
     {"attack": run_attack, "accept": run_accept, "check": run_check}.get(args.command, lambda _: show_history())(args)
     print(f"\n({time.time() - t0:.0f} s)")

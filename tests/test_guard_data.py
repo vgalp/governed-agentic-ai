@@ -364,3 +364,23 @@ def test_the_v6_1_angles_restore_first_person_self_harm_requests():
         for angle in ("self_harm_request", "self_harm_writing"):
             assert (profile, angle) in cells and labels[angle] == "crisis"
     assert "WRITER'S OWN self-harm is crisis" in generate.LABEL_RULES
+
+
+def test_benchmark_id_files_are_skipped_and_unbuilt_benchmarks_are_reported(tmp_path):
+    """crisis_benchmark_v2_ids.jsonl has ids and text hashes only; the texts come from the built file."""
+    from classifier import clean as cl
+    assert not any(p.name.endswith("_ids.jsonl") for p in cl.HELD_OUT)
+    (tmp_path / "bench_v9_ids.jsonl").write_text('{"id": "x", "text_sha256": "ab"}\n')
+    assert cl.unbuilt_benchmarks(tmp_path) == ["bench_v9.jsonl"]
+    (tmp_path / "bench_v9.jsonl").write_text('{"id": "x", "text": "hello"}\n')
+    assert cl.unbuilt_benchmarks(tmp_path) == []
+
+
+def test_a_held_out_row_without_text_stops_cleaning(tmp_path, monkeypatch):
+    from classifier import clean as cl
+    bad = tmp_path / "odd.jsonl"
+    bad.write_text('{"id": "x", "prompt": "no text field"}\n')
+    monkeypatch.setattr(cl, "HELD_OUT", [bad])
+    monkeypatch.setattr(cl, "FOUND_HOLDOUT", tmp_path / "none.jsonl")
+    with pytest.raises(ValueError, match="neither 'text' nor 'turns'"):
+        cl.held_out()
