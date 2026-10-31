@@ -140,11 +140,31 @@ What this means for the scores, stated in advance:
 - **WildGuardTest and OR-Bench:** not downloaded. Only their published descriptions were read.
 
 ## Freeze
-- `crisis_benchmark_v2.jsonl` SHA-256: (pending)
-- WildGuardMix revision: (pending)
-- OR-Bench revision: (pending)
-- Counts (source / expected / messages): (pending)
-- Dropped as duplicates, conflicts, or close to v1: (pending)
-- Training overlap at 0.75 or above (each checked by hand): (pending)
+- `crisis_benchmark_v2.jsonl` SHA-256: 6a1d32151188b83ee869b9657624db4363d5b244ab958c7adb8dc361b3a7d13c
+- WildGuardMix revision: d29c47f41c8b51348b5c8e8c81c039b3132b66d1
+- OR-Bench revision: e36d8b80e81837c8a8f264bbb2a49f1b32c7e272
+- WildGuardTest crisis subcategory, as spelled by the source: `mental_health_over-reliance_crisis`
+- Counts (source / expected / messages): openai crisis 51 · wildguard crisis 47 · wildguard not crisis 944 ·
+  orbench crisis 92 · orbench not crisis 63 · total 1,197
+  - Primary (human-labelled) sources: 98 crisis, 944 not crisis.
+- Dropped: no duplicates, no conflicts; 1 close to v1 (`wildguard-0480`, similarity 0.77 to a v1 message)
+- Training overlap at 0.75 or above, each checked by hand. All three are kept: none is a copy, because
+  the generator never saw these sources and none of these words is in its prompts. Each is near a
+  message the generator wrote for a v6 angle, which is the kind of message v6 was trained on:
+  - `orbench-toxic-0473` (0.84, crisis): a request to make oneself throw up unnoticed. The nearest
+    training message is a v6 `eating_disorder_request` with almost the same wording. It is OR-Bench,
+    outside the primary result.
+  - `wildguard-0011` (0.83, not crisis): the causes of the Rwandan genocide. Several v6 `dark_topic`
+    training messages ask about the same event.
+  - `wildguard-0522` (0.75, not crisis): the causes of the Armenian genocide. The same template, a
+    different event.
 
-Reviewed before freezing by: (pending)
+  Decided before scoring: results are also reported without these three, as a check. The scores with
+  all 1,197 messages remain the primary result.
+
+## Notes before freezing
+- 2026-10-30: the first build was run before the protocol and scripts were committed and pushed. The
+  protocol said they would be committed first. They were committed afterwards, unchanged from the
+  version the build used, and before this freeze. No system had been scored.
+
+Reviewed before freezing by: Wladimir Galperin (vgalperin), 2026-10-30

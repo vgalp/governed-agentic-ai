@@ -1,0 +1,96 @@
+{
+  "benchmark": "crisis_benchmark_v2.jsonl",
+  "built": "2026-10-30",
+  "benchmark_sha256": "6a1d32151188b83ee869b9657624db4363d5b244ab958c7adb8dc361b3a7d13c",
+  "primary_sources": [
+    "openai",
+    "wildguard"
+  ],
+  "sources": {
+    "openai": {
+      "name": "OpenAI moderation evaluation set (samples-1680)",
+      "repo": "openai/moderation-api-release",
+      "file": "data/samples-1680.jsonl.gz",
+      "revision": "f4ab51b5edd3bfbcb349a56324274235b674e0e4",
+      "sha256": "ef3f7de86ee394fe337b0a566ba4b9c7db058f3caa8d6a4a0006138b663ab9a8",
+      "licence": "MIT",
+      "url": "https://github.com/openai/moderation-api-release",
+      "citation": "Markov et al., A Holistic Approach to Undesired Content Detection in the Real World, AAAI 2023 (arXiv:2208.03274).",
+      "labels_by": "OpenAI's labellers"
+    },
+    "wildguard": {
+      "name": "WildGuardTest (test split of WildGuardMix, Allen Institute for AI)",
+      "repo": "allenai/wildguardmix",
+      "revision": "d29c47f41c8b51348b5c8e8c81c039b3132b66d1",
+      "licence": "ODC-BY; access after accepting AI2's Responsible Use Guidelines (not redistributed here)",
+      "url": "https://huggingface.co/datasets/allenai/wildguardmix",
+      "citation": "Han et al., WildGuard: Open One-Stop Moderation Tools for Safety Risks, Jailbreaks, and Refusals of LLMs, NeurIPS 2024 Datasets and Benchmarks (arXiv:2406.18495).",
+      "labels_by": "three human annotators per item",
+      "files": {
+        "test": {
+          "file": "test/wildguard_test.parquet",
+          "sha256": "6ccc2909c1ae6d41424fac69f1fc32535b1de39cb8f80407d81e8bc64a0bebca"
+        }
+      },
+      "crisis_subcategory": "mental_health_over-reliance_crisis"
+    },
+    "orbench": {
+      "name": "OR-Bench (Hard-1K and Toxic)",
+      "repo": "bench-llm/or-bench",
+      "revision": "e36d8b80e81837c8a8f264bbb2a49f1b32c7e272",
+      "licence": "CC BY 4.0",
+      "url": "https://huggingface.co/datasets/bench-llm/or-bench",
+      "citation": "Cui et al., OR-Bench: An Over-Refusal Benchmark for Large Language Models, 2024 (arXiv:2405.20947).",
+      "labels_by": "an ensemble of three language models (not people); reported apart, not in the primary result",
+      "files": {
+        "hard-1k": {
+          "file": "or-bench-hard-1k.csv",
+          "sha256": "a6e2f1166416efe5901f3bb05c47dc92ab3aca3acfe143693d38b8057d841e6d"
+        },
+        "toxic": {
+          "file": "or-bench-toxic.csv",
+          "sha256": "3be45901faae3b4b2b51bf7f8a2784c1650a1cc8c631dbc8b171d5312d4e0057"
+        }
+      }
+    }
+  },
+  "counts": {
+    "openai crisis": 51,
+    "orbench crisis": 92,
+    "orbench not_crisis": 63,
+    "wildguard crisis": 47,
+    "wildguard not_crisis": 944
+  },
+  "variants": {
+    "plain": 510,
+    "adversarial": 481
+  },
+  "dropped": {
+    "duplicate": 0,
+    "close to benchmark v1": 1
+  },
+  "close_to_v1": [
+    {
+      "id": "wildguard-0480",
+      "similarity": 0.77
+    }
+  ],
+  "training_overlap": {
+    "training_messages_compared": 5559,
+    "threshold": 0.75,
+    "too_close": [
+      {
+        "id": "orbench-toxic-0473",
+        "similarity": 0.84
+      },
+      {
+        "id": "wildguard-0011",
+        "similarity": 0.83
+      },
+      {
+        "id": "wildguard-0522",
+        "similarity": 0.75
+      }
+    ]
+  }
+}
