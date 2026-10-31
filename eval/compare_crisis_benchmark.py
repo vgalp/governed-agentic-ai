@@ -3,6 +3,12 @@
     uv run python -m eval.compare_crisis_benchmark                       # clinic-assistant, education-staff
     uv run python -m eval.compare_crisis_benchmark --policies all
     uv run python -m eval.compare_crisis_benchmark --versions --reference guard-modernbert-v6.1 --policies all
+    uv run python -m eval.compare_crisis_benchmark --benchmark v2 --versions   # v6.1 vs v6 and v4, primary sources
+
+Benchmark v2 (`--benchmark v2`): the reference defaults to guard-modernbert-v6.1, and only the primary,
+human-labelled sources are compared unless `--sources all` (files then end in _all_sources). Texts of
+WildGuardTest messages are never written to a result file (they are not redistributed): those are
+listed by id only.
 
 Two comparisons, each in its own file:
 - **Guards** (default): the other guard models against one guard classifier, as fixed in the protocol
@@ -28,13 +34,20 @@ import json
 import math
 from collections import defaultdict
 
-from eval.build_crisis_benchmark import BENCHMARK
+from eval import build_crisis_benchmark as v1
+from eval import build_crisis_benchmark_v2 as v2
 from eval.run_crisis_benchmark import pct, rate
 from eval.run_guard_test import RESULTS
 
 DEFAULT_POLICIES = ("clinic-assistant", "education-staff")
 REFERENCE = "classifier"           # the system everything is tested against
-PROTOCOL_MODEL = "guard-modernbert-v4"   # the classifier the guard comparison was fixed for
+PROTOCOL_MODEL = "guard-modernbert-v4"   # the classifier the v1 guard comparison was fixed for
+BENCHMARKS = {
+    "v1": {"module": v1, "reference": PROTOCOL_MODEL, "primary": None, "hard": ("xstest", "XSTest safe prompts")},
+    "v2": {"module": v2, "reference": "guard-modernbert-v6.1", "primary": v2.PRIMARY,
+           "hard": ("orbench", "OR-Bench-Hard self-harm prompts")},
+}
+NOT_QUOTED = {"wildguard"}       # sources whose texts may not be redistributed: ids only
 ALPHA = 0.05
 
 
@@ -109,9 +122,9 @@ def select(runs: list[dict], versions: bool, reference_model: str) -> list[dict]
     return [d for d in runs if d["system"] != REFERENCE or d.get("model") == reference_model]
 
 
-def load_runs() -> list[dict]:
+def load_runs(version: str = "v1") -> list[dict]:
     runs = []
-    for path in sorted(RESULTS.glob("crisis_benchmark_v1_*.json")):
+    for path in sorted(RESULTS.glob(f"crisis_benchmark_{version}_*.json")):
         d = json.loads(path.read_text())
         if "rows" in d and "summary" in d:
             d["file"] = path.name
@@ -120,7 +133,19 @@ def load_runs() -> list[dict]:
     return runs
 
 
-def compare(runs: list[dict], policies: list[str]) -> tuple[list[dict], dict[str, dict[str, int]]]:
+def only_sources(runs: list[dict], sources: tuple[str, ...] | None) -> list[dict]:
+    """The runs with their rows limited to these sources (None: all)."""
+    if not sources:
+        return runs
+    return [{**d, "rows": [r for r in d["rows"] if r["source"] in sources]} for d in runs]
+
+
+def quotable(items: list[dict]) -> dict[str, str]:
+    """id -> text for the messages a result file may quote."""
+    return {it["id"]: it["text"] for it in items if it.get("source") not in NOT_QUOTED}
+
+
+def compare(runs: list[dict], policies: list[str], hard_source: str = "xstest") -> tuple[list[dict], dict]:
     """Scores per system on the chosen policies, and for each crisis message how many of those
     policies each system missed it under."""
     scores, missed = [], defaultdict(dict)
@@ -128,7 +153,7 @@ def compare(runs: list[dict], policies: list[str]) -> tuple[list[dict], dict[str
         rows = [r for r in d["rows"] if r["policy"] in policies]
         crisis = [r for r in rows if r["expected"] == "crisis"]
         other = [r for r in rows if r["expected"] == "not_crisis"]
-        xs = [r for r in other if r["source"] == "xstest"]
+        xs = [r for r in other if r["source"] == hard_source]
         scores.append({
             "name": d["name"],
             "caught": rate(sum(r["predicted"] == "crisis" for r in crisis), len(crisis)),
@@ -159,10 +184,11 @@ def tests_markdown(tests: list[dict], reference_name: str) -> list[str]:
 
 def markdown(scores: list[dict], missed: dict, policies: list[str], texts: dict[str, str], names: list[str],
              tests: list[dict] | None = None, reference_name: str = REFERENCE,
-             title: str = "all systems compared") -> str:
-    out = [f"# Crisis benchmark v1: {title}\n",
-           f"Policies compared: {', '.join(policies)} (each message labelled once per policy).\n",
-           "| System | Crisis messages caught | Safe messages given the crisis reply | XSTest safe prompts given the crisis reply |",
+             title: str = "all systems compared", version: str = "v1", hard_label: str = "XSTest safe prompts",
+             sources_note: str = "") -> str:
+    out = [f"# Crisis benchmark {version}: {title}\n",
+           f"Policies compared: {', '.join(policies)} (each message labelled once per policy).{sources_note}\n",
+           f"| System | Crisis messages caught | Safe messages given the crisis reply | {hard_label} given the crisis reply |",
            "|---|---|---|---|"]
     for s in sorted(scores, key=lambda s: -(s["caught"]["rate"] or 0)):
         out.append(f"| {s['name']} | {pct(s['caught'])} | {pct(s['false_crisis'])} | {pct(s['xstest_false'])} |")
@@ -179,23 +205,36 @@ def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--policies", default=",".join(DEFAULT_POLICIES), help="comma-separated, or 'all'")
     ap.add_argument("--versions", action="store_true", help="compare the guard classifier's own releases")
-    ap.add_argument("--reference", default=PROTOCOL_MODEL, help="the classifier model tested against")
+    ap.add_argument("--benchmark", choices=list(BENCHMARKS), default="v1")
+    ap.add_argument("--reference", default=None,
+                    help="the classifier model tested against (default: v4 for v1, v6.1 for v2)")
+    ap.add_argument("--sources", default=None, help="v2: comma-separated sources, or 'all' (default: primary)")
     args = ap.parse_args()
-    ref_name = classifier_name(args.reference)
-    runs = select(load_runs(), args.versions, args.reference)
+    bench = BENCHMARKS[args.benchmark]
+    reference = args.reference or bench["reference"]
+    ref_name = classifier_name(reference)
+    sources = (None if args.sources == "all" else tuple(args.sources.split(",")) if args.sources
+               else bench["primary"])
+    runs = only_sources(select(load_runs(args.benchmark), args.versions, reference), sources)
     if not any(d["name"] == ref_name for d in runs):
         raise SystemExit(f"No benchmark result for {ref_name}.")
     common = set.intersection(*({r["policy"] for r in d["rows"]} for d in runs)) if runs else set()
     policies = sorted(common) if args.policies == "all" else [p for p in args.policies.split(",") if p in common]
     if not policies:
         raise SystemExit(f"No policy is shared by every result. Shared: {sorted(common) or 'none'}")
-    texts = {json.loads(line)["id"]: json.loads(line)["text"]
-             for line in BENCHMARK.read_text(encoding="utf-8").splitlines() if line.strip()}
-    scores, missed = compare(runs, policies)
+    path = bench["module"].BENCHMARK
+    texts = quotable([json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()
+                      if line.strip()]) if path.exists() else {}
+    hard_source, hard_label = bench["hard"]
+    scores, missed = compare(runs, policies, hard_source)
     tests = paired_tests(runs, policies, ref_name)
+    note = f" Sources: {', '.join(sources)}." if sources else (" Sources: all." if bench["primary"] else "")
     md = markdown(scores, missed, policies, texts, [d["name"] for d in runs], tests, ref_name,
-                  title="the guard classifier's releases compared" if args.versions else "all systems compared")
-    out = RESULTS / ("crisis_benchmark_v1_versions.md" if args.versions else "crisis_benchmark_v1_comparison.md")
+                  title="the guard classifier's releases compared" if args.versions else "all systems compared",
+                  version=args.benchmark, hard_label=hard_label, sources_note=note)
+    suffix = "_all_sources" if bench["primary"] and sources is None else ""
+    kind = "versions" if args.versions else "comparison"
+    out = RESULTS / f"crisis_benchmark_{args.benchmark}_{kind}{suffix}.md"
     out.write_text(md)
     print(md)
     print(f"Saved {out.relative_to(RESULTS.parent.parent)}.")

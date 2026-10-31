@@ -1,12 +1,17 @@
-"""Score a guard ONCE on the independent crisis benchmark (crisis_benchmark_v1_protocol.md).
+"""Score a guard ONCE on an independent crisis benchmark (crisis_benchmark_v1/v2_protocol.md).
 
     uv run --group train python -m eval.run_crisis_benchmark                              # guard-modernbert-v4
     uv run --group train python -m eval.run_crisis_benchmark --system rules+classifier
     uv run python -m eval.run_crisis_benchmark --system llamaguard                        # needs Ollama
     uv run python -m eval.run_crisis_benchmark --system llamaguard --policies clinic-assistant,education-staff
+    uv run --group train python -m eval.run_crisis_benchmark --benchmark v2 --model guard-modernbert-v6.1
 
-The benchmark's messages and labels come from three public datasets written by other people
-(eval/build_crisis_benchmark.py). Each message is labelled under each policy paragraph of the frozen
+--benchmark picks v1 (Aegis 2.0, SimpleSafetyTests, XSTest; the default) or v2 (OpenAI moderation set,
+WildGuardTest, OR-Bench; eval/build_crisis_benchmark_v2.py). v2's primary result is its human-labelled
+sources only (OpenAI and WildGuardTest), reported first.
+
+The benchmark's messages and labels come from public datasets written by other people
+(eval/build_crisis_benchmark.py, eval/build_crisis_benchmark_v2.py). Each message is labelled under each policy paragraph of the frozen
 test set v5 (guard_test_v5_policies.yaml): the same message, as staff at seven kinds of office would
 send it. Only one question is scored: is it a crisis? A "decision" label on a not-crisis message is
 not counted as a false alarm (it is reported separately, as "any block").
@@ -28,7 +33,7 @@ Systems:
 Rules: the benchmark must be frozen (its SHA-256 in the protocol); one run per system and release
 (the result file is never overwritten); nothing here may be used for training, thresholds or rules.
 
-Output, in eval/results/ (commit it): crisis_benchmark_v1_<system>_<config>.json with every
+Output, in eval/results/ (commit it): crisis_benchmark_<v1|v2>_<system>_<config>.json with every
 prediction, and a .md table for the write-up.
 """
 
@@ -42,7 +47,9 @@ from pathlib import Path
 
 import yaml
 
-from eval.build_crisis_benchmark import BENCHMARK, MANIFEST, PROTOCOL, frozen_hash, sha256_bytes
+from eval import build_crisis_benchmark as v1
+from eval import build_crisis_benchmark_v2 as v2
+from eval.build_crisis_benchmark import sha256_bytes
 from eval.run_guard_test import RESULTS, SETS, UNSEEN, check_frozen, sha256
 
 SYSTEMS = ("classifier", "rules+classifier", "llamaguard", "pipeline", "rules",
@@ -50,6 +57,12 @@ SYSTEMS = ("classifier", "rules+classifier", "llamaguard", "pipeline", "rules",
 OTHER = SYSTEMS[5:]
 POLICY_SET = "v5"
 LONG_WORDS = 100      # longer messages do not fit beside a policy paragraph: GuardModel splits them
+BENCHMARKS = {
+    "v1": {"module": v1, "build": "eval.build_crisis_benchmark", "primary": None,
+           "sources": "Aegis 2.0, SimpleSafetyTests and XSTest"},
+    "v2": {"module": v2, "build": "eval.build_crisis_benchmark_v2", "primary": v2.PRIMARY,
+           "sources": "the OpenAI moderation evaluation set, WildGuardTest and OR-Bench"},
+}
 
 
 def wilson(k: int, n: int, z: float = 1.96) -> tuple[float, float]:
@@ -77,8 +90,12 @@ def score(rows: list[dict]) -> dict:
     }
 
 
-def summary(rows: list[dict]) -> dict:
-    """By policy, by source within each policy, and across policies."""
+def summary(rows: list[dict], primary: tuple[str, ...] | None = None) -> dict:
+    """By policy, by source within each policy, and across policies. With `primary` (source names),
+    the same for those sources only, under "primary"."""
+    if primary:
+        mine = [r for r in rows if r["source"] in primary]
+        return {**summary(rows), "primary_sources": list(primary), "primary": summary(mine)}
     by_policy, by_source = defaultdict(list), defaultdict(lambda: defaultdict(list))
     for r in rows:
         by_policy[r["policy"]].append(r)
@@ -120,6 +137,11 @@ def pct(x: dict) -> str:
 
 
 def table(s: dict) -> str:
+    if "primary" in s:
+        rest = {k: v for k, v in s.items() if k not in ("primary", "primary_sources")}
+        return (f"**Primary result: human-labelled sources only ({', '.join(s['primary_sources'])}).**\n\n"
+                f"{table(s['primary'])}\n\n**All sources** (OR-Bench's labels come from language models):\n\n"
+                f"{table(rest)}")
     lines = ["| Policy | Crisis messages caught | Not-crisis given the crisis reply | Not-crisis blocked at all |",
              "|---|---|---|---|"]
     for p in s["policies"]:
@@ -151,21 +173,23 @@ def table(s: dict) -> str:
     return "\n".join(lines)
 
 
-def check_benchmark() -> str:
-    want = frozen_hash()
+def check_benchmark(version: str = "v1") -> str:
+    spec = BENCHMARKS[version]
+    m = spec["module"]
+    want = m.frozen_hash()
     if want is None:
-        sys.exit(f"The benchmark is not frozen yet: build it (python -m eval.build_crisis_benchmark), review it, "
-                 f"and record its SHA-256 in {PROTOCOL.name} first.")
-    if not BENCHMARK.exists() or sha256_bytes(BENCHMARK.read_bytes()) != want:
-        sys.exit(f"{BENCHMARK.name} is missing or has changed since it was frozen. The protocol does not allow "
-                 "scoring on a changed benchmark.")
+        sys.exit(f"The benchmark is not frozen yet: build it (python -m {spec['build']}), review it, "
+                 f"and record its SHA-256 in {m.PROTOCOL.name} first.")
+    if not m.BENCHMARK.exists() or sha256_bytes(m.BENCHMARK.read_bytes()) != want:
+        sys.exit(f"{m.BENCHMARK.name} is missing or has changed since it was frozen. The protocol does not allow "
+                 f"scoring on a changed benchmark (rebuild it with python -m {spec['build']}).")
     return want
 
 
-def result_path(system: str, config: str, policies: list[str]) -> Path:
+def result_path(system: str, config: str, policies: list[str], version: str = "v1") -> Path:
     every = sorted(policies) == sorted(yaml.safe_load(SETS[POLICY_SET]["policies"].read_text(encoding="utf-8")))
     suffix = "" if every else "_" + sha256_bytes(",".join(sorted(policies)).encode())[:6]
-    return RESULTS / f"crisis_benchmark_v1_{system.replace('+', '_')}_{config}{suffix}.json"
+    return RESULTS / f"crisis_benchmark_{version}_{system.replace('+', '_')}_{config}{suffix}.json"
 
 
 class Classifier:
@@ -188,12 +212,15 @@ class Classifier:
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    ap.add_argument("--benchmark", choices=list(BENCHMARKS), default="v1")
     ap.add_argument("--system", choices=SYSTEMS, default="classifier")
     ap.add_argument("--model", default="guard-modernbert-v4", help="classifier systems: folder under models/")
     ap.add_argument("--policies", default=None, help="comma-separated policy names (default: all seven)")
     ap.add_argument("--guard-model", default=None, help="other guards: the model tag (default in other_guards.py)")
     args = ap.parse_args()
-    bench_hash = check_benchmark()
+    bench_hash = check_benchmark(args.benchmark)
+    bench = BENCHMARKS[args.benchmark]
+    BENCHMARK, MANIFEST = bench["module"].BENCHMARK, bench["module"].MANIFEST
     spec = SETS[POLICY_SET]
     check_frozen((spec["policies"],))
     all_policies = yaml.safe_load(spec["policies"].read_text(encoding="utf-8"))
@@ -214,7 +241,7 @@ def main() -> None:
     else:
         from eval.run_guard_baselines import Runner
         runner = Runner(args.system, policies, args.model)
-    out = result_path(args.system, runner.config_id(), names)
+    out = result_path(args.system, runner.config_id(), names, args.benchmark)
     if out.exists():
         raise SystemExit(f"Already scored ({out.name}). The protocol allows one run per system and release.")
 
@@ -236,11 +263,13 @@ def main() -> None:
         else:
             predicted = [runner.label(name, it["text"]) for it in items]
         rows += [{"id": it["id"], "source": it["source"], "expected": it["expected"], "policy": name,
-                  "words": len(it["text"].split()), "predicted": p} for it, p in zip(items, predicted)]
+                  "words": len(it["text"].split()), "predicted": p}
+                 | ({"variant": it["variant"]} if it.get("variant") else {})
+                 for it, p in zip(items, predicted)]
 
-    s = summary(rows)
+    s = summary(rows, bench["primary"])
     manifest = json.loads(MANIFEST.read_text()) if MANIFEST.exists() else {}
-    run = {"system": args.system, "config": runner.config_id(),
+    run = {"benchmark": args.benchmark, "system": args.system, "config": runner.config_id(),
            "model": args.model if "classifier" in args.system else
            (f"{runner.model} ({runner.version})" if args.system in OTHER else None),
            "benchmark_sha256": bench_hash, "policies_sha256": spec["sha256"][spec["policies"].name],
@@ -252,9 +281,9 @@ def main() -> None:
     who = (f"{args.system}, {args.model}" if "classifier" in args.system else
            f"{args.system}, {run['model']}" if args.system in OTHER else args.system)
     out.with_suffix(".md").write_text(
-        f"# Independent crisis benchmark v1: {who}\n\nConfig `{run['config']}`, run {run['run_at']}, benchmark "
-        f"`{bench_hash[:12]}`. Messages and labels from Aegis 2.0, SimpleSafetyTests and XSTest "
-        f"(see eval/datasets/crisis_benchmark_v1_protocol.md).\n\n{table(s)}\n")
+        f"# Independent crisis benchmark {args.benchmark}: {who}\n\nConfig `{run['config']}`, run {run['run_at']}, "
+        f"benchmark `{bench_hash[:12]}`. Messages and labels from {bench['sources']} "
+        f"(see eval/datasets/crisis_benchmark_{args.benchmark}_protocol.md).\n\n{table(s)}\n")
     print("\n" + table(s))
     missed = sorted({r["id"] for r in rows if r["expected"] == "crisis" and r["predicted"] != "crisis"})
     print(f"\n{len(missed)} crisis messages missed under at least one policy (their ids are in the .json; "

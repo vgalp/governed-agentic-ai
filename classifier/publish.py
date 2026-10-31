@@ -124,12 +124,27 @@ def count(rows: list[dict], keep) -> dict:
     return {"k": k, "n": n, "rate": p, "ci95": [max(0.0, centre - half), min(1.0, centre + half)]}
 
 
+BENCHMARK_SOURCES = {
+    "v1": ("Aegis 2.0, SimpleSafetyTests and XSTest",
+           (("sst", "SimpleSafetyTests (crisis only)"), ("xstest", "XSTest (safe prompts that sound unsafe)"))),
+    "v2": (("the OpenAI moderation evaluation set and WildGuardTest (human labels; the primary result). "
+            "OR-Bench, whose labels come from language models, is reported in the repository but not here"),
+           (("openai", "OpenAI moderation set (crisis only)"), ("wildguard", "WildGuardTest"))),
+}
+
+
+def headline_summary(b: dict) -> dict:
+    """The numbers a card quotes: the primary (human-labelled) sources when the benchmark has them."""
+    return b["summary"].get("primary", b["summary"])
+
+
 def benchmark_section(benchmarks: list[dict], seen: bool) -> str:
     if not benchmarks:
         return ""
     parts = []
     for b in benchmarks:
-        s, v, rows = b["summary"], b["_version"], b.get("rows", [])
+        s, v, rows = headline_summary(b), b["_version"], b.get("rows", [])
+        described, by_source = BENCHMARK_SOURCES.get(v, BENCHMARK_SOURCES["v1"])
         n_policies = len(s.get("policies", []))
         lines = ["| Messages | Crisis messages caught | Not-crisis messages given the crisis reply |",
                  "| --- | --- | --- |",
@@ -138,8 +153,7 @@ def benchmark_section(benchmarks: list[dict], seen: bool) -> str:
                            ("unseen_policies", "Policies never seen in training")):
             if key in s:
                 lines.append(f"| {label} | {rate(s[key]['crisis_caught'])} | {rate(s[key]['false_crisis'])} |")
-        for source, label in (("sst", "SimpleSafetyTests (crisis only)"),
-                              ("xstest", "XSTest (safe prompts that sound unsafe)")):
+        for source, label in by_source:
             mine = [r for r in rows if r.get("source") == source]
             if not mine:
                 continue
@@ -162,7 +176,7 @@ def benchmark_section(benchmarks: list[dict], seen: bool) -> str:
             f"Run once. Nothing in benchmark {v} was used to train or tune this model.")
         parts.append(f"""### Crisis benchmark {v} (public data written outside this project)
 
-Messages and labels from Aegis 2.0, SimpleSafetyTests and XSTest, each read under every policy
+Messages and labels from {described}, each read under every policy
 paragraph (`{b['_file']}`, benchmark `{str(b.get('benchmark_sha256', ''))[:12]}`, run {b.get('run_at', 'n/a')}).
 These messages are not about any office's work: many are deliberately edgy, dark or off-topic, so
 false alarms here are far higher than on everyday office messages. Counts are message and policy
@@ -226,7 +240,7 @@ def card(model: str, info: dict, thresholds: dict, weights_sha: str, facts: dict
                 f"{first['crisis_missed']} of {first['crisis_total']} crisis messages and wrongly blocked "
                 f"{first['wrong_blocks']} of {first['allow_total']} everyday messages.") if first else ""
     if benchmarks:
-        b = benchmarks[0]["summary"]["all"]
+        b = headline_summary(benchmarks[0])["all"]
         headline += (f" On public crisis benchmark {benchmarks[0]['_version']} it caught "
                      f"{pct(b['crisis_caught']['rate'])} of crisis messages and gave the crisis reply to "
                      f"{pct(b['false_crisis']['rate'])} of the others"
@@ -234,7 +248,7 @@ def card(model: str, info: dict, thresholds: dict, weights_sha: str, facts: dict
     files = ", ".join(f"`{r['_file']}`" for r in results)
     false_alarms = ""
     if benchmarks:
-        b = benchmarks[0]["summary"]["all"]["false_crisis"]
+        b = headline_summary(benchmarks[0])["all"]["false_crisis"]
         false_alarms = (f"\n- **False alarms on dark or off-topic messages.** On public benchmark messages that sound "
                         f"alarming but are safe (history, fiction, definitions, rudeness), {pct(b['rate'])} got the "
                         f"crisis reply. On everyday office messages the rate is far lower, but a deployment will "

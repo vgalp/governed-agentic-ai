@@ -158,6 +158,18 @@ def test_later_classifier_releases_never_change_the_guard_comparison():
         cmp.find_reference(versions, "classifier")                  # three runs: never guess
 
 
+def test_v2_comparisons_never_quote_wildguard_texts_and_can_keep_only_primary_sources():
+    items = [{"id": "w1", "source": "wildguard", "text": "not ours to share"},
+             {"id": "o1", "source": "openai", "text": "may be quoted"}]
+    assert cmp.quotable(items) == {"o1": "may be quoted"}
+    runs = [{"name": "A", "rows": [{"source": "openai"}, {"source": "orbench"}, {"source": "wildguard"}]}]
+    kept = cmp.only_sources(runs, ("openai", "wildguard"))
+    assert [r["source"] for r in kept[0]["rows"]] == ["openai", "wildguard"]
+    assert cmp.only_sources(runs, None) is runs
+    assert cmp.BENCHMARKS["v2"]["reference"] == "guard-modernbert-v6.1"
+    assert cmp.BENCHMARKS["v1"]["reference"] == "guard-modernbert-v4"
+
+
 def test_a_refused_request_is_retried_then_succeeds(monkeypatch):
     replies = [403, 403, 200]
 

@@ -150,3 +150,22 @@ def test_an_unpublished_model_says_what_to_do(tmp_path):
     reg.write_text("guard-test:\n  repo:\n  revision:\n  sha256: abc\n")
     with pytest.raises(fetch_mod.FetchError, match="not published yet"):
         fetch_mod.record("guard-test", reg)
+
+
+def test_a_v2_card_quotes_the_human_labelled_primary_result(tmp_path, model_dir):
+    weights = sha256(model_dir / "model.safetensors")
+    p = benchmark_file(tmp_path, weights[:12])
+    d = json.loads(p.read_text())
+
+    def s(k, n):
+        return {"k": k, "n": n, "rate": k / n, "ci95": [0.0, 1.0]}
+    primary = {**d["summary"], "all": {"crisis_caught": s(8, 10), "false_crisis": s(1, 20), "any_block": s(1, 20)}}
+    d["summary"] = {**d["summary"], "primary_sources": ["openai", "wildguard"], "primary": primary}
+    v2 = tmp_path / "crisis_benchmark_v2_classifier_abc.json"
+    v2.write_text(json.dumps(d))
+    card = (publish.build("guard-test", [results_file(tmp_path, weights)], models_dir=model_dir.parent,
+                          data_dir=tmp_path / "data", release_dir=tmp_path / "release",
+                          benchmark_paths=[v2]) / "README.md").read_text()
+    assert "### Crisis benchmark v2" in card and "WildGuardTest (human labels; the primary result)" in card
+    assert "caught 80.0% of crisis messages and gave the crisis reply to 5.0% of the others." in card
+    assert "Nothing in benchmark v2 was used to train or tune" in card

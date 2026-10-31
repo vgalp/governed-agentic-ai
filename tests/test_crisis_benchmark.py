@@ -119,6 +119,6 @@ def test_results_are_named_by_system_config_and_policy_choice():
 
 
 def test_scoring_refuses_an_unfrozen_benchmark(monkeypatch):
-    monkeypatch.setattr(r, "frozen_hash", lambda: None)
+    monkeypatch.setattr(b, "frozen_hash", lambda: None)
     with pytest.raises(SystemExit, match="not frozen"):
         r.check_benchmark()

@@ -13,3 +13,8 @@ models/
 release/
 
 release/
+# Benchmark v2 texts: WildGuardTest is shared only after accepting AI2's terms (protocol v2)
+eval/datasets/crisis_benchmark_v2.jsonl
+eval/external/raw/allenai__wildguardmix/
+eval/external/raw/bench-llm__or-bench/
+eval/external/raw/openai_samples-1680.jsonl.gz
