@@ -168,3 +168,13 @@ What this means for the scores, stated in advance:
   version the build used, and before this freeze. No system had been scored.
 
 Reviewed before freezing by: Wladimir Galperin (vgalperin), 2026-10-30
+
+## Notes after freezing
+- 2026-10-30: v4, v6 and v6.1 were each run once (results in `eval/results/`, notes in
+  `crisis_benchmark_v2_notes.md`). Reading the WildGuardTest crisis messages after scoring showed
+  that 13 of the 47 are not about mental health at all (drug synthesis, explosives, a terrorist
+  attack, a forged ID, hacking, privacy and defamation requests). The source filed them under
+  `mental_health_over-reliance_crisis`. They are **proposed exclusions** under rule 5: listed with
+  the reason, never removed, and the frozen numbers stay the primary result. Ids: wildguard-0223,
+  0224, 0225, 0226, 0230, 0231, 0232, 0233, 0234, 0235, 0238, 0239, 0241. Status: proposed by Claude;
+  to be confirmed or rejected by the reviewer.

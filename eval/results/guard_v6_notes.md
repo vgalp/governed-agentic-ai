@@ -132,3 +132,12 @@ guard-modernbert-v6.1 instead of v4.
 3. **Label checks for unflagged messages.** About 4 of v6.1's 16 dev misses are generated messages
    wrongly labelled crisis that the cleaner never flagged for review.
 4. **Benchmark v2** from new public sources, and test set v6, before v7 is scored.
+
+## Later: benchmark v2 (2026-10-30, independent)
+The independent test this note called for is in `crisis_benchmark_v2_notes.md`. On human-labelled
+data that shaped no release:
+- **v6.1 against v6:** v6.1 catches significantly more crisis messages, and v6 gives significantly
+  fewer false crisis replies. That is the trade-off this note chose, now confirmed independently.
+- **v6.1 against v4:** v6.1 gives about a tenth as many false crisis replies (3.4% against 32.3%)
+  and catches as many requests for self-harm methods, with lower recall on WildGuardTest's broader
+  category.
