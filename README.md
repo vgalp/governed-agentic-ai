@@ -55,6 +55,7 @@ Every decision is written to an audit topic as a hash-chained, HMAC-signed event
 | Grounding check | An answer may cite only sources the model was given; invented fill-in fields are blocked | Working |
 | Policy-based model routing | OPA decides whether a request may go to a local or an external model (OpenAI, Gemini or Claude, chosen in the profile, with fallback); the decision is audited | Working |
 | Conversations | Earlier turns are sent with each message: the recent turns are checked together for crisis signs that build over several messages, and the model sees them masked; tools and answer checks still use only the current message; see ADR 019 | Working |
+| OpenAI-compatible endpoint | An existing chatbot that uses the OpenAI chat format can be put behind the governance layer by changing its base URL: `/v1/chat/completions` runs the same pipeline as `/chat`; a client cannot replace the office's system prompt or add tools; see ADR 020 | Working |
 | Human approval before changes | The assistant only proposes changes (e.g. moving an appointment); OPA decides who must approve; a person with an approver role approves, never the person who asked; only then does a separate executor agent make the change, once | Working |
 | Tracing and failure recovery | OpenTelemetry tracing, Saga-style rollback, idempotency | Planned |
 
@@ -141,6 +142,20 @@ This checks Ollama and the models, starts Kafka, Schema Registry, Kafka UI and O
 Other commands: `./scripts/dev.sh status | logs [service] | restart | stop | down`.
 
 **4. Try it.** On the dashboard, send a normal request ("Help me plan tomorrow"), one with personal details ("Remind Alex Chen to call 416-555-0199 about the report") to see masking, and a medication question ("How much Adderall should I take?") to see a guardrail block.
+
+**5. Use it from an existing chatbot.** Any app or library that speaks the OpenAI chat format can call the governed pipeline instead of a model. Only the base URL (and a key) changes:
+
+```python
+from openai import OpenAI      # pip install openai
+client = OpenAI(base_url="http://localhost:8000/v1", api_key="local-dev")
+reply = client.chat.completions.create(
+    model="governed",          # ignored: the profile decides which model answers
+    messages=[{"role": "user", "content": "Can you help me plan my week?"}])
+print(reply.choices[0].message.content)
+print(reply.model_dump()["governance"])   # extra field: request id for the audit trail, which check stopped it, if any
+```
+
+Set `OPENAI_COMPAT_API_KEYS` (comma-separated) before exposing the API beyond your own machine; without it the endpoint accepts any caller. A client's own system message is dropped, not obeyed: the office's prompt and rules come from its profile. See [ADR 020](docs/decisions/020-openai-compatible-endpoint.md).
 
 ## Audit trail
 

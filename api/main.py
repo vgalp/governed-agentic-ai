@@ -1,4 +1,6 @@
+import asyncio
 import json
+import logging
 import os
 import threading
 import uuid
@@ -9,10 +11,11 @@ from typing import Literal
 
 from confluent_kafka import Consumer, Producer
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
 from agents import actions
+from api import openai_compat as compat
 from api.events import buffer, consume_events, event_stream
 from audit.chain import chains_of_profile, key_from_env, unkeyed_chains, verify_chain
 from profiles.loader import load_profile
@@ -24,6 +27,10 @@ producer = Producer({"bootstrap.servers": BOOTSTRAP, "enable.idempotence": True}
 PROFILE = load_profile()        # same PROFILE as the agents (set by scripts/dev.sh)
 responses: dict[str, dict] = {}  # in-memory for now; replaced later
 approvals = actions.ApprovalState()   # rebuilt from Kafka at startup
+# OpenAI-compatible endpoint (ADR 020): Bearer keys, comma-separated. Empty: open (local development only).
+COMPAT_KEYS = [k.strip() for k in os.environ.get("OPENAI_COMPAT_API_KEYS", "").split(",") if k.strip()]
+COMPAT_TIMEOUT = float(os.environ.get("OPENAI_COMPAT_TIMEOUT", "180"))
+log = logging.getLogger("api")
 
 
 def consume_responses():
@@ -64,6 +71,9 @@ async def lifespan(app: FastAPI):
     threading.Thread(target=consume_responses, daemon=True).start()
     threading.Thread(target=consume_approvals, daemon=True).start()
     threading.Thread(target=consume_events, args=(BOOTSTRAP,), daemon=True).start()
+    if not COMPAT_KEYS:
+        log.warning("OPENAI_COMPAT_API_KEYS is not set: /v1/chat/completions accepts any caller "
+                    "(local development only).")
     yield
     producer.flush()
 
@@ -167,14 +177,56 @@ def health():
     return {"status": "ok"}
 
 
-@app.post("/chat")
-def send_chat(req: ChatRequest):
+def submit(user_id: str, message: str, role: str | None, history: list[dict]) -> str:
+    """Put a message on the pipeline. Every entry point (/chat, /v1/chat/completions) goes through here."""
     request_id = str(uuid.uuid4())
-    event = {"request_id": request_id, "user_id": req.user_id, "message": req.message, "role": req.role,
-             "profile": PROFILE.name, "history": [t.model_dump() for t in req.history]}
+    event = {"request_id": request_id, "user_id": user_id, "message": message, "role": role,
+             "profile": PROFILE.name, "history": history}
     producer.produce("chat.requests", key=request_id, value=json.dumps(event))
     producer.flush()
-    return {"request_id": request_id}
+    return request_id
+
+
+@app.post("/chat")
+def send_chat(req: ChatRequest):
+    return {"request_id": submit(req.user_id, req.message, req.role, [t.model_dump() for t in req.history])}
+
+
+@app.get("/v1/models")
+def compat_models(request: Request):
+    if not compat.authorized(request.headers.get("authorization"), COMPAT_KEYS):
+        return JSONResponse(compat.CompatError("Invalid API key.", 401, "invalid_api_key").body(), 401)
+    return compat.models(PROFILE.name)
+
+
+@app.post("/v1/chat/completions")
+async def compat_chat(request: Request):
+    """OpenAI-compatible chat (ADR 020): the same pipeline as /chat, in the OpenAI request and
+    response shapes, so an existing chatbot can be put behind the governance layer by its base URL."""
+    if not compat.authorized(request.headers.get("authorization"), COMPAT_KEYS):
+        return JSONResponse(compat.CompatError("Invalid API key.", 401, "invalid_api_key").body(), 401)
+    try:
+        req = compat.to_request(await request.json())
+    except ValueError:
+        return JSONResponse(compat.CompatError("The request body is not valid JSON.").body(), 400)
+    except compat.CompatError as e:
+        return JSONResponse(e.body(), e.status)
+    # Demo only, like /chat: a real deployment takes the role from the caller's sign-in.
+    role = request.headers.get("x-governed-role") or None
+    request_id = submit(req["user_id"], req["message"], role, req["history"])
+    waited = 0.0
+    while request_id not in responses:
+        if waited >= COMPAT_TIMEOUT:
+            err = compat.CompatError(f"No answer within {COMPAT_TIMEOUT:.0f} seconds (request {request_id}). "
+                                     "Is the pipeline running?", 504, "timeout")
+            return JSONResponse(err.body(), 504)
+        await asyncio.sleep(0.2)
+        waited += 0.2
+    completion = compat.to_completion(responses[request_id], PROFILE.name, req["dropped_system_messages"])
+    if req["stream"]:
+        return StreamingResponse(compat.stream_events(completion), media_type="text/event-stream",
+                                 headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+    return completion
 
 
 @app.get("/chat/{request_id}")
