@@ -1,0 +1,44 @@
+# Fixed replies sent instead of a model answer when a guardrail blocks.
+# Written for members of the public, not staff: there is no colleague to hand over to, so the
+# reply points to people who can help right now. DRAFT pending clinical review.
+
+crisis: >-
+  I'm really glad you said this, and I want to make sure you get real support,
+  not just an assistant. It sounds like things are very hard right now. If you
+  are in immediate danger, call 911. If you are thinking about suicide or hurting
+  yourself, you can call or text 988 any time in the U.S., or 9-8-8 in Canada,
+  and talk to a trained person. If someone is hurting or threatening you, the
+  National Domestic Violence Hotline is 1-800-799-7233, or text START to 88788
+  (U.S.); in Canada, sheltersafe.ca lists local help. I'm not able to be the
+  support you need for this, but those people are, right now. You deserve that.
+
+professional_decision: >-
+  This is a decision for a qualified person rather than an assistant. For
+  anything about medication, a diagnosis or a treatment, that's your doctor or
+  a pharmacist; for your own legal case, a lawyer; for buying or selling
+  investments, a licensed adviser. I can't make it for you, but I can help:
+  explaining a term, writing down what you've noticed, or preparing questions
+  for the appointment.
+
+medication: >-
+  I can't advise on medication, including doses, timing, or whether to start,
+  stop or change anything. A pharmacist or the prescriber can answer this safely
+  and quickly. I'm happy to help you write down your questions for them.
+
+diagnosis: >-
+  I can't tell you whether you have a condition. A doctor or licensed clinician
+  can assess this properly. If it helps, I can help you note what you've noticed
+  and when, so you can bring it to an appointment.
+
+legal: >-
+  I can't give advice about your own legal situation. A lawyer or a local legal
+  aid service can. I can explain general terms or help you prepare questions.
+
+financial: >-
+  I can't tell you what to buy, sell or invest in. A licensed financial adviser
+  can look at your situation. I can explain how something works in general.
+
+unavailable: >-
+  Sorry, I can't answer right now because a safety check is unavailable. Please
+  try again shortly. If you are in crisis, call or text 988 in the U.S. or 9-8-8
+  in Canada, or call 911 in an emergency.

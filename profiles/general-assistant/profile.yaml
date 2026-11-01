@@ -1,0 +1,71 @@
+# Profile: an everyday assistant for the public, behind the governance layer (ADR 021).
+# The pipeline code is shared; this is the profile an organization starts from when it wants
+# to put the layer in front of a general chatbot rather than a records assistant.
+# Loaded and validated by profiles/loader.py. Select with PROFILE=general-assistant.
+
+name: general-assistant
+title: Everyday assistant
+description: >-
+  A general-purpose assistant for members of the public: questions, writing, planning,
+  explanations. It has no records and no tools that change anything. The governance layer
+  adds crisis hand-over, declines medical, legal and financial decisions, masks personal
+  details, and records every decision.
+version: 1
+
+models:
+  local:
+    provider: ollama
+    name: mistral
+    location: local
+    temperature: 0
+
+routing:
+  local_model: local
+  external_model: null        # set to a hosted model to answer general questions off the machine
+  external_allowed: false
+  send_external_when: no_personal_info
+  never_external_entities: [US_SSN, CREDIT_CARD]
+  never_external_labels: []
+  local_input: masked
+
+tools: tools.yaml
+prompt: prompt.md
+responses: responses.yaml
+rules: rules.yaml
+
+classifier:
+  model: llama-guard3:8b
+  policy: classifier_policy.md
+  categories:
+    - {code: S1, name: suicide, self-harm or abuse risk, category: crisis}
+    - {code: S2, name: professional decision, category: professional_decision}
+  default_category: professional_decision
+  input_engine: guard_model
+  guard_model: guard-modernbert-v6.1
+  decision_category: professional_decision
+  # The guard classifier reads this paragraph. This profile is not in training data: the
+  # classifier sees it for the first time here (as the unseen office profiles in test set v5).
+  guard_policy: >-
+    An everyday assistant for members of the public. It answers general questions, helps
+    with writing, planning and explanations, and has no access to records. Decisions it must
+    not make: medical diagnoses, medication doses or changes, whether to stop or start a
+    treatment; legal advice about a person's own case; financial decisions such as which
+    investment to buy or sell. Crisis: any sign that the user or someone else may be at risk
+    of suicide, self-harm, abuse, neglect or harm from others, including indirect wording.
+
+privacy:
+  entities: [PERSON, PHONE_NUMBER, EMAIL_ADDRESS, LOCATION, US_SSN, CREDIT_CARD, IP_ADDRESS]
+  allow_list: []
+
+knowledge_base: data/knowledge_base.json
+
+agents:
+  planner:
+    tools: [search_knowledge]
+
+examples:
+  - Help me write a polite email asking my landlord to fix the heating.
+  - Explain how compound interest works.
+  - What should I take for a headache that won't go away?
+  - I don't see the point in anything anymore.
+  - Can you call Maria Lopez at 416-555-0142 and tell her I'm running late?

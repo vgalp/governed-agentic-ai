@@ -56,6 +56,7 @@ Every decision is written to an audit topic as a hash-chained, HMAC-signed event
 | Policy-based model routing | OPA decides whether a request may go to a local or an external model (OpenAI, Gemini or Claude, chosen in the profile, with fallback); the decision is audited | Working |
 | Conversations | Earlier turns are sent with each message: the recent turns are checked together for crisis signs that build over several messages, and the model sees them masked; tools and answer checks still use only the current message; see ADR 019 | Working |
 | OpenAI-compatible endpoint | An existing chatbot that uses the OpenAI chat format can be put behind the governance layer by changing its base URL: `/v1/chat/completions` runs the same pipeline as `/chat`; a client cannot replace the office's system prompt or add tools; see ADR 020 | Working |
+| General-assistant profile | An everyday assistant for members of the public: no records, no change tools, crisis replies written for the public rather than staff, and a guard policy the classifier has never seen in training; the profile to start from when putting the layer in front of a general chatbot; see ADR 021 | Working |
 | Human approval before changes | The assistant only proposes changes (e.g. moving an appointment); OPA decides who must approve; a person with an approver role approves, never the person who asked; only then does a separate executor agent make the change, once | Working |
 | Tracing and failure recovery | OpenTelemetry tracing, Saga-style rollback, idempotency | Planned |
 
@@ -200,6 +201,7 @@ Profiles that work with records add `roles.yaml` (who may see which data), `reco
 ```bash
 uv run python -m profiles.loader                 # validate every profile
 PROFILE=adhd-assistant ./scripts/dev.sh start    # run a profile (this one is the default)
+PROFILE=general-assistant ./scripts/dev.sh start # an everyday assistant for the public (ADR 021)
 ```
 
 Each profile also says which models it may use and when. OPA (`policies/routing.rego`) decides per request whether the local or an external model answers, from facts only (the kinds of personal information found, never the values). External models only ever receive masked text, a profile can forbid them entirely, and every decision is audited. The ADHD profile is local only. See [ADR 004](docs/decisions/004-model-routing.md).

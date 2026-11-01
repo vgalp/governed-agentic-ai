@@ -1,0 +1,30 @@
+[
+  {
+    "id": "gen-001",
+    "title": "Where to get urgent help",
+    "text": "In the U.S., call or text 988 (Suicide & Crisis Lifeline) any time. In Canada, call or text 9-8-8. In an emergency, call 911. For domestic violence in the U.S., call 1-800-799-7233 or text START to 88788.",
+    "tags": ["crisis", "help", "988", "emergency", "hotline", "violence"],
+    "status": "SAMPLE - pending clinical review"
+  },
+  {
+    "id": "gen-002",
+    "title": "Preparing for a medical appointment",
+    "text": "Write down what you have noticed, when it started, what makes it better or worse, every medication and supplement you take, and the questions you want answered. Bring the list with you.",
+    "tags": ["doctor", "appointment", "symptoms", "questions", "medication"],
+    "status": "SAMPLE - pending clinical review"
+  },
+  {
+    "id": "gen-003",
+    "title": "Finding legal help",
+    "text": "Local legal aid offices, law school clinics and bar association referral services can help people who cannot afford a lawyer. Many offer a free first consultation.",
+    "tags": ["legal", "lawyer", "legal aid", "court", "lease", "landlord"],
+    "status": "SAMPLE"
+  },
+  {
+    "id": "gen-004",
+    "title": "Writing a clear request",
+    "text": "Say what you need, by when, and why, in that order. Keep it to one short paragraph, be polite, and end with a clear question or next step.",
+    "tags": ["email", "letter", "writing", "request", "polite", "landlord", "complaint"],
+    "status": "SAMPLE"
+  }
+]

@@ -1,0 +1,8 @@
+# One read-only tool: a few approved safety and how-to notes. No records, nothing that changes.
+
+search_knowledge:
+  description: Approved general notes (safety lines, how to find local help)
+  server: http://127.0.0.1:8100/mcp
+  kind: read
+  data_label: approved_content
+  lane: knowledge
