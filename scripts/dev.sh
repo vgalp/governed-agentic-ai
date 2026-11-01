@@ -10,7 +10,7 @@
 #
 #   PROFILE=<name> ./scripts/dev.sh start   run another profile (default: adhd-assistant)
 #
-# Chat UI: http://localhost:8000   Kafka UI: http://localhost:8080
+# Demo: http://localhost:8000   Engineer view: /dashboard   Kafka UI: http://localhost:8080
 
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -19,9 +19,12 @@ cd "$(dirname "$0")/.."
 LOG_DIR="logs"
 PY=".venv/bin/python"
 TOPICS="chat.requests chat.responses audit.model_inputs audit.tool_calls audit.guardrails audit.routing audit.approvals agent.trace approvals.requested approvals.decided actions.executed"
-MODELS="mistral llama-guard3:8b"
 export PYTHONUNBUFFERED=1   # write logs immediately
 export PROFILE="${PROFILE:-adhd-assistant}"   # which profile every service loads (see profiles/)
+# The Ollama models every profile needs, plus the active profile's own (read from its profile.yaml).
+MODELS="llama-guard3:8b $("${PY:-.venv/bin/python}" -c "
+from profiles.loader import load_profile; p = load_profile()
+print(' '.join(sorted({m['name'] for m in p.models.values() if m.get('provider') == 'ollama'})))" 2>/dev/null || echo mistral)"
 
 # name | process pattern | module and arguments | port to wait for ("" = none)
 SERVICES=(
@@ -30,6 +33,7 @@ SERVICES=(
   "changes|-m mcp_servers\.changes|mcp_servers.changes.server|8102"
   "medication-review|-m mcp_servers\.medication_review|mcp_servers.medication_review.server|8103"
   "fhir-records|-m mcp_servers\.fhir_records|mcp_servers.fhir_records.server|8104"
+  "web-research|-m mcp_servers\.web_research|mcp_servers.web_research.server|8105"
   "api|-m uvicorn api\.main|uvicorn api.main:app --port 8000|8000"
   "planner|-m agents\.planner|agents.planner|"
   "executor|-m agents\.executor|agents.executor|"
@@ -139,12 +143,12 @@ status() {
 case "${1:-}" in
   start)
     check_prereqs; start_infra; stop_services; start_services
-    say "Ready.  Chat UI: http://localhost:8000   Kafka UI: http://localhost:8080"
+    say "Ready.  Demo: http://localhost:8000   Engineer view: http://localhost:8000/dashboard   Kafka UI: http://localhost:8080"
     ;;
   stop)    stop_services ;;
   down)    stop_services; say "Stopping containers"; docker compose stop >/dev/null; ok "containers stopped" ;;
   restart) stop_services; check_prereqs; start_infra; start_services
-           say "Ready.  Chat UI: http://localhost:8000" ;;
+           say "Ready.  Demo: http://localhost:8000   Engineer view: http://localhost:8000/dashboard" ;;
   status)  status ;;
   logs)    if [ -n "${2:-}" ]; then tail -f "$LOG_DIR/$2.log"; else tail -f "$LOG_DIR"/*.log; fi ;;
   *)       sed -n '2,13p' "$0" | sed 's/^# \{0,1\}//'; exit 1 ;;

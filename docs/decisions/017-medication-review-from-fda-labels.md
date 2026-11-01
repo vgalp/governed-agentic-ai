@@ -74,3 +74,20 @@ ID returned (grounding passes); unmentioned pairs never called safe; a role with
 gets nothing; no label file is said plainly; the tool is called only for review questions and only by
 clinicians; decision questions are still blocked; the loader refuses a direct answer without `when`, an
 unknown pattern, and a missing `tool_denied` reply; the demo patients are in the database.
+
+## Amendment (2026-10-31): a label file that fills itself
+With a FHIR source (ADR 013) the medication list comes from the record system, so a patient can have
+a drug the downloaded file never saw, and the review could only say "not checked". A profile may now
+set `labels_fetch: on_demand` in `medication_review.yaml`:
+- During a review, a medication whose ingredients or FDA label are not on file is looked up then, in
+  RxNorm and openFDA, exactly as `scripts/fetch_drug_labels.py` does. Drug names and RxNorm codes are
+  the only things sent; never the patient, never the question.
+- What is found is written into the label file with today's date, so the next review reads it from
+  the file, and the answer still quotes a stored, dated label. Reproducibility is kept.
+- The tool's result lists what was fetched (medication, ingredient, label set ID and version), so the
+  gateway audits it with the tool call, and the answer says "Fetched for this review and kept on
+  file, dated today: …".
+- A lookup that fails (offline, nothing found) leaves the drug "not checked", as before.
+- The default stays `never`: only the downloaded file, no outbound calls. An office that forbids them
+  changes nothing. `clinic-epic` uses `on_demand`; `clinic-assistant` keeps `never`.
+The lookups moved to `mcp_servers/medication_review/labels.py`, shared by the script and the server.

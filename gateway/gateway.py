@@ -66,9 +66,14 @@ def filter_results(results: list[dict], allowed: list[str]) -> tuple[list[dict],
     return kept, len(results) - len(kept)
 
 
-async def _call(server_url: str, tool: str, args: dict) -> dict:
+async def _call(server_url: str, tool: str, args: dict, on_progress=None) -> dict:
+    """on_progress(message): a tool's MCP log messages, as it works (web research reports each
+    page read); the planner shows them in the trace. Text only, never results."""
+    async def logged(params) -> None:
+        if on_progress is not None and params.level in ("info", "notice", "warning"):
+            on_progress(str(params.data)[:300])
     async with streamablehttp_client(server_url) as (read, write, _):
-        async with ClientSession(read, write) as session:
+        async with ClientSession(read, write, logging_callback=logged if on_progress else None) as session:
             await session.initialize()
             result = await session.call_tool(tool, args)
             if getattr(result, "structuredContent", None):
@@ -79,9 +84,10 @@ async def _call(server_url: str, tool: str, args: dict) -> dict:
 def call_tool(agent: str, tool: str, args: dict, request_id: str,
               profile: Profile | None = None, audit_args: dict | None = None,
               role: str | None = None, tenant: str | None = None,
-              client: str | None = None) -> dict:
+              client: str | None = None, on_progress=None) -> dict:
     """Call a tool if policy allows it. audit_args is what the audit records instead of
     args, for tools that receive real identifiers: the audit only ever holds masked text.
+    on_progress(message) receives the tool's own progress messages while it runs.
 
     tenant and client come from the outside endpoint's auth check (who is calling), never
     from the request. For a tenant-scoped tool the tenant is required and enforced."""
@@ -121,7 +127,7 @@ def call_tool(agent: str, tool: str, args: dict, request_id: str,
         args = {**args, "allowed_classes": classes}
         event["args"]["allowed_classes"] = classes
     try:
-        result = asyncio.run(_call(profile.tools[tool].server, tool, args))
+        result = asyncio.run(_call(profile.tools[tool].server, tool, args, on_progress))
     except Exception as e:
         _audit({**event, "decision": "allow", "error": type(e).__name__})
         raise

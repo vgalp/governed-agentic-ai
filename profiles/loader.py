@@ -108,6 +108,12 @@ class Tool:
                                      # then alone; tools without one are called for every other question
     answer: str = "model"            # model: a model writes the answer from the results ·
                                      # direct: the tool's own text is the answer (source text, no model)
+    keeps: tuple[str, ...] = ()      # masked entity types restored in the query sent to this tool
+                                     # (e.g. LOCATION for web research: a place is the question, not a
+                                     # personal detail). Never PERSON or contact details.
+    on_empty: str | None = None      # responses.yaml key sent, with no model, when the question was for
+                                     # this tool (when) and it returned nothing. A current-events question
+                                     # must not be answered from a model's memory when the search failed.
 
 
 @dataclass(frozen=True)
@@ -172,6 +178,7 @@ class Profile:
     records_map: RecordsMap | None = None       # how records_db becomes records (records.yaml)
     outside: OutsideConfig | None = None        # governed MCP endpoint for outside assistants (outside.yaml)
     fhir_map: FhirMap | None = None             # how a FHIR server's resources become records (ADR 013)
+    faithfulness: dict | None = None            # a second model judges answers from listed tools (ADR 022)
 
     def response(self, category: str, role: str | None = None) -> str:
         """The fixed reply for a category, worded for the role if the role has its own."""
@@ -455,7 +462,8 @@ def select_external_model(profile: Profile, key: str) -> Profile:
 TOOL_ANSWERS = {"model", "direct"}
 
 
-def _tools(raw: dict, where: str, patterns: dict[str, re.Pattern] | None = None) -> dict[str, Tool]:
+def _tools(raw: dict, where: str, patterns: dict[str, re.Pattern] | None = None,
+           responses: dict | None = None) -> dict[str, Tool]:
     """tools.yaml: every tool the profile can use, with where it runs and what it does."""
     if not raw:
         raise ProfileError(f"{where}: list at least one tool")
@@ -501,12 +509,30 @@ def _tools(raw: dict, where: str, patterns: dict[str, re.Pattern] | None = None)
             raise ProfileError(f"{w}: answer must be one of {sorted(TOOL_ANSWERS)}")
         if answer == "direct" and when is None:
             raise ProfileError(f"{w}: answer: direct needs 'when', so the tool answers only the questions it is for")
+        keeps = tuple(t.get("keeps") or ())
+        if keeps:
+            if not isinstance(t["keeps"], list) or not all(isinstance(k, str) for k in keeps):
+                raise ProfileError(f"{w}: keeps must be a list of entity types")
+            bad = sorted(set(keeps) & NEVER_KEPT)
+            if bad:
+                raise ProfileError(f"{w}: keeps may not restore {', '.join(bad)}: personal details never go to a tool "
+                                   "this way (receives_identifiers is for local-only tools)")
+            if flags["receives_identifiers"]:
+                raise ProfileError(f"{w}: keeps is pointless with receives_identifiers (the tool gets the original)")
+        on_empty = t.get("on_empty")
+        if on_empty is not None:
+            if when is None:
+                raise ProfileError(f"{w}: on_empty needs 'when' (it answers when the question's own tool found nothing)")
+            if responses is None or on_empty not in responses:
+                raise ProfileError(f"{w}: on_empty '{on_empty}' is not a reply in responses.yaml")
         tools[name] = Tool(name, str(t.get("description", "")), server, kind, label, lane,
                            flags["receives_identifiers"], flags["role_filtered"], flags["tenant_scoped"],
-                           when, answer)
+                           when, answer, keeps, on_empty)
     return tools
 
 
+NEVER_KEPT = {"PERSON", "PHONE_NUMBER", "EMAIL_ADDRESS", "US_SSN", "CREDIT_CARD", "IP_ADDRESS",
+              "US_PASSPORT", "US_DRIVER_LICENSE", "IBAN_CODE", "MEDICAL_LICENSE", "US_BANK_NUMBER"}
 OUTSIDE_AUTH_KINDS = {"introspection"}
 MASK_RESULTS = {"external", "always", "never"}
 
@@ -748,6 +774,20 @@ def load_profile_from(path: Path) -> Profile:
             raise ProfileError(f"{path.name}/responses.yaml: no response for ungrounded "
                                "(needed because the profile checks citations)")
 
+    faithfulness = p.get("faithfulness")
+    if faithfulness:
+        if not isinstance(faithfulness, dict) or not faithfulness.get("judge"):
+            raise ProfileError(f"{where}: faithfulness needs a judge (a key in models)")
+        judge = faithfulness["judge"]
+        if judge not in models:
+            raise ProfileError(f"{where}: faithfulness judge '{judge}' is not in models")
+        if judge == routing.get("local_model") or judge == routing.get("external_model"):
+            raise ProfileError(f"{where}: faithfulness judge '{judge}' is also an answering model; "
+                               "the judge must be a different model")
+        if "unfaithful" not in responses:
+            raise ProfileError(f"{path.name}/responses.yaml: no response for unfaithful "
+                               "(needed because the profile has a faithfulness judge)")
+
     # Every category that can block a message needs a fixed reply.
     used = {r.category for r in input_rules + output_rules}
     used |= {x.category for x in cats} | {classifier.default_category, "unavailable"}
@@ -760,7 +800,7 @@ def load_profile_from(path: Path) -> Profile:
         raise ProfileError(f"{path.name}/responses.yaml: every response must be non-empty text")
 
     tools_file = _require(p, "tools", where)
-    tools = _tools(_yaml(_file(path, tools_file, where)), f"{path.name}/{tools_file}", patterns)
+    tools = _tools(_yaml(_file(path, tools_file, where)), f"{path.name}/{tools_file}", patterns, responses)
     if any(t.when for t in tools.values()) and p.get("roles") and "tool_denied" not in responses:
         raise ProfileError(f"{path.name}/responses.yaml: no response for tool_denied (needed because a "
                            "tool is called for some questions only, and a role may not have it)")
@@ -869,6 +909,7 @@ def load_profile_from(path: Path) -> Profile:
         records_map=records_map,
         fhir_map=fhir_map,
         outside=outside,
+        faithfulness=faithfulness or None,
     )
 
 

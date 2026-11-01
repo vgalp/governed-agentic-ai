@@ -6,8 +6,8 @@
 <title>Safety Demo</title>
 <style>
   :root {
-    --bg: #f4f6f8; --panel: #ffffff; --text: #1a2230; --muted: #627086; --line: #e1e6ed;
-    --brand: #0f5c8c; --brand-soft: #e6f0f7;
+    --bg: #eef1f5; --panel: #ffffff; --text: #16202c; --muted: #5f6c80; --line: #dfe4ec;
+    --brand: #0f5c8c; --brand-soft: #e6f0f7; --shadow: 0 1px 2px rgba(16, 24, 40, .06), 0 6px 20px rgba(16, 24, 40, .05);
     --pass: #1b7a4b; --pass-soft: #e5f4ec;
     --stop: #b42318; --stop-soft: #fdecea;
     --wait: #8a5a00; --wait-soft: #fdf3dc;
@@ -17,8 +17,8 @@
   }
   @media (prefers-color-scheme: dark) {
     :root {
-      --bg: #10141a; --panel: #181d25; --text: #e7ebf1; --muted: #9aa5b8; --line: #2a313d;
-      --brand: #6fb3e6; --brand-soft: #16283a;
+      --bg: #0e1218; --panel: #171c24; --text: #e7ebf1; --muted: #9aa5b8; --line: #2a313d;
+      --brand: #6fb3e6; --brand-soft: #16283a; --shadow: none;
       --pass: #5fd39a; --pass-soft: #14301f; --stop: #ff8a80; --stop-soft: #3a1917;
       --wait: #f2c062; --wait-soft: #3a2c10; --skip: #6c7587; --skip-soft: #1d222b;
       --run: #8fc3ef; --run-soft: #16283a;
@@ -29,7 +29,7 @@
          font: 16px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
   button { font: inherit; cursor: pointer; }
 
-  header { background: var(--panel); border-bottom: 1px solid var(--line); }
+  header { background: var(--panel); border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 5; }
   .top { max-width: 1360px; margin: 0 auto; padding: 14px 20px; display: flex; gap: 16px;
          align-items: center; justify-content: space-between; flex-wrap: wrap; }
   .title { display: flex; gap: 12px; align-items: center; }
@@ -44,7 +44,7 @@
   .main { max-width: 1360px; margin: 0 auto; padding: 20px; display: grid;
           grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 20px; align-items: start; }
   @media (max-width: 980px) { .main { grid-template-columns: 1fr; } }
-  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow); }
 
   /* --- left: who you are, scenarios, conversation --- */
   .left { display: flex; flex-direction: column; gap: 14px; }
@@ -57,7 +57,7 @@
   .rolenote { font-size: 13px; color: var(--muted); margin-top: 8px; }
   .scenarios { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px; }
   .scn { text-align: left; border: 1px solid var(--line); background: var(--panel); color: var(--text);
-         border-radius: 10px; padding: 10px 12px; }
+         border-radius: 12px; padding: 11px 13px; transition: border-color .12s, background .12s; }
   .scn:hover { border-color: var(--brand); background: var(--brand-soft); }
   .scn b { display: block; font-size: 14px; }
   .scn span { display: block; font-size: 12.5px; color: var(--muted); margin-top: 2px; }
@@ -65,15 +65,21 @@
 
   .chat { display: flex; flex-direction: column; min-height: 420px; }
   #log { flex: 1; padding: 16px 18px; display: flex; flex-direction: column; gap: 14px; overflow-y: auto; max-height: 56vh; }
-  .empty { color: var(--muted); text-align: center; margin: auto; font-size: 15px; padding: 30px 10px; }
+  .empty { color: var(--muted); text-align: center; margin: auto; font-size: 15px; padding: 40px 10px; max-width: 360px; line-height: 1.6; }
   .bubble { max-width: 88%; padding: 11px 14px; border-radius: 14px; white-space: pre-wrap; word-break: break-word; }
   .me { align-self: flex-end; background: var(--brand); color: #fff; border-bottom-right-radius: 4px; cursor: pointer; }
   .me .who { font-size: 11.5px; opacity: .8; margin-bottom: 2px; }
-  .bot { align-self: flex-start; background: var(--bg); border: 1px solid var(--line); border-bottom-left-radius: 4px; cursor: pointer; }
+  .bot { align-self: flex-start; background: var(--bg); border: 1px solid var(--line); border-bottom-left-radius: 4px; cursor: pointer; line-height: 1.55; }
   .bot.sel, .me.sel { outline: 3px solid var(--brand-soft); }
   .bot.thinking { color: var(--muted); font-style: italic; }
+  .bot.thinking .prog { margin: 0; padding: 0; list-style: none; }
+  .bot.thinking .prog li { margin: 2px 0; font-style: normal; }
+  .bot.thinking .prog li.done { opacity: .6; }
+  .bot.thinking .prog li.done::before { content: "✓ "; color: var(--ok, #4caf50); }
+  .bot.thinking .prog li.now::before { content: "… "; }
+  .bot.thinking .prog li.now { font-style: italic; }
   .verdict { display: flex; gap: 8px; align-items: center; margin-top: 8px; font-size: 13px; font-style: normal; flex-wrap: wrap; }
-  .pill { font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; }
+  .pill { font-size: 12.5px; font-weight: 700; padding: 4px 10px; border-radius: 999px; letter-spacing: .01em; }
   .p-pass { color: var(--pass); background: var(--pass-soft); }
   .p-stop { color: var(--stop); background: var(--stop-soft); }
   .p-wait { color: var(--wait); background: var(--wait-soft); }
@@ -92,7 +98,7 @@
   .bts-head { padding: 16px 18px 10px; border-bottom: 1px solid var(--line); }
   .bts-head h2 { margin: 0; font-size: 18px; }
   .bts-head p { margin: 4px 0 0; font-size: 14px; color: var(--muted); }
-  .summary { margin: 12px 18px 0; padding: 12px 14px; border-radius: 10px; font-size: 15px; font-weight: 600; display: none; }
+  .summary { margin: 14px 18px 0; padding: 14px 16px; border-radius: 12px; font-size: 16px; font-weight: 700; display: none; }
   .summary.show { display: block; }
   .summary small { display: block; font-weight: 400; font-size: 13.5px; margin-top: 2px; }
   .s-pass { background: var(--pass-soft); color: var(--pass); }
@@ -142,10 +148,10 @@
       <div class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.5-3 8.3-7 9.5C8 19.3 5 15.5 5 11V6l7-3z"/><path d="M9 12l2 2 4-4"/></svg></div>
       <div>
         <h1 id="ptitle">Governed assistant</h1>
-        <div class="tag">Every message passes through safety and privacy checks. Watch them happen on the right.</div>
+        <div class="tag" id="tag">Every message passes through safety and privacy checks. Watch them happen on the right.</div>
       </div>
     </div>
-    <div class="links"><a href="/" target="_blank">Plain chat</a><a href="/dashboard" target="_blank">Engineer view</a></div>
+    <div class="links"><a href="/chat" target="_blank">Plain chat</a><a href="/dashboard" target="_blank">Engineer view</a></div>
   </div>
 </header>
 
@@ -158,17 +164,17 @@
     </div>
 
     <div class="card section">
-      <div class="label">2 · Try a situation</div>
+      <div class="label" id="scnLabel">2 · Try a situation</div>
       <div class="scenarios" id="scenarios"></div>
     </div>
 
     <div class="card chat">
-      <div id="log"><div class="empty" id="empty">Pick a situation above, or type your own question below.</div></div>
+      <div id="log"><div class="empty" id="empty">Pick a situation above, or type your own message below. Each reply shows what the system decided, and the steps appear on the right.</div></div>
       <form id="form">
         <textarea id="input" placeholder="Type a question for the assistant…"></textarea>
         <button id="send" type="submit">Send</button>
       </form>
-      <div class="fine">Research prototype with synthetic patients only. Not a medical device and not for emergencies.</div>
+      <div class="fine">Research prototype with synthetic data only. Not a medical device and not for emergencies.</div>
     </div>
   </div>
 
@@ -184,8 +190,24 @@
 </div>
 
 <script>
-// Guided situations for the clinic profile. Other profiles use their own example questions.
+// Guided situations per profile. A profile not listed here uses its own example questions.
 const SCENARIOS = {
+  "general-assistant": [
+    {title: "An everyday question", hint: "Answered normally", text: "Help me write a polite email asking my landlord to fix the heating."},
+    {title: "Explain something", hint: "General information is fine", text: "What is sertraline used for, in general?"},
+    {title: "A medical decision", hint: "Only a doctor or pharmacist may decide", text: "My doctor put me on sertraline, can I just stop, I feel fine"},
+    {title: "A person at risk", hint: "Handed to a person; no AI involved", text: "I don't see the point in anything anymore."},
+    {title: "Someone being hurt", hint: "Abuse disclosed", text: "My partner checks my phone and won't let me see my friends. How do I plan around that?"},
+    {title: "Personal details", hint: "Hidden before any AI sees them", text: "Can you call Maria Lopez at 416-555-0142 and tell her I'm running late?"},
+    {title: "Look something up", hint: "Web pages from allowed sites, cited and judged", text: "Search the web for the current 988 Lifeline text and chat options."},
+  ],
+  "adhd-assistant": [
+    {title: "Plan the day", hint: "Answered from approved tips", text: "Help me plan tomorrow."},
+    {title: "A dose question", hint: "Only the prescriber may decide", text: "How much Adderall should I take?"},
+    {title: "Am I ADHD?", hint: "A diagnosis is for a clinician", text: "Do I have ADHD?"},
+    {title: "A person at risk", hint: "Handed to a person; no AI involved", text: "Everyone would be better off without me."},
+    {title: "Personal details", hint: "Hidden before any AI sees them", text: "Remind Sarah Lee to call me at 416-555-0199 about the report."},
+  ],
   "clinic-assistant": [
     {title: "Look up a record", hint: "Clinician asks about a patient's medicines", role: "clinician",
      text: "What medications is Chester Aufderhar taking?"},
@@ -206,37 +228,51 @@ const SCENARIOS = {
 const STEPS = [
   {key: "received", title: "Question received", why: "Nothing has been sent to any AI yet.",
    match: s => s.agent === "intake" && s.step === "received"},
-  {key: "safety", title: "Safety check", why: "Looks for signs that someone may be at risk, and for decisions only a clinician may make (doses, diagnoses).",
+  {key: "safety", title: "Safety check", why: () => V.safetyWhy,
    match: s => s.agent === "intake" && ["input_rules", "input_classifier", "reply"].includes(s.step)},
   {key: "role", title: "Who is asking", why: "The role decides which parts of the record may be used.",
-   match: s => s.agent === "intake" && s.step === "role_check"},
+   match: s => s.agent === "intake" && s.step === "role_check", only: "roles"},
   {key: "privacy", title: "Personal details hidden", why: "Names and contact details are replaced with placeholders before an AI sees the text.",
    match: s => s.agent === "intake" && s.step === "masking"},
-  {key: "records", title: "Records looked up, under policy", why: "A policy engine approves every lookup. Only data this role may see is fetched.",
+  {key: "records", title: () => V === VOCAB.public ? "Approved notes looked up" : "Records looked up, under policy", why: () => V === VOCAB.public ? "A policy engine approves every lookup. The assistant has no records, only a few approved notes." : "A policy engine approves every lookup. Only data this role may see is fetched.",
    match: s => s.agent === "knowledge" || s.agent === "records"},
   {key: "change", title: "Change proposed, not made", why: "The assistant can only propose a change. A different person must approve it.",
    match: s => s.agent === "action", only: "change"},
-  {key: "model", title: "AI model chosen", why: "Patient data stays on this computer. Only general questions may use an outside model, with names removed.",
+  {key: "model", title: "AI model chosen", why: () => V === VOCAB.public ? "Personal details stay on this computer. Only text with none of them may use an outside model." : "Patient data stays on this computer. Only general questions may use an outside model, with names removed.",
    match: s => s.agent === "router", only: "answer"},
-  {key: "draft", title: "AI writes a draft", why: "The model may only use the records it was given.",
+  {key: "draft", title: "AI writes a draft", why: () => V === VOCAB.public ? "The model may only use the notes it was given, and must not invent facts." : "The model may only use the records it was given.",
    match: s => s.agent === "answer" && s.step === "model", only: "answer"},
-  {key: "check", title: "Answer checked", why: "Every fact must come from a record the AI was given, and the answer is checked for safety again.",
-   match: s => s.agent === "answer" && ["output_rules", "grounding", "output_classifier", "reply"].includes(s.step), only: "answer"},
+  {key: "check", title: "Answer checked", why: () => V === VOCAB.public ? "The answer is checked again: no dose, no diagnosis, no trade, nothing invented." : "Every fact must come from a record the AI was given, and the answer is checked for safety again.",
+   match: s => s.agent === "answer" && ["output_rules", "grounding", "output_classifier", "faithfulness", "reply"].includes(s.step), only: "answer"},
   {key: "audit", title: "Recorded in the audit log", why: "Each step is written to a tamper-evident log that anyone can verify later.",
    match: () => false},
 ];
 
-const BLOCK_WORDS = {
-  crisis: "Possible risk to someone's safety. The clinic's crisis protocol was shown right away; no AI was involved.",
-  medication: "This asks for a medication decision, which only a clinician may make. The AI was never asked.",
-  diagnosis: "This asks for a diagnosis, which only a clinician may make. The AI was never asked.",
-  medical_advice: "This asks for a clinical decision, which only a clinician may make. The AI was never asked.",
+// Words differ by who the assistant is for: staff with records, or a member of the public.
+const VOCAB = {
+  staff: {who: "a clinician", records: "the records", crisisWhere: "The crisis protocol was shown right away",
+          rules: "safety rules", safetyWhy: "Looks for signs that someone may be at risk, and for decisions only a clinician may make (doses, diagnoses)."},
+  public: {who: "a qualified person", records: "approved notes", crisisWhere: "Help lines were shown right away",
+           rules: "safety rules", safetyWhy: "Looks for signs that someone may be at risk, and for decisions that need a doctor, pharmacist, lawyer or adviser rather than an assistant."},
+};
+let V = VOCAB.staff;
+const BLOCK_WORDS = () => ({
+  crisis: `Possible risk to someone's safety. ${V.crisisWhere}; no AI was involved.`,
+  medication: `This asks for a medication decision, which only ${V.who} may make. The AI was never asked.`,
+  diagnosis: `This asks for a diagnosis, which only ${V.who} may make. The AI was never asked.`,
+  medical_advice: `This asks for a clinical decision, which only ${V.who} may make. The AI was never asked.`,
+  professional_decision: "This is a decision for a doctor, pharmacist, lawyer or adviser, not an assistant. The AI was never asked.",
+  legal: "This asks for advice on someone's own legal case, which a lawyer must give. The AI was never asked.",
+  financial: "This asks what to buy or sell, which a licensed adviser must answer. The AI was never asked.",
   role_required: "No role was chosen, so no records may be used.",
   action_denied: "This role may not ask for this change.",
-  ungrounded: "The draft mentioned something that is not in the records, so it was held back.",
-};
-const LAYER_WORDS = {rules: "clinic safety rules", classifier: "AI safety classifier", grounding: "source check",
-                     roles: "role check", policy: "policy engine"};
+  ungrounded: `The draft cited a source it was never given (${V.records} or an invented reference), so it was held back.`,
+  no_results: "The question asked for current information, but no page from an allowed site could be read. The AI was not asked to answer from memory.",
+  unfaithful: "A second model compared the draft with the web pages it was written from and found claims the pages do not support, so it was held back. The pages are listed.",
+});
+const LAYER_WORDS = () => ({rules: V.rules, classifier: "AI safety classifier", grounding: "source check",
+                            roles: "role check", policy: "policy engine", conversation: "conversation check",
+                            faithfulness: "second-model judge"});
 const FRIENDLY = [
   [/^No input rule matched$/, "Safety rules: nothing found"],
   [/^guard-[\w.-]+: safe$/, "Our trained safety model: safe"],
@@ -247,7 +283,7 @@ const FRIENDLY = [
   [/^Draft answer ready \((\d+) characters, not shown\)$/, "Draft ready"],
 ];
 const friendly = t => FRIENDLY.reduce((s, [re, to]) => s.replace(re, to), t || "");
-const TOOL_WORDS = {search_knowledge: "Clinic policies", search_records: "Patient records", reschedule_appointment: "Appointment change"};
+const TOOL_WORDS = () => ({search_knowledge: V === VOCAB.public ? "Approved notes" : "Clinic policies", search_records: "Patient records", reschedule_appointment: "Appointment change", web_research: "Web research"});
 
 const ICON = {
   pass: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"/></svg>',
@@ -278,8 +314,56 @@ function connect() {
     if (!id) return;
     track(id).events.push(ev);                     // kept even if it arrives before /chat returns the ID
     if (id === selected) renderSteps();
+    if (ev.topic === "agent.trace") renderProgress(track(id));
     if (ev.topic === "chat.responses") updateBubbles();
   };
+}
+
+// What the assistant is doing right now, in plain words, shown in the bubble while it works.
+// Built from the same trace events as the panel on the right; the bubble shows a short log.
+function progressLine(s) {
+  const d = s.details || {};
+  if (s.agent === "intake") {
+    if (s.step === "received") return "Question received";
+    if (["input_rules", "input_classifier", "input_check", "input_agent", "conversation"].includes(s.step)) return "Checking the question for safety";
+    if (s.step === "masking") return "Hiding personal details";
+    if (s.step === "role_check") return "Checking who is asking";
+  }
+  if (s.agent === "knowledge" || s.agent === "records") {
+    if (s.step === "web_research") {
+      if (s.outcome === "running") return "Searching the web";
+      if (d.progress) return s.summary;                       // the tool's own play-by-play
+      const m = /(\d+) result\(s\); read (\d+) page\(s\)(?: from ([^;]+))?/.exec(s.summary || "");
+      return m ? `Searched the web: ${m[1]} results, read ${m[2]} page${m[2] === "1" ? "" : "s"}${m[3] ? " from " + m[3] : ""}` : "Searched the web";
+    }
+    return s.outcome === "running" ? `Looking up ${s.step.replace(/_/g, " ")}` : `Looked up ${s.step.replace(/_/g, " ")}`;
+  }
+  if (s.agent === "router") return "Choosing which AI model may answer";
+  if (s.agent === "answer") {
+    if (s.step === "model") { const m = /Asking (\S+)/.exec(s.summary || ""); return s.outcome === "running" ? `${m ? m[1] : "The model"} is writing a draft` : "Draft written"; }
+    if (["output_rules", "output_classifier", "grounding", "toxicity", "output_check"].includes(s.step)) return "Checking the draft";
+    if (s.step === "faithfulness") { const m = /^(\S+) judging/.exec(s.summary || ""); return s.outcome === "running" ? `${m ? m[1] : "A second model"} is comparing the draft with the pages` : "Draft compared with the pages"; }
+  }
+  if (s.agent === "action") return "Preparing a change for a person to approve";
+  return null;
+}
+function renderProgress(req) {
+  const bot = req.botBubble;
+  if (!bot || req.answered) return;
+  const lines = [];
+  for (const s of traceSteps(req)) {
+    const text = progressLine(s);
+    if (!text) continue;
+    const last = lines[lines.length - 1];
+    if (last && last.text === text) { last.now = s.outcome === "running"; continue; }
+    if (last && last.now) last.now = false;
+    lines.push({text, now: s.outcome === "running"});
+  }
+  if (!lines.length) return;
+  if (!lines[lines.length - 1].now) lines[lines.length - 1].now = true;   // the step after it has not reported yet
+  const ul = el("ul", "prog");
+  lines.slice(-6).forEach(l => ul.append(el("li", l.now ? "now" : "done", l.text)));
+  bot.replaceChildren(ul);
 }
 
 function traceSteps(req) {
@@ -296,7 +380,7 @@ function renderSteps() {
   const box = $("steps");
   const req = selected && requests.get(selected);
   if (!req) {
-    box.replaceChildren(...STEPS.filter(s => !s.only || s.only === "answer").map((s, i) => stepEl(s, "idle", null, i + 1)));
+    box.replaceChildren(...STEPS.filter(s => !s.only || s.only === "answer" || (s.only === "roles" && profile.roles.length)).map((s, i) => stepEl(s, "idle", null, i + 1)));
     return;
   }
   const steps = traceSteps(req);
@@ -308,6 +392,7 @@ function renderSteps() {
   for (const def of STEPS) {
     if (def.only === "change" && !isChange) continue;
     if (def.only === "answer" && isChange) continue;
+    if (def.only === "roles" && !profile.roles.length) continue;
     const mine = steps.filter(def.match);
     let state;
     if (def.key === "audit") state = auditState(req, resp);
@@ -340,8 +425,8 @@ function stepEl(def, state, ctx, n) {
   li.dataset.n = String(n);
   const icon = el("div", "icon");
   const body = el("div", "body");
-  const h = el("h3", "", def.title);
-  body.append(h, el("div", "why", def.why));
+  const h = el("h3", "", typeof def.title === "function" ? def.title() : def.title);
+  body.append(h, el("div", "why", typeof def.why === "function" ? def.why() : def.why));
   li.append(icon, body);
   setState(li, state);
   if (!ctx) return li;
@@ -352,13 +437,13 @@ function stepEl(def, state, ctx, n) {
     return li;
   }
   if (def.key === "safety" && state === "stop" && guard) {
-    body.append(el("div", "result", BLOCK_WORDS[guard.category] || `Stopped: ${guard.category}`));
-    body.append(el("div", "detail", `Caught by the ${LAYER_WORDS[guard.layer] || guard.layer}`));
+    body.append(el("div", "result", BLOCK_WORDS()[guard.category] || `Stopped: ${guard.category}`));
+    body.append(el("div", "detail", `Caught by the ${LAYER_WORDS()[guard.layer] || guard.layer}`));
     return li;
   }
   if (def.key === "check" && state === "stop" && guard) {
-    body.append(el("div", "result", BLOCK_WORDS[guard.category] || "The draft answer was held back."));
-    body.append(el("div", "detail", `Caught by the ${LAYER_WORDS[guard.layer] || guard.layer}`));
+    body.append(el("div", "result", BLOCK_WORDS()[guard.category] || "The draft answer was held back."));
+    body.append(el("div", "detail", `Caught by the ${LAYER_WORDS()[guard.layer] || guard.layer}`));
     return li;
   }
   if (def.key === "privacy") {
@@ -401,7 +486,7 @@ function stepEl(def, state, ctx, n) {
     return li;
   }
   for (const s of mine.filter(s => s.outcome !== "running")) {
-    const tool = def.key === "records" && TOOL_WORDS[s.step] ? `${TOOL_WORDS[s.step]}: ` : "";
+    const tool = def.key === "records" && TOOL_WORDS()[s.step] ? `${TOOL_WORDS()[s.step]}: ` : "";
     body.append(el("div", "detail", tool + friendly(s.summary)));
   }
   if (state === "run") body.append(el("div", "result", "Working…"));
@@ -488,15 +573,16 @@ function outcome(req) {
   }
   if (d.guardrail) {
     const g = d.guardrail;
-    if (g.category === "crisis") return ["stop", "Crisis protocol shown", "The message suggested someone may be at risk. No AI was involved."];
-    if (g.stage === "output") return ["stop", "Draft answer held back", BLOCK_WORDS[g.category] || "The answer did not pass the final check."];
+    if (g.category === "crisis") return ["stop", V === VOCAB.public ? "Handed to a person" : "Crisis protocol shown", "The message suggested someone may be at risk. No AI was involved."];
+    if (g.stage === "output") return ["stop", "Draft answer held back", BLOCK_WORDS()[g.category] || "The answer did not pass the final check."];
     if (g.stage === "access" && g.category === "tool_denied") return ["stop", "Not available to this role", "This role may not use that tool. Nothing was looked up."];
-    if (g.stage === "access") return ["stop", "Choose a role first", BLOCK_WORDS.role_required];
-    return ["stop", "Stopped before the AI", BLOCK_WORDS[g.category] || "This request needs a person, not the assistant."];
+    if (g.stage === "access") return ["stop", "Choose a role first", BLOCK_WORDS().role_required];
+    if (g.category === "no_results") return ["stop", "Nothing found to answer from", BLOCK_WORDS().no_results];
+    return ["stop", "Stopped before the AI", BLOCK_WORDS()[g.category] || "This request needs a person, not the assistant."];
   }
   const where = d.route ? (d.route.target === "none" ? "quoting its sources word for word, with no AI model" : d.route.target === "external" ? "an outside model, with names removed" : "the model on this computer") : "the assistant";
   const n = (d.sources || []).length;
-  return ["pass", "Answered", `By ${where}, from ${n} approved source${n === 1 ? "" : "s"}.`];
+  return ["pass", "Answered", `By ${where}${n ? `, from ${n} approved source${n === 1 ? "" : "s"}` : ""}.`];
 }
 
 function renderSummary(req, resp, isChange) {
@@ -529,8 +615,16 @@ function updateBubbles() {
     const v = req.botBubble.querySelector(".verdict");
     const [state, head] = outcome(req);
     v.replaceChildren(el("span", `pill p-${state}`, head));
-    const srcs = (req.sources || []).map(s => s.id).join(", ");
-    if (srcs) v.append(el("span", "src", `Sources: ${srcs}`));
+    const srcs = req.sources || [];
+    if (srcs.length) {
+      const span = el("span", "src", "Sources: ");
+      srcs.forEach((s, i) => {                                   // web pages link to the page read
+        if (i) span.append(", ");
+        if (s.url) { const a = el("a", "", s.id); a.href = s.url; a.target = "_blank"; a.rel = "noopener"; a.title = s.title || s.url; span.append(a); }
+        else span.append(s.id);
+      });
+      v.append(span);
+    }
   }
 }
 
@@ -549,6 +643,7 @@ async function ask(text, asRole) {
     const {request_id} = await r.json();
     const req = track(request_id);
     req.botBubble = bot;
+    renderProgress(req);                                      // events that arrived before the ID did
     me.dataset.id = bot.dataset.id = request_id;
     me.onclick = bot.onclick = () => select(request_id);
     select(request_id);
@@ -559,7 +654,7 @@ async function ask(text, asRole) {
         bot.replaceChildren(document.createTextNode(data.answer));
         bot.append(el("div", "verdict"));
         req.answered = true;
-        req.sources = data.sources || [];
+        req.sources = data.sources || [];                      // {id, title, url?}
         req.final = {request_id, guardrail: data.guardrail || null, approval: data.approval || null,
                      route: data.route || null, sources: (data.sources || []).map(s => s.id)};
         if (data.approval) loadApproval(data.approval.approval_id);
@@ -588,8 +683,13 @@ function setRole(k) {
 
 fetch("/profile").then(r => r.json()).then(p => {
   profile = p;
+  V = p.roles.length ? VOCAB.staff : VOCAB.public;
   $("ptitle").textContent = p.title;
   document.title = `${p.title} · safety demo`;
+  $("tag").textContent = p.roles.length
+    ? "A staff assistant with records. Every message passes through safety and privacy checks; watch them on the right."
+    : "An everyday assistant for the public. Every message passes through safety and privacy checks; watch them on the right.";
+  renderSteps();
   if (p.roles.length) {
     for (const r of p.roles) {
       const b = el("button", "", r.title);
@@ -601,6 +701,7 @@ fetch("/profile").then(r => r.json()).then(p => {
     setRole(p.roles[0].key);
   } else {
     $("roles").closest(".card").remove();
+    $("scnLabel").textContent = "Try a situation";
   }
   const list = SCENARIOS[p.name] || p.examples.map(t => ({title: t, hint: "", role: null, text: t}));
   for (const s of list) {

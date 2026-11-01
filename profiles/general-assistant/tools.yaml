@@ -6,3 +6,17 @@ search_knowledge:
   kind: read
   data_label: approved_content
   lane: knowledge
+
+# Governed web research (ADR 022): for a question that asks for current information, a few pages
+# from allowed sites, as dated snapshots to cite. Called only for such questions (when), then alone.
+# Retrieval only: the planner's model writes the answer, and a second model judges it (faithfulness).
+web_research:
+  description: Web research (pages from allowed sites, fetched for this question and cited)
+  server: http://127.0.0.1:8105/mcp
+  kind: read
+  data_label: web_page                     # untrusted public text; never personal data
+  lane: knowledge
+  when: web_research                       # rules.yaml
+  keeps: [LOCATION]                        # a place is the question ("rules in Ontario"); people never
+  on_empty: no_web_pages                   # responses.yaml: if no page could be read, say so; no model
+                                           # answers a current-events question from memory

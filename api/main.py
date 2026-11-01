@@ -101,8 +101,14 @@ class ChatRequest(BaseModel):
 
 
 @app.get("/", include_in_schema=False)
+def front_page():
+    """The demo view: the chat and, beside it, each safety step in plain words. The front door."""
+    return FileResponse(UI_DIR / "demo.html")
+
+
+@app.get("/chat", include_in_schema=False)
 def chat_ui():
-    """Simple chat window for local testing."""
+    """Plain chat window for local testing (badges only, no explanation)."""
     return FileResponse(UI_DIR / "index.html")
 
 
@@ -114,7 +120,7 @@ def dashboard():
 
 @app.get("/demo", include_in_schema=False)
 def demo():
-    """Demo view for non-technical audiences: the chat, and each safety step in plain words."""
+    """Kept for old links: the demo view is now the front page."""
     return FileResponse(UI_DIR / "demo.html")
 
 

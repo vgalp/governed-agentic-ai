@@ -15,7 +15,12 @@ version: 1
 models:
   local:
     provider: ollama
-    name: mistral
+    name: qwen2.5:7b            # answers; chosen over Mistral 7B after a side-by-side on this profile (ADR 022)
+    location: local
+    temperature: 0
+  judge:
+    provider: ollama
+    name: llama3.1:8b           # a different family judges answers written from web pages (ADR 022)
     location: local
     temperature: 0
 
@@ -59,9 +64,21 @@ privacy:
 
 knowledge_base: data/knowledge_base.json
 
+# The model sees source IDs (gen-### notes, web-xxxxxxxx page snapshots) so it can cite them, and
+# the grounding check blocks an answer that cites anything else, including an invented ID.
+cite_sources: true
+source_id_pattern: '\b(gen-\d{3}|web-[0-9a-f]{8})\b'
+
 agents:
   planner:
-    tools: [search_knowledge]
+    tools: [search_knowledge, web_research]
+
+# A second model checks answers written from web pages against the pages (ADR 022). The judge must
+# not be an answering model. strict: an unreadable judge reply withholds the answer.
+faithfulness:
+  judge: judge
+  for_tools: [web_research]
+  strict: true
 
 examples:
   - Help me write a polite email asking my landlord to fix the heating.
@@ -69,3 +86,4 @@ examples:
   - What should I take for a headache that won't go away?
   - I don't see the point in anything anymore.
   - Can you call Maria Lopez at 416-555-0142 and tell her I'm running late?
+  - Search the web for the current 988 Lifeline text and chat options.

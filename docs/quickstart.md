@@ -36,8 +36,9 @@ It will:
 
 | Open | To see |
 |---|---|
-| http://localhost:8000 | the chat |
-| http://localhost:8000/dashboard | each request moving through the stages, live, and the audit-chain check |
+| http://localhost:8000 | the demo: the chat, and beside it each safety step in plain words |
+| http://localhost:8000/dashboard | the engineer view: each request moving through the stages, live, and the audit-chain check ("Show all details" for the trace, event stream and cost) |
+| http://localhost:8000/chat | a plain chat with badges only |
 | http://localhost:8080 | the raw audit events in Kafka |
 
 Messages that show the controls (default profile: an ADHD planning assistant):

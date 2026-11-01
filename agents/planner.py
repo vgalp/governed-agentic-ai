@@ -25,6 +25,7 @@ It cannot make the change; only the executor agent can, after approval."""
 
 import json
 from datetime import datetime
+from urllib.parse import urlparse
 
 import requests
 from confluent_kafka import Consumer, Producer
@@ -35,14 +36,14 @@ from agents.trace import Trace, ids_text, masking_summary
 from audit.chain import get_audit_chain
 from gateway.gateway import ToolCallDenied, call_tool
 from gateway.opa import decide
-from guardrails import toxicity
+from guardrails import faithfulness, toxicity
 from guardrails.classifier import classifier_check, crisis_over_rule, input_check, input_engine_name, load_guard
 from guardrails.grounding import check_citations
 from guardrails.input_agent import review as agent_review
 from guardrails.rules import GuardrailDecision, check_input, check_output, classifier_exemption
 from llm import usage
 from llm.providers import ModelUnavailable, chat
-from privacy.masking import mask, unmask
+from privacy.masking import mask, restore_types, unmask
 from profiles.loader import load_profile
 from router.router import RouteDecision, audit_route, fallbacks, local_decision, route
 
@@ -73,7 +74,9 @@ if PROFILE.classifier.input_engine == "guard_model":
 AGENT_MODEL = PROFILE.models[PROFILE.classifier.input_agent] if PROFILE.classifier.input_agent else None
 toxicity.load()                               # now, so the first answer is not slowed by loading it
 DECISION_CATEGORY = PROFILE.classifier.decision_category or PROFILE.classifier.default_category
+FAITHFULNESS = faithfulness.load_config(PROFILE)       # a second model judges answers from listed tools (ADR 022)
 GUARDS = {"question": input_engine_name(PROFILE), "answer": PROFILE.classifier.model,
+          "judge": FAITHFULNESS.judge["name"] if FAITHFULNESS else None,
           "input_agent": AGENT_MODEL["name"] if AGENT_MODEL else None}
 print(f"Planner agent listening on chat.requests (profile {PROFILE.name}, "
       f"local model {PROFILE.local_model['name']}, external model {_ext}, "
@@ -403,15 +406,19 @@ while True:
     #    A tool with `when` (tools.yaml) is called only for questions matching its pattern, and then
     #    alone; the others are called for every other question.
     to_call, triggered = tools_to_call(PROFILE, AGENT_NAME, req["message"])
-    notes, tools_used, direct, denied_for_role, tool_notes = [], [], None, None, []
+    notes, tools_used, direct, denied_for_role, tool_notes, empty_notes = [], [], None, None, [], {}
     for tool in to_call:
         receives_ids = tool in PROFILE.identifier_tools
         agent = PROFILE.tools[tool].lane         # where its steps show in the trace (tools.yaml)
         trace.start(agent, tool, f"{tool} through the gateway (policy check)")
         try:
-            result = call_tool(AGENT_NAME, tool, {"query": req["message"] if receives_ids else masked_message},
-                               request_id, PROFILE,
-                               audit_args={"query": masked_message} if receives_ids else None, role=role)
+            kept = PROFILE.tools[tool].keeps
+            query = (req["message"] if receives_ids else
+                     restore_types(masked_message, mapping, kept) if kept else masked_message)
+            result = call_tool(AGENT_NAME, tool, {"query": query}, request_id, PROFILE,
+                               audit_args={"query": masked_message} if (receives_ids or kept) else None, role=role,
+                               # the tool's own play-by-play (web research: each page read), live in the trace
+                               on_progress=lambda m, agent=agent, tool=tool: trace.step(agent, tool, "info", m, progress=True))
         except ToolCallDenied as e:
             print("Denied:", e)
             trace.step(agent, tool, "block", f"Denied by policy: role {role} may not use {tool}"
@@ -420,7 +427,16 @@ while True:
                 denied_for_role = tool
             continue
         found = result.get("results", [])
-        summary = f"{len(found)} result(s)" + (f": {ids_text([n['id'] for n in found])}" if found else "")
+        summary = f"{len(found)} result(s)" + (f": {ids_text([n['id'] for n in found])}" if found else
+                                              f"; {result['note']}" if result.get("note") else "")
+        if "query_sent" in result:                 # web research: what went out and what came back (no page text)
+            hosts = [urlparse(n.get("url", "")).hostname or "?" for n in found]
+            summary = (f"searched {result.get('searched', 'the web')} for \"{result['query_sent']}\": "
+                       f"{result.get('hits', '?')} result(s); read {len(found)} page(s)"
+                       + (f" from {', '.join(hosts)}" if hosts else "")
+                       + (f"; skipped {result['skipped_not_allowed']} not on the allowed list"
+                          if result.get("skipped_not_allowed") else "")
+                       + (f"; {result['note']}" if result.get("note") else ""))
         if tool in PROFILE.role_filtered_tools and access and access["restricted"]:
             summary += f"; not fetched for this role: {', '.join(access['restricted'])}"
         trace.step(agent, tool, "pass" if found else "info", summary, returned=len(found))
@@ -429,8 +445,24 @@ while True:
             notes += found
         elif result.get("note") and tool in PROFILE.identifier_tools:
             tool_notes.append(f"{tool}: {result['note']}")      # e.g. "give the date of birth too"
+        if not found:
+            empty_notes[tool] = result.get("note", "")
         if PROFILE.tools[tool].answer == "direct" and result.get("answer") and direct is None:
             direct = (tool, result["answer"], found)
+
+    # 3a. The question was for a tool that found nothing, and the tool says what to reply (tools.yaml
+    #     on_empty): a fixed reply, no model. A current-events question answered from a model's
+    #     memory is stale or invented, and the model would cite pages it never saw.
+    empty = next((t for t in triggered if PROFILE.tools[t].on_empty and t in empty_notes), None)
+    if empty and not direct:
+        note = (empty_notes.get(empty) or "nothing could be read").rstrip(".")
+        text = PROFILE.response(PROFILE.tools[empty].on_empty, role).format(query=req["message"], note=note)
+        publish_response(request_id, text, [], {"stage": "tools", "layer": "tools", "category": "no_results"},
+                         access=access)
+        trace.step("answer", "reply", "info", f"{empty} found nothing ({note}); fixed reply sent, no model asked")
+        consumer.commit(message=msg)
+        print(f"Tool {empty} found nothing: {request_id}")
+        continue
 
     # 3a. The question was for a tool this role may not use: say so, and who may (no model).
     if denied_for_role and not direct:
@@ -582,9 +614,23 @@ while True:
         out_layer = "classifier"
         trace.step("answer", "output_classifier", "pass" if out_check.allowed else "block",
                    f"{GUARDS['answer']}: safe" if out_check.allowed else f"Blocked by {GUARDS['answer']}: {out_check.category}")
+    if out_check.allowed and FAITHFULNESS is not None:
+        trace.start("answer", "faithfulness", f"{FAITHFULNESS.judge['name']} judging the answer against its sources")
+        out_check, verdict = faithfulness.check(restored_answer, notes_text, FAITHFULNESS, chat,
+                                                sorted(set(tools_used) | set(triggered)), PROFILE)
+        if verdict.get("ran"):
+            out_layer = "faithfulness"
+            trace.step("answer", "faithfulness", "pass" if out_check.allowed else "block",
+                       f"{verdict['judge']}: every claim is in the sources" if out_check.allowed
+                       else f"Withheld by {verdict['judge']}: {out_check.reason}", **verdict)
+        else:
+            trace.step("answer", "faithfulness", "info", "Not needed: no judged tool answered this question")
     audit_guardrail(request_id, "output", out_layer, out_check, role)
     if not out_check.allowed:
-        publish_response(request_id, reply(out_check, role), [],
+        #  An answer withheld by the judge still lists the pages, so the person can read them (ADR 022).
+        listed = ([{"id": n["id"], "title": n["title"], **({"url": n["url"]} if n.get("url") else {})} for n in notes]
+                  if out_check.category == "unfaithful" else [])
+        publish_response(request_id, reply(out_check, role), listed,
                          {"stage": "output", "layer": out_layer, "category": out_check.category,
                           **({"engine": GUARDS["answer"]} if out_layer == "classifier" else {})},
                          route_info, access)
@@ -594,7 +640,7 @@ while True:
         continue
 
     # 7. Publish the answer with its sources, then commit.
-    sources = [{"id": n["id"], "title": n["title"]} for n in notes]
+    sources = [{"id": n["id"], "title": n["title"], **({"url": n["url"]} if n.get("url") else {})} for n in notes]
     publish_response(request_id, restored_answer, sources, None, route_info, access)
     trace.step("answer", "reply", "info", f"Answer sent with {len(sources)} source(s)",
                sources=[s["id"] for s in sources])

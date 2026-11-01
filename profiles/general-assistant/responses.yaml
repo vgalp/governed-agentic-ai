@@ -38,6 +38,27 @@ financial: >-
   I can't tell you what to buy, sell or invest in. A licensed financial adviser
   can look at your situation. I can explain how something works in general.
 
+# The draft cited a source it was never given, for example an invented page ID (grounding check).
+ungrounded: >-
+  I couldn't give a reliable answer: my draft referred to a source I was not
+  actually given. Please try asking again, or ask me to search the web for it.
+
+# The question asked for current information, but no page from an allowed site could be read
+# (the search returned nothing, the sites were not on the allowed list, or the network failed).
+# No model answers: a current-events question answered from memory would be stale or invented.
+no_web_pages: >-
+  I searched the web for "{query}" but could not read any page from the sites I
+  am allowed to use ({note}). I won't guess at current information from memory,
+  because it may be out of date. You could try different wording, or check an
+  official site directly.
+
+# The answer was written from web pages, and the second model found claims the pages do not
+# support (ADR 022). The pages are still listed as sources.
+unfaithful: >-
+  I looked this up, but the answer I drafted said things the pages I read do not
+  support, so I am not giving it. The pages I found are listed below; please read
+  them directly, and I can help with questions about them.
+
 unavailable: >-
   Sorry, I can't answer right now because a safety check is unavailable. Please
   try again shortly. If you are in crisis, call or text 988 in the U.S. or 9-8-8

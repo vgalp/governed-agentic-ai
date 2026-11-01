@@ -57,6 +57,7 @@ Every decision is written to an audit topic as a hash-chained, HMAC-signed event
 | Conversations | Earlier turns are sent with each message: the recent turns are checked together for crisis signs that build over several messages, and the model sees them masked; tools and answer checks still use only the current message; see ADR 019 | Working |
 | OpenAI-compatible endpoint | An existing chatbot that uses the OpenAI chat format can be put behind the governance layer by changing its base URL: `/v1/chat/completions` runs the same pipeline as `/chat`; a client cannot replace the office's system prompt or add tools; see ADR 020 | Working |
 | General-assistant profile | An everyday assistant for members of the public: no records, no change tools, crisis replies written for the public rather than staff, and a guard policy the classifier has never seen in training; the profile to start from when putting the layer in front of a general chatbot; see ADR 021 | Working |
+| Governed web research | For questions that ask for current information: the masked question goes to a search engine, pages from allowed sites only are fetched as dated, hashed snapshots the answer must cite, page text passes the injection check, and a second model (Llama 3.1) judges the answer against the pages before it is shown; see ADR 022 | Working |
 | Human approval before changes | The assistant only proposes changes (e.g. moving an appointment); OPA decides who must approve; a person with an approver role approves, never the person who asked; only then does a separate executor agent make the change, once | Working |
 | Tracing and failure recovery | OpenTelemetry tracing, Saga-style rollback, idempotency | Planned |
 
@@ -142,7 +143,7 @@ This checks Ollama and the models, starts Kafka, Schema Registry, Kafka UI and O
 
 Other commands: `./scripts/dev.sh status | logs [service] | restart | stop | down`.
 
-**4. Try it.** On the dashboard, send a normal request ("Help me plan tomorrow"), one with personal details ("Remind Alex Chen to call 416-555-0199 about the report") to see masking, and a medication question ("How much Adderall should I take?") to see a guardrail block.
+**4. Try it.** Open http://localhost:8000: the demo view, with the chat on the left and, on the right, each safety step in plain words. Pick a situation or type one. The engineer view is at /dashboard (simple by default; "Show all details" adds the decision trace, the event stream and cost and quality), and a plain chat at /chat. On any of them, send a normal request ("Help me plan tomorrow"), one with personal details ("Remind Alex Chen to call 416-555-0199 about the report") to see masking, and a medication question ("How much Adderall should I take?") to see a guardrail block.
 
 **5. Use it from an existing chatbot.** Any app or library that speaks the OpenAI chat format can call the governed pipeline instead of a model. Only the base URL (and a key) changes:
 

@@ -1,0 +1,24 @@
+# Web research (ADR 022): where the everyday assistant may read, and how much.
+# search: duckduckgo (HTML endpoint, no key, no account) or searxng (url: http://...).
+search: duckduckgo
+# Only these sites are fetched. An office widens or narrows this list; empty means any site not denied.
+allow:
+  - gov
+  - edu
+  - who.int
+  - 988lifeline.org
+  - nih.gov
+  - cdc.gov
+  - fda.gov
+  - mayoclinic.org
+  - wikipedia.org
+  - canada.ca
+  - ontario.ca
+deny:
+  - reddit.com
+  - facebook.com
+  - x.com
+  - twitter.com
+max_pages: 3
+max_chars: 6000
+timeout_seconds: 10

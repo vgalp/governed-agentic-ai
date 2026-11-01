@@ -4,14 +4,13 @@ quoted word for word; clinicians only; never a recommendation; no model."""
 import importlib.util
 import json
 import shutil
-from pathlib import Path
 
 import pytest
 import yaml
 
 from agents.tool_choice import tool_denied_reply, tools_to_call
 from guardrails.rules import check_input, classifier_exemption, GuardrailDecision
-from mcp_servers.medication_review.server import ingredients_of, load_config, quote, review
+from mcp_servers.medication_review.server import fetch_missing, ingredients_of, load_config, quote, review
 from profiles.loader import ProfileError, load_profile, load_profile_from
 
 CLINIC = load_profile("clinic-assistant")
@@ -201,10 +200,9 @@ def test_demo_patients_are_in_the_database_and_marked_synthetic(tmp_path):
 # --- the download script (no network: openFDA and RxNorm answers are faked) ---------------------
 
 def _fetch_module():
-    spec = importlib.util.spec_from_file_location("fetch_drug_labels", Path("scripts/fetch_drug_labels.py"))
-    m = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(m)
-    return m
+    """The lookups now live in one module shared by the script and the review server."""
+    from mcp_servers.medication_review import labels
+    return labels
 
 
 def test_fetch_picks_the_single_ingredient_label_and_keeps_only_what_is_needed(monkeypatch):
@@ -290,3 +288,87 @@ def test_the_drug_s_own_name_is_preferred_over_its_class(clinic):
     from mcp_servers.medication_review.server import Config, mentions
     c = Config(labels, cfg.medications, cfg.drug_column, cfg.sections, cfg.class_terms, cfg.data_class)
     assert mentions("warfarin", "ibuprofen", c)[0]["term"] == "ibuprofen"
+
+
+# --- on-demand label fetching (a cache that fills itself) ------------------------------------
+
+def _on_demand(clinic, lookup):
+    p, _ = clinic
+    cfg_path = p.path / "medication_review.yaml"
+    cfg_path.write_text(cfg_path.read_text() + "\nlabels_fetch: on_demand\n")
+    return p, load_config(p), lookup
+
+
+def test_the_switch_defaults_to_never_and_rejects_other_values(clinic, tmp_path):
+    p, cfg = clinic
+    assert cfg.labels_fetch == "never"
+    assert fetch_missing(cfg, [{"name": "Anything", "rxcui": None}], lookup=lambda *a: pytest.fail("called")) == []
+    cfg_path = p.path / "medication_review.yaml"
+    cfg_path.write_text(cfg_path.read_text() + "\nlabels_fetch: sometimes\n")
+    with pytest.raises(ValueError, match="labels_fetch"):
+        load_config(p)
+
+
+def test_on_demand_fetches_only_what_is_missing_saves_it_dated_and_reports_it(clinic):
+    asked = []
+
+    def lookup(labels, meds, sections):
+        asked.append([m["name"] for m in meds])
+        labels["medications"]["Ciprofloxacin 500 MG Oral Tablet"] = {"rxcui": "9", "ingredients": ["ciprofloxacin"]}
+        labels["ingredients"]["newdrug"] = {"set_id": "12345678-0000-0000-0000-00000000000a", "effective_time": "20260401",
+                                            "title": "Newdrug", "brand_names": [], "classes": [],
+                                            "sections": {"drug_interactions": ["Warfarin: test text."]}}
+        return [{"medication": meds[0]["name"], "ingredients": ["newdrug"],
+                 "labels": [{"ingredient": "newdrug", "set_id": "12345678-0000-0000-0000-00000000000a", "effective_time": "20260401"}]}]
+    p, cfg, lookup = _on_demand(clinic, lookup)
+    fetched = fetch_missing(cfg, [{"name": "Newdrug 10 MG", "rxcui": None}], lookup=lookup)
+    assert fetched[0]["labels"][0]["ingredient"] == "newdrug"
+    saved = json.loads((p.path / "data" / "drug_labels.json").read_text())
+    assert "newdrug" in saved["ingredients"] and saved["downloaded"]            # written back, dated
+    assert "warfarin" in saved["ingredients"]                                  # what was there is kept
+
+
+def test_the_review_fetches_for_a_drug_with_no_label_and_says_so_in_the_answer(clinic, monkeypatch):
+    calls = []
+
+    def lookup(labels, meds, sections):
+        calls.append(sorted(m["name"] for m in meds))
+        return []
+    p, cfg, _ = _on_demand(clinic, lookup)
+    monkeypatch.setattr("mcp_servers.medication_review.labels.fetch_into", lookup)
+    out = review(p.records_db, p, cfg, "medication review for Harold Brinkley", ALL)
+    # Harold's drugs: warfarin and ibuprofen have labels; nothing else is missing, so nothing is asked
+    assert out["answer"].startswith("Medication review for Harold Brinkley") and "fetched" not in out
+    assert all("warfarin" not in c and "ibuprofen" not in c for c in calls) or calls == []
+
+
+def test_a_failed_lookup_leaves_the_drug_not_checked(clinic):
+    def lookup(labels, meds, sections):
+        return []            # offline, or nothing found
+    p, cfg, lookup = _on_demand(clinic, lookup)
+    before = (p.path / "data" / "drug_labels.json").read_text()
+    assert fetch_missing(cfg, [{"name": "Unknownium", "rxcui": None}], lookup=lookup) == []
+    assert (p.path / "data" / "drug_labels.json").read_text() == before         # nothing written
+
+
+def test_fetch_into_sends_names_only_and_skips_what_is_on_file(monkeypatch):
+    from mcp_servers.medication_review import labels as lk
+    urls = []
+
+    def fake_get(url):
+        urls.append(url)
+        if "approximateTerm" in url:
+            return {"approximateGroup": {"candidate": [{"rxcui": "77"}]}}
+        if "related.json" in url:
+            return {"relatedGroup": {"conceptGroup": [{"conceptProperties": [{"name": "Metformin"}]}]}}
+        return {"results": [{"set_id": "m-set", "effective_time": "20250101", "drug_interactions": ["t"],
+                             "openfda": {"generic_name": ["METFORMIN HYDROCHLORIDE"]}}]}
+    monkeypatch.setattr(lk, "get", fake_get)
+    monkeypatch.setattr(lk.time, "sleep", lambda s: None)
+    labels = {"medications": {}, "rxcui": {}, "ingredients": {"warfarin": {"set_id": "w"}}}
+    fetched = lk.fetch_into(labels, [{"name": "Metformin 500 MG", "rxcui": None},
+                                      {"name": "Warfarin 5 MG", "rxcui": "1"}], ["drug_interactions"])
+    assert [f["medication"] for f in fetched] == ["Metformin 500 MG", "Warfarin 5 MG"]
+    assert labels["ingredients"]["metformin"]["set_id"] == "m-set" and labels["ingredients"]["metformin"]["downloaded"]
+    assert fetched[1]["labels"] == []                       # warfarin's label was already on file
+    assert all("Harold" not in u and "patient" not in u.lower() for u in urls)

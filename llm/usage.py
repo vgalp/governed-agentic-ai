@@ -18,7 +18,7 @@ from contextlib import contextmanager
 from contextvars import ContextVar
 from dataclasses import asdict, dataclass, field
 
-PURPOSES = ("answer", "proposal", "input_agent", "question_check", "answer_check")
+PURPOSES = ("answer", "proposal", "input_agent", "question_check", "answer_check", "judge")
 
 
 @dataclass

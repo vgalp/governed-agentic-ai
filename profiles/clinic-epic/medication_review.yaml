@@ -1,5 +1,9 @@
 # Medication review (ADR 017), from Epic's MedicationRequest records (ADR 013).
 labels: data/drug_labels.json          # scripts/fetch_drug_labels.py --profile clinic-epic --patient "..."
+# on_demand: a medication with no label on file is looked up in RxNorm and openFDA during the review
+# (drug names only, never the patient), saved to the file dated today, and the fetch is audited with
+# the tool call. never: only the downloaded file; an office that forbids outbound calls keeps this.
+labels_fetch: on_demand
 source: fhir                           # the medication list comes from fhir.yaml's record type below
 medications: medications
 sections: [contraindications, drug_interactions]

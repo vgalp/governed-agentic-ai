@@ -58,6 +58,13 @@
                      border-radius: 999px; padding: 3px 10px; font-size: 12px; }
   .grid { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 14px; }
   @media (max-width: 900px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+  /* Simple view (default): the selected request's journey, the recent requests and four totals.
+     Everything else is detail, shown by the switch in the header. */
+  body.simple .detail-only { display: none !important; }
+  body.simple .counters.simple-four .counter:nth-child(n+5) { display: none; }
+  .switch { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); cursor: pointer;
+            border: 1px solid var(--line); border-radius: 999px; padding: 4px 10px; background: var(--panel); }
+  .switch input { margin: 0; }
   .grid > div { min-width: 0; }
   .stages { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 8px; }
   .stages.six { grid-template-columns: repeat(6, minmax(0, 1fr)); }
@@ -139,18 +146,19 @@
   .appr .msg { font-size: 12px; color: var(--block); }
 </style>
 </head>
-<body>
+<body class="simple">
 <div class="wrap">
   <header>
     <div>
       <h1>Governed Agentic AI · live pipeline · <span id="ptitle"></span></h1>
-      <div class="sub">Every request, as it moves through the safety controls. Synthetic data only.</div>
+      <div class="sub">Every request, as it moves through the safety controls. Synthetic data only. The simple view shows the journey of one request and the totals; "Show all details" adds the trace, the event stream and cost and quality.</div>
     </div>
     <div class="status">
       <span class="pill" id="conn"><span class="dot"></span><span id="connText">Connecting…</span></span>
       <span class="pill" id="auditPill">Audit chain: checking…</span>
       <button class="btn" id="verifyBtn">Verify audit chain</button>
-      <a class="btn" id="openChat" href="/" target="_blank" style="text-decoration:none">Open chat</a>
+      <label class="switch" title="Show the event stream, decision trace, cost and quality"><input type="checkbox" id="details"> Show all details</label>
+      <a class="btn" id="openChat" href="/" target="_blank" style="text-decoration:none">Open demo</a>
     </div>
   </header>
   <div class="auditnote" id="auditNote" hidden></div>
@@ -173,18 +181,20 @@
           </div>
         </div>
         <div class="stages" id="stages"></div>
-        <div class="label" id="traceLabel">Decision trace: each agent's steps, live from the agent.trace topic</div>
-        <div class="lanes" id="lanes"></div>
-        <div class="trace" id="trace"></div>
-        <div class="label" id="usageLabel">Cost and quality for this request (model calls, tokens, cost, toxicity)</div>
-        <div class="usage" id="usage">—</div>
         <div class="label" id="maskedLabel">What the model saw (after masking)</div>
         <div class="masked" id="masked">—</div>
-        <div class="label">Audit events for this request</div>
-        <div class="timeline" id="timeline"></div>
+        <div class="detail-only">
+          <div class="label" id="traceLabel">Decision trace: each agent's steps, live from the agent.trace topic</div>
+          <div class="lanes" id="lanes"></div>
+          <div class="trace" id="trace"></div>
+          <div class="label" id="usageLabel">Cost and quality for this request (model calls, tokens, cost, toxicity)</div>
+          <div class="usage" id="usage">—</div>
+          <div class="label">Audit events for this request</div>
+          <div class="timeline" id="timeline"></div>
+        </div>
       </div>
 
-      <div class="panel" style="margin-top:14px">
+      <div class="panel detail-only" style="margin-top:14px">
         <h2>Live event stream</h2>
         <div class="feed" id="feed"></div>
         <div class="note">This view never shows personal data: user messages and answers are hidden; only masked text, decisions and counts appear.</div>
@@ -200,9 +210,9 @@
       </div>
       <div class="panel" style="margin-top:14px">
         <h2>Totals</h2>
-        <div class="counters" id="counters"></div>
+        <div class="counters simple-four" id="counters"></div>
       </div>
-      <div class="panel" style="margin-top:14px">
+      <div class="panel detail-only" style="margin-top:14px">
         <h2>Cost and quality</h2>
         <div class="counters" id="quality"></div>
         <div class="outcomes" id="outcomes"></div>
@@ -544,9 +554,9 @@ function renderLists() {
       if (e.topic === "audit.model_inputs") masked += e.data.entities_masked || 0;
     }
   }
-  const counters = [["Requests", all.length], ["Answered", answered], ["Blocked at input", blockedIn],
-                    ["Blocked at output", blockedOut], ["Tool calls allowed", toolsOk], ["Tool calls denied", toolsDenied],
-                    ["Personal details masked", masked], ["Changes proposed", proposed],
+  const counters = [["Requests", all.length], ["Answered", answered], ["Stopped before the model", blockedIn],
+                    ["Personal details masked", masked], ["Blocked at output", blockedOut],
+                    ["Tool calls allowed", toolsOk], ["Tool calls denied", toolsDenied], ["Changes proposed", proposed],
                     ["Changes made after approval", made], ["Events seen", feed.length]];
   $("counters").replaceChildren(...counters.map(([k, v]) => {
     const c = el("div", "counter"); c.append(el("div", "v", String(v)), el("div", "k", k)); return c;
@@ -762,6 +772,7 @@ const profileLoaded = fetch("/profile").then(r => r.json()).then(p => {
   PROFILE_NAME = p.name;
   CHAT = p.chat !== false;
   if (!CHAT) for (const id of ["sendForm", "examples", "openChat", "approvalsPanel"]) $(id).style.display = "none";
+  if (!p.roles.length) $("approvalsPanel").classList.add("detail-only");   // no roles: nothing can be proposed
   for (const r of p.roles) roleTitles[r.key] = r.title;
   roleKeys = p.roles.map(r => r.key);
   if (p.roles.length) {
@@ -775,6 +786,14 @@ const profileLoaded = fetch("/profile").then(r => r.json()).then(p => {
 }).catch(() => {});
 $("sendForm").onsubmit = e => { e.preventDefault(); const t = $("sendInput").value.trim(); if (t) { send(t); $("sendInput").value = ""; } };
 $("verifyBtn").onclick = () => verifyAudit(true);
+let showAll = false;
+try { showAll = localStorage.getItem("dashboard.details") === "1"; } catch {}
+$("details").checked = showAll;
+document.body.classList.toggle("simple", !showAll);
+$("details").onchange = () => {
+  document.body.classList.toggle("simple", !$("details").checked);
+  try { localStorage.setItem("dashboard.details", $("details").checked ? "1" : "0"); } catch {}
+};
 setInterval(render, 1000);        // keeps "running" states and progress fresh
 setInterval(verifyAudit, 15000);
 setInterval(render, 20000);           // so "no reply after 2 min" is counted even when nothing new arrives

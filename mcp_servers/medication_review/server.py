@@ -24,6 +24,7 @@ import json
 import re
 import sqlite3
 from dataclasses import dataclass
+from datetime import date
 from pathlib import Path
 
 import yaml
@@ -44,6 +45,8 @@ class Config:
     class_terms: dict[str, list[str]]  # FDA drug class -> other words labels use for it
     data_class: str                    # the data class of everything returned
     source: str = "database"           # database (records.yaml) or fhir (fhir.yaml, ADR 013)
+    labels_path: Path | None = None    # where the label file lives (written to by on-demand fetches)
+    labels_fetch: str = "never"        # never: only the downloaded file · on_demand: fetch what is missing
 
 
 def load_config(profile: Profile) -> Config | None:
@@ -61,9 +64,31 @@ def load_config(profile: Profile) -> Config | None:
                          f"{'fhir.yaml' if source == 'fhir' else 'records.yaml'}")
     labels_path = (profile.path / raw["labels"]).resolve()
     labels = json.loads(labels_path.read_text()) if labels_path.exists() else {}
+    fetch = raw.get("labels_fetch", "never")
+    if fetch not in ("never", "on_demand"):
+        raise ValueError(f"{path.name}: labels_fetch must be never or on_demand, not {fetch!r}")
     return Config(labels, rtype, raw.get("drug_column"),
                   tuple(raw.get("sections", ["contraindications", "drug_interactions"])),
-                  {k.lower(): v for k, v in (raw.get("class_terms") or {}).items()}, rtype.data_class, source)
+                  {k.lower(): v for k, v in (raw.get("class_terms") or {}).items()}, rtype.data_class, source,
+                  labels_path, fetch)
+
+
+def fetch_missing(cfg: Config, meds: list[dict], lookup=None) -> list[dict]:
+    """With labels_fetch: on_demand, look up the ingredients and FDA labels the file lacks for these
+    medications, save them to the file with today's date, and return what was fetched (for the audit
+    and the answer). Drug names and codes only go out; never the patient. With "never", nothing."""
+    if cfg.labels_fetch != "on_demand" or not meds:
+        return []
+    from mcp_servers.medication_review import labels as lk
+    fetched = (lookup or lk.fetch_into)(cfg.labels, meds, list(cfg.sections))
+    if fetched and cfg.labels_path is not None:
+        cfg.labels.setdefault("source", "openFDA drug label API, https://open.fda.gov/apis/drug/label/ ; "
+                                        "ingredients from RxNorm, https://lhncbc.nlm.nih.gov/RxNav/")
+        cfg.labels.setdefault("sections", list(cfg.sections))
+        cfg.labels.setdefault("downloaded", date.today().isoformat())
+        cfg.labels_path.parent.mkdir(parents=True, exist_ok=True)
+        cfg.labels_path.write_text(json.dumps(cfg.labels, indent=1, sort_keys=True) + "\n")
+    return fetched
 
 
 def ingredients_of(description: str, labels: dict, rxcui: str | None = None) -> list[str]:
@@ -227,7 +252,7 @@ def review(db_path: Path | None, profile: Profile, cfg: Config | None, query: st
         return {"results": [], "note": "medication review is not set up for this profile"}
     if cfg.data_class not in allowed_classes:
         return {"results": [], "note": "this role may not see medication records"}
-    if not cfg.labels.get("ingredients"):
+    if not cfg.labels.get("ingredients") and cfg.labels_fetch != "on_demand":
         return {"results": [], "answer": "Medication review is not available: the FDA label file has not been "
                                          "downloaded yet (scripts/fetch_drug_labels.py)."}
     not_found = {"several": "More than one patient matches; please use the full name.",
@@ -255,6 +280,13 @@ def review(db_path: Path | None, profile: Profile, cfg: Config | None, query: st
     dc = [cfg.data_class]
     results = [{"id": m["id"], "title": "Current medication", "text": f"{name}: {m['name']}", "data_classes": dc}
                for m in meds]
+    missing = [m for m in meds if not ingredients_of(m["name"], cfg.labels, m.get("rxcui"))
+               or any(i not in (cfg.labels.get("ingredients") or {})
+                      for i in ingredients_of(m["name"], cfg.labels, m.get("rxcui")))]
+    fetched = fetch_missing(cfg, missing)
+    if not cfg.labels.get("ingredients"):
+        return {"results": [], "answer": "Medication review is not available: no FDA label could be found "
+                                         "for these medications (RxNorm and openFDA were asked)."}
     for m in meds:
         m["ingredients"] = ingredients_of(m["name"], cfg.labels, m.get("rxcui"))
 
@@ -281,7 +313,11 @@ def review(db_path: Path | None, profile: Profile, cfg: Config | None, query: st
         results.append({"id": lid, "title": f"FDA label: {lab.get('title', ing)}",
                         "text": f"{lab.get('title', ing)}, label version {_date(lab.get('effective_time'))}, "
                                 f"{DAILYMED.format(set_id=lab['set_id'])}", "data_classes": dc})
-    return {"results": results, "answer": _answer(name, meds, findings, labels_used, unchecked, no_ingredients, cfg)}
+    out = {"results": results, "answer": _answer(name, meds, findings, labels_used, unchecked, no_ingredients, cfg,
+                                                 fetched)}
+    if fetched:       # audited with the tool call by the gateway: drug names and label IDs, never the patient
+        out["fetched"] = [{"medication": f["medication"], "labels": f["labels"]} for f in fetched]
+    return out
 
 
 def _date(t: str | None) -> str:
@@ -292,7 +328,7 @@ SECTION_NAMES = {"contraindications": "Contraindications", "drug_interactions": 
                  "precautions": "Precautions", "boxed_warning": "Boxed warning", "warnings_and_cautions": "Warnings"}
 
 
-def _answer(name, meds, findings, labels_used, unchecked, no_ingredients, cfg: Config) -> str:
+def _answer(name, meds, findings, labels_used, unchecked, no_ingredients, cfg: Config, fetched=()) -> str:
     lines = [f"Medication review for {name}, for your review. This is not a recommendation: "
              "the decision stays with you.", "",
              "Current medications: " + "; ".join(f"{m['name']} [{m['id']}]" for m in meds) + "."]
@@ -317,6 +353,10 @@ def _answer(name, meds, findings, labels_used, unchecked, no_ingredients, cfg: C
                   "). That does not mean they are safe together."]
     if unchecked or no_ingredients:
         lines += ["", "Not checked, no FDA label on file: " + ", ".join(sorted(unchecked) + no_ingredients) + "."]
+    new = [lab for f in fetched for lab in f["labels"]]
+    if new:
+        lines += ["", "Fetched for this review and kept on file, dated today: " +
+                  "; ".join(f"{lab['ingredient']} (label version {_date(lab.get('effective_time'))})" for lab in new) + "."]
     lines += ["", f"Source: FDA drug labels (openFDA), downloaded {cfg.labels.get('downloaded', 'unknown')}; "
                   "full labels on DailyMed. Labels may not list every interaction, and they are not a substitute "
                   "for your judgment or a pharmacist's review."]
