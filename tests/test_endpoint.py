@@ -140,7 +140,7 @@ def gateway_fakes(monkeypatch, rows):
     monkeypatch.setattr(gateway, "_is_allowed", lambda p, a, t, r, tenant=None: True)
     monkeypatch.setattr(gateway, "_audit", events.append)
 
-    async def fake_call(url, tool, args):
+    async def fake_call(url, tool, args, on_progress=None):
         seen.update(args)
         return {"results": rows}
     monkeypatch.setattr(gateway, "_call", fake_call)

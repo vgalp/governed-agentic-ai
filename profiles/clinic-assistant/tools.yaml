@@ -65,3 +65,15 @@ chart_brief:
   role_filtered: true
   when: chart_brief                        # rules.yaml
   answer: direct
+
+# Drug reference (ADR 024): what the FDA label says about a medication, quoted (drug_reference.yaml).
+# Drugs only, never a patient: the tool gets the masked question and refuses one that names a person.
+# The tool's text is the answer. Clinicians and nurses.
+drug_reference:
+  description: Drug reference (FDA label sections for a named medication, quoted with version date and link)
+  server: http://127.0.0.1:8107/mcp         # mcp_servers/drug_reference
+  kind: read
+  data_label: approved_content             # public FDA text, no patient data
+  lane: knowledge
+  when: drug_reference                     # rules.yaml
+  answer: direct

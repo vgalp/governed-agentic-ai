@@ -82,12 +82,14 @@ classifier:
 privacy:
   entities: [PERSON, PHONE_NUMBER, EMAIL_ADDRESS, LOCATION, US_SSN, CREDIT_CARD, IP_ADDRESS]
   allow_list: []
+  # Medication names are not people: without this, "apixaban" is masked as [PERSON_1] (ADR 024).
+  allow_list_files: [privacy/drug_names.txt]
 
 knowledge_base: data/knowledge_base.json
 
 agents:
   planner:
-    tools: [search_knowledge, search_records, medication_review, chart_brief]
+    tools: [search_knowledge, search_records, medication_review, chart_brief, drug_reference]
   # Makes approved changes only. The planner, which talks to the model, cannot.
   executor:
     tools: [reschedule_appointment]

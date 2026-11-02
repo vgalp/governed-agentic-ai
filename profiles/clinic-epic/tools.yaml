@@ -54,3 +54,14 @@ chart_brief:
   role_filtered: true
   when: chart_brief
   answer: direct
+
+# Drug reference (ADR 024): what the FDA label says about a medication, quoted (drug_reference.yaml).
+# Drugs only, never a patient. The tool's text is the answer. Clinicians and nurses.
+drug_reference:
+  description: Drug reference (FDA label sections for a named medication, quoted with version date and link)
+  server: http://127.0.0.1:8107/mcp
+  kind: read
+  data_label: approved_content
+  lane: knowledge
+  when: drug_reference
+  answer: direct

@@ -79,7 +79,7 @@ def test_gateway_passes_allowed_classes_and_audits_the_role(monkeypatch):
     monkeypatch.setattr(gateway, "allowed_classes", lambda p, r: ["appointments"])
     monkeypatch.setattr(gateway, "_audit", events.append)
 
-    async def fake_call(url, tool, args):
+    async def fake_call(url, tool, args, on_progress=None):
         sent.update(args)
         return {"results": [{"id": "apt-1", "data_classes": ["appointments"]},
                             {"id": "med-1", "data_classes": ["medications"]}]}   # tool over-returns
@@ -107,7 +107,7 @@ def test_denied_role_raises_and_is_audited(monkeypatch):
 
 def test_clinic_roles_and_policy_data():
     assert set(CLINIC.roles) == {"clinician", "nurse", "front_desk", "compliance"}
-    assert CLINIC.role_filtered_tools == ("search_records", "medication_review")
+    assert CLINIC.role_filtered_tools == ("search_records", "medication_review", "chart_brief")
     assert CLINIC.policy_data()["roles"]["compliance"]["tools"] == ["search_knowledge"]
     assert "role_required" in CLINIC.responses
 

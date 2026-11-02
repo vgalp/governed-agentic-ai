@@ -35,6 +35,7 @@ SERVICES=(
   "fhir-records|-m mcp_servers\.fhir_records|mcp_servers.fhir_records.server|8104"
   "web-research|-m mcp_servers\.web_research|mcp_servers.web_research.server|8105"
   "chart-brief|-m mcp_servers\.chart_brief|mcp_servers.chart_brief.server|8106"
+  "drug-reference|-m mcp_servers\.drug_reference|mcp_servers.drug_reference.server|8107"
   "api|-m uvicorn api\.main|uvicorn api.main:app --port 8000|8000"
   "planner|-m agents\.planner|agents.planner|"
   "executor|-m agents\.executor|agents.executor|"

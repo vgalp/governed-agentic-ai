@@ -61,6 +61,8 @@ classifier:
 privacy:
   entities: [PERSON, PHONE_NUMBER, EMAIL_ADDRESS, LOCATION, US_SSN, CREDIT_CARD, IP_ADDRESS]
   allow_list: []
+  # Medication names are not people: without this, "apixaban" is masked as [PERSON_1] (ADR 024).
+  allow_list_files: [privacy/drug_names.txt]
   # The local model (on this computer, no records) sees place names: "weather in Toronto" or
   # "prime minister of Canada" cannot be answered as "[LOCATION_1]". People and contact details
   # stay masked for every model; an outside model, if one were allowed, would see no places either.

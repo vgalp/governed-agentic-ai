@@ -891,6 +891,15 @@ def load_profile_from(path: Path) -> Profile:
                                "served through the outside endpoint, which knows who is asking")
 
     privacy = p.get("privacy") or {}
+    allow_list = [str(w) for w in privacy.get("allow_list") or []]
+    for rel in privacy.get("allow_list_files") or []:        # e.g. privacy/drug_names.txt (repo root)
+        f = (PROFILES_DIR.parent / str(rel)).resolve()
+        if not f.exists():
+            raise ProfileError(f"{where}: privacy.allow_list_files: {rel} does not exist")
+        for line in f.read_text(encoding="utf-8").splitlines():
+            w = line.strip()
+            if w and not w.startswith("#"):
+                allow_list += [w, w.capitalize(), w.title(), w.upper()]   # Presidio matches the exact text
     local_sees = tuple(privacy.get("local_model_sees") or ())
     if local_sees:
         if not isinstance(privacy["local_model_sees"], list) or not all(isinstance(k, str) for k in local_sees):
@@ -918,7 +927,7 @@ def load_profile_from(path: Path) -> Profile:
         output_rules=output_rules,
         classifier=classifier,
         privacy_entities=tuple(privacy.get("entities", [])),
-        privacy_allow_list=tuple(privacy.get("allow_list", [])),
+        privacy_allow_list=tuple(dict.fromkeys(allow_list)),
         local_model_sees=local_sees,
         knowledge_base=_file(path, _require(p, "knowledge_base", where), where),
         records_db=records_db,

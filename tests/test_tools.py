@@ -30,7 +30,8 @@ def clinic_copy(tmp_path):
 
 def test_clinic_tools_are_described_in_one_place():
     p = load_profile("clinic-assistant")
-    assert set(p.tools) == {"search_knowledge", "search_records", "reschedule_appointment", "medication_review"}
+    assert set(p.tools) == {"search_knowledge", "search_records", "reschedule_appointment", "medication_review",
+                            "chart_brief", "drug_reference"}
     records = p.tools["search_records"]
     assert records.server == "http://127.0.0.1:8101/mcp" and records.kind == "read"
     assert records.receives_identifiers and records.role_filtered
@@ -40,7 +41,8 @@ def test_clinic_tools_are_described_in_one_place():
 def test_old_settings_are_derived_from_the_registry():
     p = load_profile("clinic-assistant")
     assert p.tool_data_labels == {"search_knowledge": "approved_content", "search_records": "patient_record",
-                                  "reschedule_appointment": "patient_record", "medication_review": "patient_record"}
+                                  "reschedule_appointment": "patient_record", "medication_review": "patient_record",
+                                  "chart_brief": "patient_record", "drug_reference": "approved_content"}
     assert p.identifier_tools == ("search_records", "medication_review")
     assert p.role_filtered_tools == ("search_records", "medication_review")
 
@@ -56,7 +58,7 @@ def test_gateway_uses_the_profile_server(monkeypatch):
     p = load_profile("adhd-assistant")
     seen = {}
 
-    async def fake_call(url, tool, args):
+    async def fake_call(url, tool, args, on_progress=None):
         seen["url"] = url
         return {"results": []}
     monkeypatch.setattr(gateway, "_call", fake_call)

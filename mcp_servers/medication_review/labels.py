@@ -43,10 +43,20 @@ def get(url: str) -> dict:
     return {}
 
 
-def rxnorm(name: str) -> tuple[str | None, list[str]]:
-    """(RxNorm code, ingredient names) for a medication name."""
-    found = get(f"{RXNAV}/approximateTerm.json?" + urllib.parse.urlencode({"term": name, "maxEntries": 1}))
+def _close(a: str, b: str) -> bool:
+    """The same word, or a near spelling (same first four letters, length within two)."""
+    a, b = a.lower().strip(), b.lower().strip()
+    return a == b or (len(a) >= 5 and a[:4] == b[:4] and abs(len(a) - len(b)) <= 2)
+
+
+def rxnorm(name: str, strict: bool = False) -> tuple[str | None, list[str]]:
+    """(RxNorm code, ingredient names) for a medication name. strict: accept the approximate match
+    only if one of RxNorm's candidate names is the word itself or a near spelling of it; the drug
+    reference uses this to reject ordinary words. (RxNav's score is not a 0-100 similarity.)"""
+    found = get(f"{RXNAV}/approximateTerm.json?" + urllib.parse.urlencode({"term": name, "maxEntries": 5}))
     cands = (found.get("approximateGroup") or {}).get("candidate") or []
+    if strict:
+        cands = [c for c in cands if c.get("name") and _close(c["name"], name)]
     if not cands:
         return None, []
     rxcui = cands[0]["rxcui"]

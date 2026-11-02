@@ -315,7 +315,7 @@ def test_the_epic_profile_is_the_clinic_with_another_records_source():
     assert EPIC.classifier.guard_policy == CLINIC.classifier.guard_policy
     assert EPIC.records_map is None and EPIC.fhir_map is not None and not EPIC.actions
     assert EPIC.roles["clinician"].tools == ("search_knowledge", "search_records", "medication_review",
-                                             "medication_list", "chart_brief")
+                                             "medication_list", "chart_brief", "drug_reference")
     assert "medication_review" not in EPIC.roles["nurse"].tools and "medication_list" in EPIC.roles["nurse"].tools
     assert "medication_list" not in EPIC.roles["front_desk"].tools
     assert EPIC.tools["search_records"].server.endswith(":8104/mcp")

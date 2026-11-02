@@ -1,0 +1,172 @@
+# Medication names (generic and brand) that masking must not treat as a person's name.
+# Seed list; extend from RxNorm with scripts/fetch_drug_names.py. One name per line, lower case.
+acetaminophen
+advil
+albuterol
+albuterol sulfate
+amiodarone
+amiodarone hydrochloride
+amlodipine
+amlodipine besylate 10 mg
+amlodipine besylate 2.5 mg
+amlodipine besylate 5 mg
+amoxicillin
+amoxicillin and clavulanate potassium
+apixaban
+aspirin
+aspirin and extended - release dipyridamole capsules, 25 mg / 200 mg
+atomoxetine
+atomoxetine hydrochloride
+atorvastatin
+augmentin
+auvelity
+azithromycin
+budesonide
+carvedilol
+cefazolin
+cefuroxime
+cefuroxime axetil
+cephalexin
+cetirizine
+cetirizine hydrochloride
+chlorpheniramine
+cipro
+ciprofloxacin
+clavulanate
+cligavyx
+clopidogrel
+coumadin
+crestor
+cyclosporine
+cyclosporine, modfied
+dabigatran
+demerol
+dextromethorphan
+dienogest
+diphenhydramine
+diphenhydramine hcl
+doxylamine
+doxylamine succinate and pyridoxine hydrochloride
+drospirenone
+edoxaban
+eliquis
+ellence
+enoxaparin
+enoxaparin sodium
+epinephrine
+epirubicin
+escitalopram
+estradiol
+estradiol valerate
+ethinyl estradiol
+etonogestrel
+etonogestrel and ethinyl estradiol vaginal
+fentanyl
+fentanyl citrate
+fluoxetine
+fluticasone
+fluticasone propionate
+fulvestrant
+furosemide
+gabapentin
+glucophage
+heparin
+heparin sodium
+humalog
+hyaluronidase
+hydrochlorothiazide
+hydrocodone
+hydrocodone bitartrate and homatropine methylbromide
+hydrocodone polistirex and chlorpheniramine polistirex extended-release
+hydrocortisone
+hylenex recombinant
+ibuprofen
+insulin
+isoflurane
+lantus
+lasix
+leucovorin
+leucovorin calcium
+levonorgestrel
+levothyroxine
+levothyroxine sodium
+lexapro
+lipitor
+lisinopril
+losartan
+losartan potassium
+lovenox
+medroxyprogesterone
+medroxyprogesterone acetate
+meperidine
+metformin
+metoprolol
+metoprolol tartrate
+midazolam
+morphine
+motrin
+naproxen
+naproxen sodium
+natazia
+nestabs one
+neurontin
+nexplanon
+nitrofurantoin
+nitroglycerin
+norelgestromin
+norelgestromin and ethinyl estradiol
+norethindrone
+ogivri
+omeprazole
+ondansetron
+oxaliplatin
+oxycodone
+oxycodone hydrochloride
+paclitaxel
+paclitaxel 100mg per vial
+pantoprazole
+penicillin v
+penicillin v potassium
+plavix
+pradaxa
+prasugrel
+pravastatin
+pravastatin sodium
+prednisone
+prilosec
+propofol
+protonix
+prozac
+rivaroxaban
+rocuronium
+rocuronium bromide
+rosuvastatin
+salmeterol
+serevent diskus
+sertraline
+sevoflurane
+simvastatin
+slynd
+sodium fluoride
+sodium fluoride f 18
+sulfamethoxazole
+sulfamethoxazole and trimethoprim
+synthroid
+tacrolimus
+terrell
+tramadol
+tramadol hydrochloride
+trastuzumab
+trimethoprim
+tropicamide
+twirla
+tylenol
+ventolin
+vitamin b12
+warfarin
+warfarin sodium
+xarelto
+zithromax
+zocor
+zofran
+zoloft

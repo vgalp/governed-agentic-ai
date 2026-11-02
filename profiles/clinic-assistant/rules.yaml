@@ -68,6 +68,17 @@ patterns:
       - '|\b(brief|summar(y|ise|ize)) (me )?(on|about|for) \b'
       - '|\bwhat (do we|do i|do you) know about\b'
 
+  # A drug reference question (ADR 024): what the FDA label says about a named medication, with no
+  # patient. Answered by the drug_reference tool quoting the label; a question with decision words
+  # ("should we", "can I give") is not a lookup and goes through the usual checks.
+  drug_reference:
+    regex:
+      - '\b(fda )?label\b|\bpackage insert\b|\bprescribing information\b|\bmonograph\b'
+      - '|\b(look ?up|reference (for|on)|information (on|about)|info (on|about)) \b.{0,30}\b(drug|medication|medicine|[a-z]+(in|ol|ide|ine|ate|one|pril|sartan|statin|mab|zole|mycin|cillin|oxacin|azepam|olol|dipine|parin|aban|gliptin|flozin|lutide)\b)'
+      - '|\b(contraindications?|indications?|side effects?|adverse (reactions?|effects?)|boxed warning|black box|warnings?|precautions?|interactions?) (of|for|with)\b'
+      - '|\b(what does|what do) (the )?(fda |drug )?labels? say\b'
+      - '|\b[a-z]+ (and|with|plus) [a-z]+ (interactions?|together)\b'
+
   # A request to change an appointment. Starts a proposal that a person must approve
   # (actions.yaml); the assistant never changes anything itself.
   reschedule_request:
@@ -105,3 +116,6 @@ classifier_exemptions:
   # A chart brief: the record's own lines and documentation checks, by a tool (ADR 023).
   - {category: medical_advice, reason: chart brief with no decision words (record text only),
      any: [chart_brief], none: [decision_words]}
+  # A drug reference question: the FDA label quoted, by a tool, for a drug and no patient (ADR 024).
+  - {category: medical_advice, reason: drug reference lookup with no decision words (FDA label text only),
+     any: [drug_reference], none: [decision_words]}

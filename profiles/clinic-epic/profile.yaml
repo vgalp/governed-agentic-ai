@@ -70,12 +70,14 @@ classifier:
 privacy:
   entities: [PERSON, PHONE_NUMBER, EMAIL_ADDRESS, LOCATION, US_SSN, CREDIT_CARD, IP_ADDRESS]
   allow_list: []
+  # Medication names are not people: without this, "apixaban" is masked as [PERSON_1] (ADR 024).
+  allow_list_files: [privacy/drug_names.txt]
 
 knowledge_base: data/knowledge_base.json
 
 agents:
   planner:
-    tools: [search_knowledge, search_records, medication_review, medication_list, chart_brief]   # review before list
+    tools: [search_knowledge, search_records, medication_review, medication_list, chart_brief, drug_reference]   # review before list
 
 # Epic sandbox test patients (fhir.epic.com documentation lists them), found by name and date of
 # birth. Shown as example buttons.
