@@ -61,6 +61,10 @@ classifier:
 privacy:
   entities: [PERSON, PHONE_NUMBER, EMAIL_ADDRESS, LOCATION, US_SSN, CREDIT_CARD, IP_ADDRESS]
   allow_list: []
+  # The local model (on this computer, no records) sees place names: "weather in Toronto" or
+  # "prime minister of Canada" cannot be answered as "[LOCATION_1]". People and contact details
+  # stay masked for every model; an outside model, if one were allowed, would see no places either.
+  local_model_sees: [LOCATION]
 
 knowledge_base: data/knowledge_base.json
 
@@ -79,6 +83,8 @@ faithfulness:
   judge: judge
   for_tools: [web_research]
   strict: true
+  mode: warn              # a fact the pages contradict withholds the answer; a fact they do not mention
+                          # sends it with a warning. withhold: any unsupported fact withholds (clinic setting)
 
 examples:
   - Help me write a polite email asking my landlord to fix the heating.

@@ -103,3 +103,17 @@ only path to any tool, passes them to the planner as it waits, and the planner w
 to the trace. The chat bubble shows them live in place of "Checking…", and the staff dashboard
 lists them under the tool's lane. The messages hold hosts, counts and IDs, never page text, so
 nothing new enters the audit. Any tool can report this way; the records tools do not yet.
+
+## Amendment (2026-11-01): two modes for the judge
+An 8B judge is wrong both ways, and in live use it withheld plain answers ("what is One Piece",
+from two Wikipedia pages). The judge prompt now grades specific facts only (names, dates, numbers,
+office-holders, prices, rules, quotes), says why each is rejected ("not in sources" or
+"contradicted: …"), and paraphrase is explicitly fine. The profile chooses what a finding does:
+- `mode: withhold` (default; clinic and county): any unsupported fact withholds the answer.
+- `mode: warn` (the everyday profile): a fact the pages **contradict** withholds the answer (the
+  stale-memory case: "Trudeau" against a page that says Carney); a fact the pages merely do not
+  mention sends the answer with a fixed warning (`not_confirmed`) and the trace records it.
+The judge is never removed: the contradiction check is what caught "Joe Biden, sworn in 2023".
+How often each mode is right is a question for the chatbot comparison set, which should get a
+"research" section: questions with a known-good answer, counted as correct pass / correct withhold
+/ false withhold.

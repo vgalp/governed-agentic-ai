@@ -382,7 +382,10 @@ while True:
             history = []                     # could not mask the turns separately: send none of them
     else:
         masked_history, (masked_message, mapping) = [], mask(req["message"], PROFILE)
-    trace.step("intake", "masking", "info", masking_summary(mapping))
+    trace.step("intake", "masking", "info", masking_summary(mapping)
+               + (f"; the local model sees {', '.join(PROFILE.local_model_sees).lower()} names (profile setting)"
+                  if PROFILE.local_model_sees and any(t for t in mapping
+                                                       if t.strip("[]").rsplit("_", 1)[0] in PROFILE.local_model_sees) else ""))
 
     # 2b. A request for a change? First ask OPA whether this role may ask for it at all.
     action = actions.detect(PROFILE, req["message"]) if PROFILE.actions else None
@@ -525,6 +528,9 @@ while True:
     # 5. Ask the model.
     def ask(d: RouteDecision) -> str:
         user_text = masked_message if d.send_masked else req["message"]
+        if d.send_masked and d.target == "local" and PROFILE.local_model_sees:
+            # a place is the question ("pm of Canada"); people and contact details stay masked
+            user_text = restore_types(masked_message, mapping, PROFILE.local_model_sees)
         trace.start("answer", "model", f"Asking {d.model['name']} ({d.model['provider']}, {d.target}, sees "
                                        f"{'masked' if d.send_masked else 'original'} text, {len(notes)} note(s))")
         # Audit what the model saw. The audit never holds raw personal data:
@@ -620,8 +626,12 @@ while True:
                                                 sorted(set(tools_used) | set(triggered)), PROFILE)
         if verdict.get("ran"):
             out_layer = "faithfulness"
+            if verdict.get("warning"):          # mode: warn, nothing contradicted: delivered with a note
+                restored_answer += "\n\n" + PROFILE.response("not_confirmed", role)
             trace.step("answer", "faithfulness", "pass" if out_check.allowed else "block",
-                       f"{verdict['judge']}: every claim is in the sources" if out_check.allowed
+                       (f"{verdict['judge']}: {verdict['unsupported']} claim(s) not found in the pages, none contradicted; "
+                        "answer sent with a warning" if verdict.get("warning") else
+                        f"{verdict['judge']}: every claim is in the sources") if out_check.allowed
                        else f"Withheld by {verdict['judge']}: {out_check.reason}", **verdict)
         else:
             trace.step("answer", "faithfulness", "info", "Not needed: no judged tool answered this question")

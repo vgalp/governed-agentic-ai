@@ -116,7 +116,7 @@ NOTES = "- [web-1a2b3c4d] 988 chat: You can text 988 or chat online, 24 hours a 
 
 def test_the_profile_names_a_judge_that_is_not_the_answering_model():
     assert CFG.judge["name"] == "llama3.1:8b" and P.local_model["name"] == "qwen2.5:7b"
-    assert CFG.for_tools == ("web_research",) and CFG.strict
+    assert CFG.for_tools == ("web_research",) and CFG.strict and CFG.mode == "warn"
     assert "unfaithful" in P.responses
 
 
@@ -128,14 +128,23 @@ def test_a_supported_answer_passes_and_an_unsupported_one_is_withheld():
         assert "SOURCES:" in messages[1]["content"] and "ANSWER:" in messages[1]["content"]
         return '{"unsupported": [], "verdict": "supported"}'
     d, info = fj.check("You can text 988 or chat online [web-1a2b3c4d].", NOTES, CFG, fake_chat, ["web_research"], P)
-    assert d.allowed and info == {"ran": True, "judge": "llama3.1:8b", "verdict": "supported", "unsupported": 0}
+    assert d.allowed and info == {"ran": True, "judge": "llama3.1:8b", "verdict": "supported", "unsupported": 0, "contradicted": 0}
     assert calls == [("llama3.1:8b", "judge")]
 
     def liar(model, messages, purpose):
         return 'Here you go: {"unsupported": [{"claim": "available in Canada since 2019", "why": "not in sources"}], "verdict": "unsupported"}'
-    d, info = fj.check("988 has run in Canada since 2019 [web-1a2b3c4d].", NOTES, CFG, liar, ["web_research"], P)
+    strict_mode = fj.FaithfulnessConfig(CFG.judge, CFG.for_tools, strict=True, mode="withhold")
+    d, info = fj.check("988 has run in Canada since 2019 [web-1a2b3c4d].", NOTES, strict_mode, liar, ["web_research"], P)
     assert not d.allowed and d.category == "unfaithful" and info["unsupported"] == 1
     assert d.response == P.responses["unfaithful"]
+    # mode: warn (this profile): the same unconfirmed fact goes through with a warning...
+    d, info = fj.check("988 has run in Canada since 2019 [web-1a2b3c4d].", NOTES, CFG, liar, ["web_research"], P)
+    assert d.allowed and info["warning"] and info["unsupported"] == 1 and info["contradicted"] == 0
+    # ...but a fact the pages contradict is withheld in either mode
+    def contradicts(model, messages, purpose):
+        return '{"unsupported": [{"claim": "Justin Trudeau is prime minister", "why": "contradicted: the page says Mark Carney"}], "verdict": "unsupported"}'
+    d, info = fj.check("Justin Trudeau is prime minister [web-1a2b3c4d].", NOTES, CFG, contradicts, ["web_research"], P)
+    assert not d.allowed and info["contradicted"] == 1 and "contradicted" in d.reason
 
 
 def test_the_judge_runs_only_for_answers_from_judged_tools():
@@ -152,12 +161,13 @@ def test_strict_withholds_when_the_judge_cannot_be_read_or_reached():
     d, info = fj.check("x", NOTES, CFG, down, ["web_research"], P)
     assert not d.allowed and info["error"] == "RuntimeError"
     lenient = fj.FaithfulnessConfig(CFG.judge, CFG.for_tools, strict=False)
+    assert "not_confirmed" in P.responses
     assert fj.check("x", NOTES, lenient, down, ["web_research"], P)[0].allowed
 
 
 def test_parse_verdict_is_forgiving_about_wrapping_but_not_shape():
-    assert fj.parse_verdict('ok {"verdict":"Supported","unsupported":[]} done') == {"verdict": "supported", "unsupported": []}
-    assert fj.parse_verdict('{"unsupported": "not a list", "verdict": "x"}') == {"verdict": "x", "unsupported": []}
+    assert fj.parse_verdict('ok {"verdict":"Supported","unsupported":[]} done') == {"verdict": "supported", "unsupported": [], "contradicted": 0}
+    assert fj.parse_verdict('{"unsupported": "not a list", "verdict": "x"}') == {"verdict": "x", "unsupported": [], "contradicted": 0}
     assert fj.parse_verdict("{}") is None and fj.parse_verdict("no json") is None
 
 
@@ -360,3 +370,42 @@ def test_wikipedia_is_tried_when_every_result_is_on_a_site_not_allowed():
     assert sess.fetched[0] == wr.WIKI_SEARCH and out["hits"] == 3
     assert [r["url"] for r in out["results"]] == ["https://en.wikipedia.org/wiki/Egghead_Arc"]
     assert out["skipped_not_allowed"] == 2
+
+
+def test_the_local_model_sees_place_names_but_never_people(tmp_path):
+    assert P.local_model_sees == ("LOCATION",)
+    restore_types = pytest.importorskip("privacy.masking").restore_types
+    masked, mapping = "Who is the pm of [LOCATION_1]? Tell [PERSON_1].", {"[LOCATION_1]": "Canada", "[PERSON_1]": "Maria"}
+    assert restore_types(masked, mapping, P.local_model_sees) == "Who is the pm of Canada? Tell [PERSON_1]."
+    import shutil
+
+    import yaml
+    dst = tmp_path / "general-assistant"
+    shutil.copytree(P.path, dst)
+    y = yaml.safe_load((dst / "profile.yaml").read_text())
+    y["privacy"]["local_model_sees"] = ["LOCATION", "PERSON"]
+    (dst / "profile.yaml").write_text(yaml.safe_dump(y, sort_keys=False))
+    with pytest.raises(ProfileError, match="may not include PERSON"):
+        load_profile_from(dst)
+    y["privacy"]["local_model_sees"] = ["NRP"]
+    (dst / "profile.yaml").write_text(yaml.safe_dump(y, sort_keys=False))
+    with pytest.raises(ProfileError, match="not in privacy.entities"):
+        load_profile_from(dst)
+
+
+def test_pm_of_canada_triggers_research():
+    from agents.tool_choice import tools_to_call
+    assert tools_to_call(P, "planner", "Who is the pm of canada")[1] == ["web_research"]
+
+
+def test_the_loader_checks_the_faithfulness_mode(tmp_path):
+    import shutil
+
+    import yaml
+    dst = tmp_path / "general-assistant"
+    shutil.copytree(P.path, dst)
+    y = yaml.safe_load((dst / "profile.yaml").read_text())
+    y["faithfulness"]["mode"] = "maybe"
+    (dst / "profile.yaml").write_text(yaml.safe_dump(y, sort_keys=False))
+    with pytest.raises(ProfileError, match="mode must be withhold"):
+        load_profile_from(dst)

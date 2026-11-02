@@ -165,6 +165,10 @@ class Profile:
     classifier: ClassifierConfig
     privacy_entities: tuple[str, ...]
     privacy_allow_list: tuple[str, ...]
+    local_model_sees: tuple[str, ...]           # masked entity types restored for the LOCAL model only
+                                                # (e.g. LOCATION: "weather in Toronto" needs the place).
+                                                # Never people or contact details; outside models and the
+                                                # audit still get the masked text.
     knowledge_base: Path
     records_db: Path | None                     # SQLite records database, if the profile has one
     cite_sources: bool                          # show source IDs to the model so it can cite them
@@ -787,6 +791,13 @@ def load_profile_from(path: Path) -> Profile:
         if "unfaithful" not in responses:
             raise ProfileError(f"{path.name}/responses.yaml: no response for unfaithful "
                                "(needed because the profile has a faithfulness judge)")
+        mode = faithfulness.get("mode", "withhold")
+        if mode not in ("withhold", "warn"):
+            raise ProfileError(f"{where}: faithfulness mode must be withhold (any unsupported fact withholds the "
+                               "answer) or warn (a contradicted fact withholds; an unconfirmed one adds a warning)")
+        if mode == "warn" and "not_confirmed" not in responses:
+            raise ProfileError(f"{path.name}/responses.yaml: no response for not_confirmed "
+                               "(the warning added to an answer in faithfulness mode: warn)")
 
     # Every category that can block a message needs a fixed reply.
     used = {r.category for r in input_rules + output_rules}
@@ -880,6 +891,18 @@ def load_profile_from(path: Path) -> Profile:
                                "served through the outside endpoint, which knows who is asking")
 
     privacy = p.get("privacy") or {}
+    local_sees = tuple(privacy.get("local_model_sees") or ())
+    if local_sees:
+        if not isinstance(privacy["local_model_sees"], list) or not all(isinstance(k, str) for k in local_sees):
+            raise ProfileError(f"{where}: privacy.local_model_sees must be a list of entity types")
+        bad = sorted(set(local_sees) & NEVER_KEPT)
+        if bad:
+            raise ProfileError(f"{where}: privacy.local_model_sees may not include {', '.join(bad)}: people and "
+                               "contact details stay masked for every model (local_input: original is the "
+                               "setting for a records assistant whose local model must see them)")
+        unknown = sorted(set(local_sees) - set(privacy.get("entities", [])))
+        if unknown:
+            raise ProfileError(f"{where}: privacy.local_model_sees names {', '.join(unknown)}, not in privacy.entities")
     return Profile(
         name=name,
         title=p.get("title", name),
@@ -896,6 +919,7 @@ def load_profile_from(path: Path) -> Profile:
         classifier=classifier,
         privacy_entities=tuple(privacy.get("entities", [])),
         privacy_allow_list=tuple(privacy.get("allow_list", [])),
+        local_model_sees=local_sees,
         knowledge_base=_file(path, _require(p, "knowledge_base", where), where),
         records_db=records_db,
         cite_sources=bool(p.get("cite_sources", False)),

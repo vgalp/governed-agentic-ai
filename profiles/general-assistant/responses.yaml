@@ -52,6 +52,13 @@ no_web_pages: >-
   because it may be out of date. You could try different wording, or check an
   official site directly.
 
+# faithfulness mode: warn. The second model found a claim the pages do not mention (but none they
+# contradict), so the answer is sent with this note added.
+not_confirmed: >-
+  (A second model checked this answer against the pages listed and could not
+  confirm every detail from them. Please read the pages for anything that
+  matters.)
+
 # The answer was written from web pages, and the second model found claims the pages do not
 # support (ADR 022). The pages are still listed as sources.
 unfaithful: >-

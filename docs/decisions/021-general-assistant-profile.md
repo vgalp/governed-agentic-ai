@@ -47,3 +47,11 @@ only, on the shared pipeline.
   only.
 - The demo video uses this profile: the same chat app, pointed first at a model and then at the
   layer, on five fixed scenarios.
+
+## Amendment (2026-11-01): the local model sees place names
+"Who is the pm of Canada" reached the local model as "Who is the pm of [LOCATION_1]" and could not
+be answered. A place is the question, not a personal detail. `privacy.local_model_sees: [LOCATION]`
+restores that one entity type for the local model only (the same rule as `keeps` for the search
+tool). People and contact details stay masked for every model (the loader refuses them here), an
+outside model still gets fully masked text, and the audit records the masked text. The masking
+step in the trace says when this applied.

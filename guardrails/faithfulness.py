@@ -45,6 +45,10 @@ class FaithfulnessConfig:
     judge: dict                       # a model entry (profile.yaml models), never the answering model
     for_tools: tuple[str, ...]        # run only when one of these tools returned the notes
     strict: bool = True               # an unreadable judge reply withholds the answer
+    mode: str = "withhold"            # withhold: any unsupported fact withholds the answer ·
+                                      # warn: a fact the pages CONTRADICT withholds; a fact they do not
+                                      # mention lets the answer through with a warning (GuardrailDecision
+                                      # allowed, info["warning"] set). The office chooses.
 
 
 def load_config(profile) -> FaithfulnessConfig | None:
@@ -54,7 +58,8 @@ def load_config(profile) -> FaithfulnessConfig | None:
     judge = profile.models.get(raw["judge"])
     if judge is None:
         raise ValueError(f"faithfulness: judge '{raw['judge']}' is not in models")
-    return FaithfulnessConfig(judge, tuple(raw.get("for_tools") or ()), bool(raw.get("strict", True)))
+    return FaithfulnessConfig(judge, tuple(raw.get("for_tools") or ()), bool(raw.get("strict", True)),
+                              str(raw.get("mode", "withhold")))
 
 
 def parse_verdict(text: str) -> dict | None:
@@ -69,15 +74,17 @@ def parse_verdict(text: str) -> dict | None:
     if not isinstance(d, dict) or "verdict" not in d:
         return None
     claims = d.get("unsupported")
-    unsupported = []
+    unsupported, contradicted = [], 0
     for c in claims if isinstance(claims, list) else []:
         if isinstance(c, dict):                           # {"claim": ..., "why": ...}
             text = str(c.get("claim", "")).strip()
             if text:
-                unsupported.append((text + (f" ({c['why']})" if c.get("why") else ""))[:200])
+                why = str(c.get("why") or "")
+                unsupported.append((text + (f" ({why})" if why else ""))[:200])
+                contradicted += why.lower().startswith("contradicted")
         elif str(c).strip():
             unsupported.append(str(c)[:200])
-    return {"verdict": str(d["verdict"]).lower().strip(), "unsupported": unsupported}
+    return {"verdict": str(d["verdict"]).lower().strip(), "unsupported": unsupported, "contradicted": contradicted}
 
 
 def judge_messages(notes_text: str, answer: str) -> list[dict]:
@@ -102,12 +109,16 @@ def check(answer: str, notes_text: str, cfg: FaithfulnessConfig, chat, tools_use
     if v is None:
         info["unreadable"] = True
         return (_withhold(profile, "judge reply unreadable") if cfg.strict else GuardrailDecision(True)), info
-    info["verdict"], info["unsupported"] = v["verdict"], len(v["unsupported"])
+    info["verdict"], info["unsupported"], info["contradicted"] = v["verdict"], len(v["unsupported"]), v["contradicted"]
     if not v["unsupported"]:                               # the list decides; a bare "unsupported" verdict
         return GuardrailDecision(True), info               # with nothing named is not a finding
     if os.environ.get("FAITHFULNESS_DEBUG"):      # development only: the claims go to the console, never
         print("faithfulness: unsupported claims:", json.dumps(v["unsupported"]), flush=True)   # never to the trace or audit
-    return _withhold(profile, f"{len(v['unsupported'])} unsupported claim(s)"), info
+    if cfg.mode == "warn" and not v["contradicted"]:
+        info["warning"] = True                             # delivered, with the not_confirmed note added
+        return GuardrailDecision(True), info
+    return _withhold(profile, f"{len(v['unsupported'])} unsupported claim(s)"
+                     + (f", {v['contradicted']} contradicted by the pages" if v["contradicted"] else "")), info
 
 
 def _withhold(profile, reason: str) -> GuardrailDecision:

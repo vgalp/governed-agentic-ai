@@ -61,7 +61,7 @@ patterns:
 
   # Questions that ask for current information from the web (tools.yaml web_research `when`).
   web_research:
-    regex: '\b(search the web|look (it |this )?up online|latest|current|recent|today|right now|this (week|month|year)|news about|what (is|are) the (current|latest|new)|search (the )?\w{2,6}\b|(president|prime minister|premier|governor|mayor|ceo|leader|head) of\b|who is the (current )?(president|prime minister|premier|governor|mayor|ceo|leader|head)|how much (does|do|is|are) .{1,40}(cost|worth|price)|is .{1,40} still (open|available|running|in force|the law)|what year is it|what (is|''s) the date)\b'
+    regex: '\b(search the web|look (it |this )?up online|latest|current|recent|today|right now|this (week|month|year)|news about|what (is|are) the (current|latest|new)|search (the )?\w{2,6}\b|(president|prime minister|premier|governor|mayor|ceo|leader|head) of\b|who is the (current )?(president|prime minister|pm|premier|governor|mayor|ceo|leader|head)|\bpm of\b|how much (does|do|is|are) .{1,40}(cost|worth|price)|is .{1,40} still (open|available|running|in force|the law)|what year is it|what (is|''s) the date)\b'
 
 input:
   - {category: crisis, reason: crisis language in input, any: [crisis]}
