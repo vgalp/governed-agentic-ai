@@ -29,6 +29,11 @@ from guardrails.injection import check_result
 from profiles.loader import Profile, load_profile
 
 
+class ToolFailed(Exception):
+    """The tool ran but returned an error or something that is not a result (its text is the message).
+    The caller treats it as 'no results' and keeps running: one failing tool must not stop the service."""
+
+
 class ToolCallDenied(Exception):
     pass
 
@@ -76,9 +81,18 @@ async def _call(server_url: str, tool: str, args: dict, on_progress=None) -> dic
         async with ClientSession(read, write, logging_callback=logged if on_progress else None) as session:
             await session.initialize()
             result = await session.call_tool(tool, args)
+            text = result.content[0].text if result.content and hasattr(result.content[0], "text") else ""
+            if getattr(result, "isError", False):              # the server raised: its message, not JSON
+                raise ToolFailed(f"{tool}: {text[:300] or 'error with no message'}")
             if getattr(result, "structuredContent", None):
                 return result.structuredContent
-            return json.loads(result.content[0].text)
+            try:
+                parsed = json.loads(text)
+            except json.JSONDecodeError:
+                raise ToolFailed(f"{tool} returned something that is not a result: {text[:300]!r}") from None
+            if not isinstance(parsed, dict):
+                raise ToolFailed(f"{tool} returned {type(parsed).__name__}, not a result")
+            return parsed
 
 
 def call_tool(agent: str, tool: str, args: dict, request_id: str,

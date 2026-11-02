@@ -11,7 +11,10 @@ an Epic partner and is not certified or endorsed by Epic.
 
 - Audience: **Backend Systems** (system to system; SMART Backend Services).
 - Incoming APIs, read-only, FHIR R4: Patient (read, search), MedicationRequest (read, search),
-  Medication (read, search), Encounter (read, search). Nothing that creates or changes records.
+  Medication (read, search), Encounter (read, search), and for the chart brief (ADR 023):
+  Condition (read, search), AllergyIntolerance (read, search), Observation (read, search).
+  Nothing that creates or changes records. Until a newly added API is active in the sandbox
+  (it can take a day), the brief reports that section as "could not be read" and the rest works.
 - Non-Production JWK Set URL: this folder's `jwks.json`, served from GitHub:
   `https://raw.githubusercontent.com/vgalp/governed-agentic-ai/main/docs/epic/jwks.json`.
   It holds the **public** key only (key ID `gaai-sandbox-1`).
@@ -55,16 +58,8 @@ requested from Epic.
 ## Run the assistant on Epic's records
 
 ```bash
-PROFILE=clinic-epic ./scripts/dev.sh restart
-```
-
-The medication review looks up FDA labels it does not have on file during the review
-(`labels_fetch: on_demand` in `medication_review.yaml`; ADR 017 amendment): drug names only go to
-RxNorm and openFDA, what is found is saved to `data/drug_labels.json` dated today, and the fetch is
-audited with the tool call. To pre-fetch instead (for an offline demo, or to see the labels first):
-
-```bash
 .venv/bin/python scripts/fetch_drug_labels.py --profile clinic-epic --patient "Camila Lopez 1987-09-12"
+PROFILE=clinic-epic ./scripts/dev.sh restart
 ```
 
 On the Governance view of where data goes: in the sandbox, patient records come from Epic's servers

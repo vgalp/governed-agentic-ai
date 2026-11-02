@@ -1,0 +1,73 @@
+# Chart brief (ADR 023): one patient's problem list, current medications with their recorded
+# reasons, allergies, latest vitals and recent visits, assembled from the record's own fields and
+# cited line by line, followed by documentation checks. No model writes a fact: the tool's text is
+# the answer (tools.yaml answer: direct). The checks compare fields of the record with the lists
+# below, which the office writes; they are documentation checks, not clinical judgments, and every
+# one is worded as "the record does not show…", for a clinician to look at.
+
+source: db                        # db: records.yaml tables · fhir: fhir.yaml resources (clinic-epic)
+
+# Sections, in order. Each names a record type of records.yaml (or fhir.yaml) and the heading shown.
+sections:
+  - {record: problems,    heading: Problem list}
+  - {record: medications, heading: Current medications}
+  - {record: allergies,   heading: Allergies}
+  - {record: vitals,      heading: Latest vitals}
+  - {record: visits,      heading: Recent visits}
+
+# The structured fields the checks read (columns for a database source; FHIR paths for fhir).
+fields:
+  medications: {name: description, reason: reason}
+  problems:    {name: description}
+  vitals:      {kind: description, value: value, units: units, date: date}
+
+checks:
+  # Medication with no recorded reason: for a medication whose name contains the key (an ingredient
+  # or class word), the usual reasons an office would expect on the problem list. The check fires
+  # when the medication's reason field is empty AND none of these terms is on the problem list.
+  # A medication not in this list is reported only if its reason field is empty.
+  medication_reason:
+    warfarin:     [atrial fibrillation, deep vein thrombosis, pulmonary embolism, heart valve, thromboembolism]
+    apixaban:     [atrial fibrillation, deep vein thrombosis, pulmonary embolism]
+    rivaroxaban:  [atrial fibrillation, deep vein thrombosis, pulmonary embolism]
+    metformin:    [diabetes]
+    insulin:      [diabetes]
+    levothyroxine: [hypothyroidism, thyroid]
+    simvastatin:  [hyperlipidemia, cholesterol, coronary, atherosclerosis]
+    atorvastatin: [hyperlipidemia, cholesterol, coronary, atherosclerosis]
+    amiodarone:   [atrial fibrillation, arrhythmia, tachycardia]
+    omeprazole:   [reflux, gerd, ulcer, gastritis, esophagitis]
+    pantoprazole: [reflux, gerd, ulcer, gastritis, esophagitis]
+    lisinopril:   [hypertension, heart failure, nephropathy]
+    amlodipine:   [hypertension, angina]
+    sertraline:   [depression, anxiety, panic, ptsd, ocd]
+    ibuprofen:    [pain, arthritis, osteoarthritis, inflammation]
+    ciprofloxacin: [infection, cystitis, pyelonephritis, prostatitis]
+    amoxicillin:  [infection, sinusitis, otitis, pharyngitis, pneumonia]
+
+  # Problem with no recorded treatment: for a problem whose name contains the key, medication name
+  # terms the office would expect to see on the current list. The check fires when the problem is on
+  # the list and no current medication contains any of these terms. An office that does not want a
+  # given check removes the line; an empty map turns the check off.
+  problem_treatment:
+    atrial fibrillation: [warfarin, apixaban, rivaroxaban, dabigatran, edoxaban, heparin]
+    hypertension:        [lisinopril, enalapril, ramipril, losartan, valsartan, amlodipine, nifedipine,
+                          hydrochlorothiazide, chlorthalidone, metoprolol, atenolol, carvedilol, spironolactone]
+    hypothyroidism:      [levothyroxine, liothyronine]
+    type 2 diabetes:     [metformin, insulin, glipizide, sitagliptin, empagliflozin, dapagliflozin, semaglutide]
+    hyperlipidemia:      [atorvastatin, simvastatin, rosuvastatin, pravastatin, ezetimibe]
+    reflux:              [omeprazole, pantoprazole, esomeprazole, lansoprazole, famotidine]
+
+  # Vital signs outside the office's thresholds (the latest value of each kind only). Keys match the
+  # record's description of the vital sign, case-insensitively; units are not converted.
+  vitals:
+    systolic blood pressure:  {min: 90,  max: 140, units: mmHg}
+    diastolic blood pressure: {min: 60,  max: 90,  units: mmHg}
+    heart rate:               {min: 50,  max: 100, units: /min}
+    oxygen saturation:        {min: 92,            units: "%"}
+    body temperature:         {min: 35.5, max: 38.0, units: Cel}
+    respiratory rate:         {min: 10,  max: 24,  units: /min}
+
+  # Also run the medication review (ADR 017) and report how many FDA label mentions it found,
+  # pointing to the full review. Needs medication_review.yaml and the label file.
+  interactions: true

@@ -41,3 +41,16 @@ medication_list:
   role_filtered: true
   when: record_lookup                      # rules.yaml: "what medications is ... taking", "current medications"
   answer: direct
+
+# Chart brief (ADR 023): Epic's problem list, medications with recorded reasons, allergies, latest
+# vitals and visits, cited line by line, with documentation checks (chart_brief.yaml). No model.
+chart_brief:
+  description: Chart brief (the record's problem list, medications, allergies, vitals and visits, with documentation checks)
+  server: http://127.0.0.1:8106/mcp
+  kind: read
+  data_label: patient_record
+  lane: records
+  receives_identifiers: true
+  role_filtered: true
+  when: chart_brief
+  answer: direct

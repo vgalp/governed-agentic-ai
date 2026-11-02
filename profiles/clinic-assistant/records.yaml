@@ -58,6 +58,36 @@ records:
       text: "{subject}: {type} visit on {start|date}, {description}."
       optional: {reason: " Reason recorded: {reason}."}
 
+  # The chart (ADR 023): problem list, allergies, vitals. Clinical data classes: clinicians and nurses.
+  problems:
+    table: conditions
+    link: patient_id
+    source_id: {prefix: cond-}
+    data_class: problems
+    only_where: {stop: null}         # on the problem list
+    order_by: [onset desc]
+    title: Problem list
+    text: "{subject}: {description}, on the problem list since {onset}."
+
+  allergies:
+    table: allergies
+    link: patient_id
+    source_id: {prefix: alg-}
+    data_class: allergies
+    title: Allergy
+    text: "{subject}: allergy to {description}."
+    optional: {reaction: " Recorded reaction: {reaction} ({severity})."}
+
+  vitals:
+    table: vitals
+    link: patient_id
+    source_id: {prefix: vit-}
+    data_class: vitals
+    order_by: [date desc, id]
+    limit: 8
+    title: Vital sign
+    text: "{subject}: {description} {value} {units}, measured {date}."
+
   claims:
     table: claims
     link: patient_id

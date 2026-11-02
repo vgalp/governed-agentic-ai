@@ -1,7 +1,11 @@
-# Hand-written synthetic patients for the medication review demo (ADR 017).
-# NOT real people and not from Synthea: invented names, dates and medication lists, chosen so
-# the review has well-known label interactions to show. Added to clinic.db by build_db.py.
-# Not for patient care.
+# Hand-written synthetic patients for the medication review (ADR 017) and chart brief (ADR 023)
+# demos. NOT real people and not from Synthea: invented names, dates, medication lists, problem
+# lists, allergies and vitals, chosen so the review and the brief's checks have something to show:
+#   Harold: hypertension on the problem list with no antihypertensive; blood pressure above the
+#           office threshold; warfarin's reason documented (atrial fibrillation).
+#   Doris:  omeprazole with no recorded reason and nothing on the problem list that documents it.
+#   Lena:   temperature above the threshold; a sulfonamide allergy.
+# Added to clinic.db by build_db.py (--add-demo, --add-chart). Not for patient care.
 
 patients:
   - id: 00000000-0000-4000-8000-00000000a001
@@ -13,6 +17,20 @@ patients:
       - {description: Warfarin Sodium 5 MG Oral Tablet, start: "2025-02-10", reason: Atrial fibrillation}
       - {description: Ibuprofen 400 MG Oral Tablet, start: "2026-09-28", reason: Knee pain}
       - {description: Ciprofloxacin 500 MG Oral Tablet, start: "2026-10-12", reason: Urinary tract infection}
+    conditions:
+      - {description: Atrial fibrillation, onset: "2025-02-03"}
+      - {description: Essential hypertension, onset: "2022-06-15"}
+      - {description: Osteoarthritis of knee, onset: "2024-01-20"}
+      - {description: Urinary tract infection, onset: "2026-10-12"}
+    allergies:
+      - {description: Penicillin, reaction: Rash, severity: moderate}
+    vitals:
+      - {date: "2026-10-30", description: Systolic blood pressure, value: 162, units: mmHg}
+      - {date: "2026-10-30", description: Diastolic blood pressure, value: 98, units: mmHg}
+      - {date: "2026-10-30", description: Heart rate, value: 88, units: /min}
+      - {date: "2026-10-30", description: Oxygen saturation, value: 96, units: "%"}
+      - {date: "2026-10-30", description: Body temperature, value: 36.8, units: Cel}
+      - {date: "2026-10-30", description: Body weight, value: 84.5, units: kg}
     appointment: {starts_at: "2026-11-03T10:00", type: Follow-up visit}
 
   - id: 00000000-0000-4000-8000-00000000a002
@@ -24,6 +42,18 @@ patients:
       - {description: Simvastatin 40 MG Oral Tablet, start: "2021-05-18", reason: Hyperlipidemia}
       - {description: Amiodarone Hydrochloride 200 MG Oral Tablet, start: "2026-08-30", reason: Atrial fibrillation}
       - {description: Metformin Hydrochloride 500 MG Oral Tablet, start: "2019-11-04", reason: Type 2 diabetes}
+      - {description: Omeprazole 20 MG Delayed Release Oral Capsule, start: "2026-03-02"}
+    conditions:
+      - {description: Hyperlipidemia, onset: "2021-05-18"}
+      - {description: Atrial fibrillation, onset: "2026-08-30"}
+      - {description: Type 2 diabetes mellitus, onset: "2019-11-04"}
+    allergies: []
+    vitals:
+      - {date: "2026-10-28", description: Systolic blood pressure, value: 128, units: mmHg}
+      - {date: "2026-10-28", description: Diastolic blood pressure, value: 78, units: mmHg}
+      - {date: "2026-10-28", description: Heart rate, value: 72, units: /min}
+      - {date: "2026-10-28", description: Oxygen saturation, value: 97, units: "%"}
+      - {date: "2026-10-28", description: Body temperature, value: 36.6, units: Cel}
     appointment: {starts_at: "2026-11-04T14:30", type: Follow-up visit}
 
   - id: 00000000-0000-4000-8000-00000000a003
@@ -34,4 +64,15 @@ patients:
     medications:
       - {description: Levothyroxine Sodium 0.1 MG Oral Tablet, start: "2018-06-11", reason: Hypothyroidism}
       - {description: Amoxicillin 500 MG Oral Capsule, start: "2026-10-14", reason: Sinusitis}
+    conditions:
+      - {description: Hypothyroidism, onset: "2018-06-11"}
+      - {description: Acute sinusitis, onset: "2026-10-14"}
+    allergies:
+      - {description: Sulfonamide antibacterial, reaction: Hives, severity: mild}
+    vitals:
+      - {date: "2026-10-31", description: Systolic blood pressure, value: 118, units: mmHg}
+      - {date: "2026-10-31", description: Diastolic blood pressure, value: 74, units: mmHg}
+      - {date: "2026-10-31", description: Heart rate, value: 92, units: /min}
+      - {date: "2026-10-31", description: Body temperature, value: 38.4, units: Cel}
+      - {date: "2026-10-31", description: Oxygen saturation, value: 98, units: "%"}
     appointment: {starts_at: "2026-11-05T09:00", type: Annual physical}

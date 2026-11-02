@@ -34,7 +34,7 @@ from agents import actions, conversation
 from agents.tool_choice import tool_denied_reply, tools_to_call
 from agents.trace import Trace, ids_text, masking_summary
 from audit.chain import get_audit_chain
-from gateway.gateway import ToolCallDenied, call_tool
+from gateway.gateway import ToolCallDenied, ToolFailed, call_tool
 from gateway.opa import decide
 from guardrails import faithfulness, toxicity
 from guardrails.classifier import classifier_check, crisis_over_rule, input_check, input_engine_name, load_guard
@@ -428,6 +428,14 @@ while True:
                        if PROFILE.roles else f"Denied by policy: {AGENT_NAME} may not use {tool}")
             if tool in triggered and PROFILE.roles:
                 denied_for_role = tool
+            continue
+        except Exception as e:              # noqa: BLE001  a tool that fails is "no results", not a dead planner
+            kind = "failed" if isinstance(e, ToolFailed) else f"unreachable ({type(e).__name__})"
+            print(f"Tool {tool} {kind}: {str(e)[:300]}", flush=True)
+            trace.step(agent, tool, "error", f"{tool} {kind}; treated as no results", returned=0)
+            empty_notes[tool] = f"the {tool.replace('_', ' ')} tool {kind}"
+            if tool in PROFILE.identifier_tools:     # tell the person the records could not be reached
+                tool_notes.append(f"{tool}: the records system did not answer; nothing was looked up")
             continue
         found = result.get("results", [])
         summary = f"{len(found)} result(s)" + (f": {ids_text([n['id'] for n in found])}" if found else

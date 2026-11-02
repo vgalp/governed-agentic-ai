@@ -51,3 +51,17 @@ medication_review:
   role_filtered: true                      # needs the medications data class
   when: interaction_review                 # rules.yaml
   answer: direct
+
+# Chart brief (ADR 023): the patient's problem list, medications with recorded reasons, allergies,
+# latest vitals and recent visits from the record, cited line by line, with documentation checks
+# (chart_brief.yaml). The tool's text is the answer: no model writes a fact. Clinicians and nurses.
+chart_brief:
+  description: Chart brief (the record's problem list, medications, allergies, vitals and visits, with documentation checks)
+  server: http://127.0.0.1:8106/mcp         # mcp_servers/chart_brief
+  kind: read
+  data_label: patient_record
+  lane: records
+  receives_identifiers: true
+  role_filtered: true
+  when: chart_brief                        # rules.yaml
+  answer: direct

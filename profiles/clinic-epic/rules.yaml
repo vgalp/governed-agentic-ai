@@ -57,6 +57,17 @@ patterns:
       - '|\binteractions?\b.{0,60}\b(medications?|meds|medicines?|drugs)\b'
       - '|\b(medications?|meds|medicines?|drugs)\b.{0,60}\binteract(ions?|s)?\b'
 
+  # A request for a chart brief (ADR 023): the record's problem list, medications with their
+  # recorded reasons, allergies, latest vitals and visits, assembled from the record's own fields
+  # and cited line by line, with documentation checks (a medication with no recorded reason, a
+  # vital sign outside the office's thresholds). The chart_brief tool answers; no model writes a fact.
+  chart_brief:
+    regex:
+      - '\b(chart|patient|clinical|pre-?rounding|handover|hand-off|handoff) (brief|summary|review|overview)\b'
+      - '|\b(brief|summary|overview|summar(y|ise|ize)|review|overview)\b.{0,40}\b(chart|history|record|patient)\b'
+      - '|\b(brief|summar(y|ise|ize)) (me )?(on|about|for) \b'
+      - '|\bwhat (do we|do i|do you) know about\b'
+
   # A request to change an appointment. Starts a proposal that a person must approve
   # (actions.yaml); the assistant never changes anything itself.
   reschedule_request:
@@ -91,3 +102,6 @@ classifier_exemptions:
   # A medication review: answered with FDA label text only, by a tool only clinicians have (ADR 017).
   - {category: medical_advice, reason: medication review with no decision words (FDA label text only),
      any: [interaction_review], none: [decision_words]}
+  # A chart brief: the record's own lines and documentation checks, by a tool (ADR 023).
+  - {category: medical_advice, reason: chart brief with no decision words (record text only),
+     any: [chart_brief], none: [decision_words]}

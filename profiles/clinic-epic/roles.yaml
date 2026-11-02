@@ -8,12 +8,15 @@ data_classes:
   visit_dates: Dates and types of past visits, without clinical details
   visit_clinical: What a past visit was for, including the recorded reason
   medications: Current medications and the recorded reason
+  problems: The problem list (recorded conditions)
+  allergies: Recorded allergies and reactions
+  vitals: Recent vital signs
 
 roles:
   clinician:
     title: Clinician
-    tools: [search_knowledge, search_records, medication_review, medication_list]
-    data_classes: [patient_details, visit_dates, visit_clinical, medications]
+    tools: [search_knowledge, search_records, medication_review, medication_list, chart_brief]
+    data_classes: [patient_details, visit_dates, visit_clinical, medications, problems, allergies, vitals]
     responses:
       medication: >-
         I don't make medication decisions such as doses, timing or changes, for any
@@ -28,8 +31,8 @@ roles:
         such as current medications and past visits, to support your decision.
   nurse:
     title: Nurse
-    tools: [search_knowledge, search_records, medication_list]
-    data_classes: [patient_details, visit_dates, visit_clinical, medications]
+    tools: [search_knowledge, search_records, medication_list, chart_brief]
+    data_classes: [patient_details, visit_dates, visit_clinical, medications, problems, allergies, vitals]
   front_desk:
     title: Front desk and billing
     tools: [search_knowledge, search_records]

@@ -49,7 +49,7 @@ fhir: fhir.yaml                            # records come from Epic (FHIR R4), r
 roles: roles.yaml
 cite_sources: true
 # Epic resource IDs are letters and digits; the last 8 are kept (fhir.yaml source_id).
-source_id_pattern: '\b(kb-cl-\d{3}|pt-[A-Za-z0-9]{8}|med-[A-Za-z0-9]{8}|enc-[A-Za-z0-9]{8}|lbl-[0-9a-f]{8})\b'
+source_id_pattern: '\b(kb-cl-\d{3}|pt-[A-Za-z0-9]{8}|med-[A-Za-z0-9]{8}|enc-[A-Za-z0-9]{8}|lbl-[0-9a-f]{8}|cond-[A-Za-z0-9]{8}|alg-[A-Za-z0-9]{8}|vit-[A-Za-z0-9]{8})\b'
 
 prompt: prompt.md
 responses: responses.yaml
@@ -75,7 +75,7 @@ knowledge_base: data/knowledge_base.json
 
 agents:
   planner:
-    tools: [search_knowledge, search_records, medication_review, medication_list]   # review before list
+    tools: [search_knowledge, search_records, medication_review, medication_list, chart_brief]   # review before list
 
 # Epic sandbox test patients (fhir.epic.com documentation lists them), found by name and date of
 # birth. Shown as example buttons.

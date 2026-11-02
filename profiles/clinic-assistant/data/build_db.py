@@ -76,6 +76,35 @@ CREATE TABLE appointments (
 );
 """
 
+# The chart (ADR 023): problem list, allergies and vitals. Added to an existing database by
+# --add-chart (CREATE TABLE IF NOT EXISTS), so a database built before ADR 023 keeps everything.
+CHART_SCHEMA = """
+CREATE TABLE IF NOT EXISTS conditions (
+    id          INTEGER PRIMARY KEY,
+    patient_id  TEXT NOT NULL REFERENCES patients(id),
+    description TEXT NOT NULL,
+    onset       TEXT,                   -- ISO date
+    stop        TEXT                    -- NULL = on the problem list
+);
+
+CREATE TABLE IF NOT EXISTS allergies (
+    id          INTEGER PRIMARY KEY,
+    patient_id  TEXT NOT NULL REFERENCES patients(id),
+    description TEXT NOT NULL,
+    reaction    TEXT,
+    severity    TEXT
+);
+
+CREATE TABLE IF NOT EXISTS vitals (
+    id          INTEGER PRIMARY KEY,
+    patient_id  TEXT NOT NULL REFERENCES patients(id),
+    date        TEXT NOT NULL,          -- ISO date
+    description TEXT NOT NULL,          -- Systolic blood pressure, Heart rate, ...
+    value       REAL,
+    units       TEXT
+);
+"""
+
 
 def clean_name(s: str) -> str:
     """'Jody426' -> 'Jody' (Synthea adds digits to make names unique)."""
@@ -180,7 +209,42 @@ def load_demo_patients(db, path: Path = DEMO_PATIENTS) -> None:
             db.execute("INSERT INTO appointments (id, patient_id, starts_at, type) VALUES (?, ?, ?, ?)",
                        (f"apt-{next_apt:04d}", p["id"], str(a["starts_at"]), a["type"]))
             next_apt += 1
+    load_demo_charts(db, people)
     print(f"demo patients: {len(people)} (demo_patients.yaml, hand-written, synthetic)")
+
+
+def load_demo_charts(db, people: list[dict]) -> None:
+    """The demo patients' problem lists, allergies and vitals (ADR 023). Run again: no change."""
+    db.executescript(CHART_SCHEMA)
+    for p in people:
+        if db.execute("SELECT COUNT(*) FROM conditions WHERE patient_id = ?", (p["id"],)).fetchone()[0]:
+            continue
+        db.executemany("INSERT INTO conditions (patient_id, description, onset, stop) VALUES (?, ?, ?, NULL)",
+                       [(p["id"], c["description"], str(c.get("onset") or "")) for c in p.get("conditions") or []])
+        db.executemany("INSERT INTO allergies (patient_id, description, reaction, severity) VALUES (?, ?, ?, ?)",
+                       [(p["id"], a["description"], a.get("reaction"), a.get("severity")) for a in p.get("allergies") or []])
+        db.executemany("INSERT INTO vitals (patient_id, date, description, value, units) VALUES (?, ?, ?, ?, ?)",
+                       [(p["id"], str(v["date"]), v["description"], v["value"], v.get("units")) for v in p.get("vitals") or []])
+
+
+def add_chart(db_path: Path = DB_PATH, path: Path = DEMO_PATIENTS) -> Path:
+    """Add the chart tables and the demo patients' charts to an existing database (ADR 023).
+    Safe to run on every start: creates nothing twice."""
+    import yaml
+    if not db_path.exists():
+        raise SystemExit(f"{db_path} does not exist: build it first with --csv")
+    db = sqlite3.connect(db_path)
+    db.execute("PRAGMA foreign_keys = ON")
+    people = (yaml.safe_load(path.read_text()) or {}).get("patients") or []
+    ids = [p["id"] for p in people]
+    have = db.execute(f"SELECT COUNT(*) FROM patients WHERE id IN ({','.join('?' * len(ids))})", ids).fetchone()[0]
+    if have < len(ids):
+        load_demo_patients(db, path)                 # also loads the charts
+    else:
+        load_demo_charts(db, people)
+    db.commit()
+    db.close()
+    return db_path
 
 
 def add_demo(db_path: Path = DB_PATH, path: Path = DEMO_PATIENTS) -> Path:
@@ -205,6 +269,7 @@ def build(csv_folder: Path, db_path: Path = DB_PATH) -> Path:
     db = sqlite3.connect(db_path)
     db.execute("PRAGMA foreign_keys = ON")   # reject rows that point at a missing patient or visit
     db.executescript(SCHEMA)
+    db.executescript(CHART_SCHEMA)
     patient_ids = load_patients(db, csv_folder)
     load_encounters(db, csv_folder, patient_ids)    # before medications and claims, which point at encounters
     load_medications(db, csv_folder, patient_ids)
@@ -222,8 +287,12 @@ if __name__ == "__main__":
     ap.add_argument("--out", type=Path, default=DB_PATH, help="where to write the database")
     ap.add_argument("--add-demo", action="store_true",
                     help="add only the demo patients (demo_patients.yaml) to an existing database")
+    ap.add_argument("--add-chart", action="store_true",
+                    help="add the chart tables (problems, allergies, vitals) and the demo charts to an existing database")
     args = ap.parse_args()
-    if args.add_demo:
+    if args.add_chart:
+        print("Updated", add_chart(args.out.expanduser()))
+    elif args.add_demo:
         print("Updated", add_demo(args.out.expanduser()))
     elif args.csv:
         print("Built", build(args.csv.expanduser(), args.out.expanduser()))

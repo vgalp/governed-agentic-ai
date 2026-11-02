@@ -34,6 +34,7 @@ SERVICES=(
   "medication-review|-m mcp_servers\.medication_review|mcp_servers.medication_review.server|8103"
   "fhir-records|-m mcp_servers\.fhir_records|mcp_servers.fhir_records.server|8104"
   "web-research|-m mcp_servers\.web_research|mcp_servers.web_research.server|8105"
+  "chart-brief|-m mcp_servers\.chart_brief|mcp_servers.chart_brief.server|8106"
   "api|-m uvicorn api\.main|uvicorn api.main:app --port 8000|8000"
   "planner|-m agents\.planner|agents.planner|"
   "executor|-m agents\.executor|agents.executor|"
@@ -109,6 +110,12 @@ stop_services() {
 start_services() {
   say "Starting services (logs in $LOG_DIR/)"
   mkdir -p "$LOG_DIR"
+  # The clinic database built before ADR 023 gets the chart tables (problems, allergies, vitals) and
+  # the demo charts; creates nothing twice, so it runs on every start.
+  if [ -f "profiles/$PROFILE/data/clinic.db" ] && [ -f "profiles/$PROFILE/data/build_db.py" ]; then
+    "${PY:-.venv/bin/python}" "profiles/$PROFILE/data/build_db.py" --add-chart --out "profiles/$PROFILE/data/clinic.db" >/dev/null 2>&1 \
+      && ok "clinic.db has the chart tables" || warn "could not add the chart tables to clinic.db (see build_db.py --add-chart)"
+  fi
   for s in "${SERVICES[@]}"; do
     IFS='|' read -r name _ args port <<< "$s"
     # shellcheck disable=SC2086  # args are split on purpose

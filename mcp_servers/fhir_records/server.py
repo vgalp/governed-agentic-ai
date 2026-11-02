@@ -124,13 +124,20 @@ def search(client: FhirClient | None, m: FhirMap | None, query: str, allowed_cla
             extra = {"name": name}
             out.append(_record(m.subject_id.make(pid), render(m.subject_title, patient, extra),
                                render(m.subject_text, patient, extra), [m.subject_class]))
+        unread = []
         for r in m.records:
             if r.data_class in allowed:                 # not allowed: never requested from the server
-                out += records_of_type(client, r, pid, name, allowed)
+                try:
+                    out += records_of_type(client, r, pid, name, allowed)
+                except FhirError as e:                  # one resource type the server refuses (not granted
+                    unread.append(f"{r.name} ({e})")    # to the app yet) must not lose the others
     except FhirError as e:
         return {"results": [], "note": f"the record system did not answer: {e}"}
     extra = {"status": m.status} if m.status else {}
-    return {"results": [{**r, **extra} for r in out[:m.max_results]]}
+    result = {"results": [{**r, **extra} for r in out[:m.max_results]]}
+    if unread:
+        result["note"] = "the record system did not answer for: " + "; ".join(unread)
+    return result
 
 
 if __name__ == "__main__":

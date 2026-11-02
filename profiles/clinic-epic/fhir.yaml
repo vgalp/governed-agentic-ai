@@ -31,7 +31,7 @@ records:
     limit: 20
     title: Current medication
     text: "{subject}: {medicationCodeableConcept.text,medicationReference.display}, ordered {authoredOn|date}."
-    optional: {reasonCode.text: " Reason recorded: {reasonCode.text}."}
+    optional: {"reasonCode.text,reasonReference.display": " Reason recorded: {reasonCode.text,reasonReference.display}."}
 
   visits:
     resource: Encounter
@@ -46,5 +46,39 @@ records:
       text: "{subject}: {type.text,type.coding.display} visit on {period.start|date}."
       optional: {reasonCode.text: " Reason recorded: {reasonCode.text}."}
 
-max_results: 25
+  # The chart (ADR 023). The Epic app must be granted these read APIs (R4): Condition,
+  # AllergyIntolerance, Observation. Until it is, the sandbox answers these searches with an error
+  # and the brief says the record system did not answer.
+  problems:
+    resource: Condition
+    link: patient
+    search: {category: problem-list-item, clinical-status: active}
+    data_class: problems
+    source_id: {prefix: cond-, keep_last: 8}
+    limit: 20
+    title: Problem list
+    text: "{subject}: {code.text,code.coding.display}, on the problem list since {onsetDateTime,recordedDate|date}."
+
+  allergies:
+    resource: AllergyIntolerance
+    link: patient
+    search: {clinical-status: active}
+    data_class: allergies
+    source_id: {prefix: alg-, keep_last: 8}
+    limit: 20
+    title: Allergy
+    text: "{subject}: allergy to {code.text,code.coding.display}."
+    optional: {reaction.manifestation.text: " Recorded reaction: {reaction.manifestation.text}."}
+
+  vitals:
+    resource: Observation
+    link: patient
+    search: {category: vital-signs}
+    data_class: vitals
+    source_id: {prefix: vit-, keep_last: 8}
+    limit: 30
+    title: Vital sign
+    text: "{subject}: {code.text,code.coding.display} {valueQuantity.value,component.valueQuantity.value} {valueQuantity.unit,component.valueQuantity.unit}, measured {effectiveDateTime|date}."
+
+max_results: 60
 status: Epic sandbox test record
