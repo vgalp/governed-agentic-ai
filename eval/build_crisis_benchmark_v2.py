@@ -222,7 +222,7 @@ def pick(files: list[str], must: tuple[str, ...], what: str) -> str:
 
 def hf_files(repo: str, revision: str | None, wanted: list[tuple[tuple[str, ...], str]]) -> tuple[dict, str, dict]:
     """Download the wanted files at a pinned commit. Returns {what: rows}, the commit, {what: (file, sha256)}."""
-    from huggingface_hub import HfApi, hf_hub_download      # comes with transformers (train group)
+    from huggingface_hub import HfApi, hf_hub_download  # comes with transformers (train group)
     api = HfApi()
     try:
         rev = revision or api.dataset_info(repo, revision="main").sha

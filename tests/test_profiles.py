@@ -7,8 +7,7 @@ import yaml
 
 from guardrails.classifier import parse_guard_output, to_decision
 from guardrails.rules import check_input, check_output
-from profiles.loader import (ProfileError, available_profiles, load_profile,
-                             load_profile_from, read_prompt)
+from profiles.loader import ProfileError, available_profiles, load_profile, load_profile_from, read_prompt
 
 
 def test_every_profile_loads():
@@ -130,7 +129,7 @@ def test_ollama_cannot_be_external(copy_of_adhd):
 
 def test_every_tool_needs_a_data_label(copy_of_adhd):
     _edit_yaml(copy_of_adhd / "tools.yaml", lambda d: d["search_knowledge"].pop("data_label"))
-    with pytest.raises(ProfileError, match="missing 'data_label'"):
+    with pytest.raises(ProfileError, match="data_label: Field required"):
         load_profile_from(copy_of_adhd)
 
 

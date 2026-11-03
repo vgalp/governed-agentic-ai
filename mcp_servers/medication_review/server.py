@@ -22,7 +22,6 @@ Settings come from the profile's medication_review.yaml. The tool is granted to 
 
 import json
 import re
-import sqlite3
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
@@ -30,6 +29,7 @@ from pathlib import Path
 import yaml
 from mcp.server.fastmcp import FastMCP
 
+from mcp_servers.common.patients import NotFound, Patient, Source
 from profiles.loader import Profile, load_profile
 
 DAILYMED = "https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid={set_id}"
@@ -158,27 +158,6 @@ def label_id(ingredient: str, labels: dict) -> str:
     return "lbl-" + labels["ingredients"][ingredient]["set_id"].replace("-", "")[:8]
 
 
-def find_patient(db: sqlite3.Connection, profile: Profile, query: str):
-    from mcp_servers.records.server import find_subjects
-    found = find_subjects(db, profile.records_map, query)
-    return found[0] if len(found) == 1 else (None, "several" if found else None)
-
-
-def current_medications(db: sqlite3.Connection, cfg: Config, sid: str) -> list[dict]:
-    r = cfg.medications
-    cols = sorted({r.source_id.column, cfg.drug_column})
-    where = " AND ".join([f'"{r.link}" = ?'] + [f'"{c}" IS NULL' if v is None else f'"{c}" = ?'
-                                               for c, v in r.only_where])
-    params = [sid] + [v for _, v in r.only_where if v is not None]
-    rows = db.execute(f'SELECT {", ".join(chr(34) + c + chr(34) for c in cols)} FROM "{r.table}" WHERE {where}',
-                      params).fetchall()
-    meds = {}
-    for row in rows:
-        row = dict(zip(cols, row))
-        meds.setdefault(row[cfg.drug_column], r.source_id.make(row[r.source_id.column]))   # one per drug
-    return [{"id": i, "name": n} for n, i in meds.items()]
-
-
 RXNORM = "rxnorm"
 
 
@@ -189,28 +168,29 @@ def _rxcui(concept: dict | None) -> str | None:
     return None
 
 
-def fhir_medications(client, m, r, query: str) -> tuple[str | None, list[dict] | str]:
-    """(patient name, medications) from a FHIR server, or (None, why not). Each medication has its
-    name and, when the record codes it, its RxNorm code."""
-    from mcp_servers.fhir_records.server import find_patient as find_fhir_patient
-    from profiles.fhir_map import human_name
-    patient, why = find_fhir_patient(client, m, query)
-    if patient is None:
-        return None, {"more than one": "several", "birthdate": "birthdate"}.get(why, "none")
+def medications_of(src: Source, cfg: Config, patient: Patient) -> list[dict]:
+    """The patient's current medications from either source: [{id, name[, rxcui]}], one per drug.
+    On FHIR a coded medication is read for its RxNorm code; a reference's display name is enough."""
+    r = cfg.medications
     meds = {}
-    for res in client.search(r.resource, {r.link: patient["id"], **dict(r.search), "_count": r.limit}, r.limit):
+    if src.kind == "db":
+        for row in src.rows(r, patient, {"name": cfg.drug_column}):
+            meds.setdefault(row["name"], {"id": row["_id"], "name": row["name"]})
+        return list(meds.values())
+    for row in src.rows(r, patient, {}):
+        res = row["_resource"]
         concept = res.get("medicationCodeableConcept")
         if not concept and (res.get("medicationReference") or {}).get("reference", "").startswith("Medication/"):
             ref = res["medicationReference"]
             try:
-                concept = client.read("Medication", ref["reference"].split("/", 1)[1]).get("code")
-            except Exception:                 # the display name is still enough to list it
+                concept = src.client.read("Medication", ref["reference"].split("/", 1)[1]).get("code")
+            except Exception:                 # noqa: BLE001  the display name is still enough to list it
                 concept = {"text": ref.get("display")}
         name = (concept or {}).get("text") or (res.get("medicationReference") or {}).get("display") or \
             next((c.get("display") for c in (concept or {}).get("coding") or [] if c.get("display")), None)
         if name:
-            meds.setdefault(name, {"id": r.source_id.make(res.get("id", "")), "name": name, "rxcui": _rxcui(concept)})
-    return human_name(patient), list(meds.values())
+            meds.setdefault(name, {"id": row["_id"], "name": name, "rxcui": _rxcui(concept)})
+    return list(meds.values())
 
 
 def medication_list(db_path: Path | None, profile: Profile, cfg: Config | None, query: str,
@@ -247,36 +227,29 @@ def review(db_path: Path | None, profile: Profile, cfg: Config | None, query: st
            client=None) -> dict:
     """The review for the patient named in the query: results to cite, and the answer text.
     Medications come from the records database, or with a FHIR source (ADR 013) from `client`."""
-    fhir = cfg is not None and cfg.source == "fhir"
-    if cfg is None or (fhir and client is None) or (not fhir and (db_path is None or not Path(db_path).exists())):
+    src = Source.open(profile, "fhir" if cfg is not None and cfg.source == "fhir" else "db", db_path, client) \
+        if cfg is not None else None
+    if src is None:
         return {"results": [], "note": "medication review is not set up for this profile"}
     if cfg.data_class not in allowed_classes:
         return {"results": [], "note": "this role may not see medication records"}
     if not cfg.labels.get("ingredients") and cfg.labels_fetch != "on_demand":
         return {"results": [], "answer": "Medication review is not available: the FDA label file has not been "
                                          "downloaded yet (scripts/fetch_drug_labels.py)."}
-    not_found = {"several": "More than one patient matches; please use the full name.",
-                 "none": "I couldn't find that patient. Please use the full name as it appears in the record."}
-    if fhir:
-        from fhir.client import FhirError
-        try:
-            name, meds = fhir_medications(client, profile.fhir_map, cfg.medications, query)
-        except FhirError as e:
-            return {"results": [], "answer": f"The record system did not answer, so nothing was reviewed: {e}"}
-        if name is None:
-            if meds == "birthdate":
-                from mcp_servers.fhir_records.server import NEED_BIRTHDATE
-                return {"results": [], "answer": NEED_BIRTHDATE}
-            return {"results": [], "answer": not_found[meds]}
-    else:
-        db = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
-        try:
-            sid, name = find_patient(db, profile, query)
-            if sid is None:
-                return {"results": [], "answer": not_found["several" if name == "several" else "none"]}
-            meds = current_medications(db, cfg, sid)
-        finally:
-            db.close()
+    found = src.find(query)
+    if isinstance(found, NotFound):
+        if found.why == "unavailable":
+            reply = found.reply.replace("did not answer:", "did not answer, so nothing was reviewed:", 1)
+            return {"results": [], "answer": reply}
+        return {"results": [], "answer": found.reply}
+    name = found.name
+    try:
+        meds = medications_of(src, cfg, found)
+    except Exception as e:                    # noqa: BLE001  FhirError or a database error
+        return {"results": [], "answer": f"The record system did not answer, so nothing was reviewed: {e}"}
+    if src.unread:
+        return {"results": [], "answer": "The record system did not answer, so nothing was reviewed: "
+                                         + "; ".join(src.unread.values())}
     dc = [cfg.data_class]
     results = [{"id": m["id"], "title": "Current medication", "text": f"{name}: {m['name']}", "data_classes": dc}
                for m in meds]
@@ -342,7 +315,6 @@ def _answer(name, meds, findings, labels_used, unchecked, no_ingredients, cfg: C
         for n, (a, b, pair) in enumerate(findings, 1):
             lines.append(f"{n}. {a['name']} [{a['id']}] and {b['name']} [{b['id']}]")
             for h in pair:
-                lab = cfg.labels["ingredients"][h["label_of"]]
                 lines.append(f"   {h['label_of'].capitalize()} label, {SECTION_NAMES.get(h['section'], h['section'])} "
                              f"[{h['id']}], mentions \"{h['term']}\": \"{h['quote']}\"")
         lines += ["", "Pairs not listed above are not mentioned in these labels. That does not mean they are safe "

@@ -1,0 +1,88 @@
+{
+  "$defs": {
+    "OutsideAuth": {
+      "additionalProperties": false,
+      "properties": {
+        "cache_seconds": {
+          "default": 30,
+          "maximum": 300,
+          "minimum": 0,
+          "title": "Cache Seconds",
+          "type": "integer"
+        },
+        "kind": {
+          "title": "Kind",
+          "type": "string"
+        },
+        "secret_env": {
+          "title": "Secret Env",
+          "type": "string"
+        },
+        "url": {
+          "title": "Url",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "url",
+        "secret_env"
+      ],
+      "title": "OutsideAuth",
+      "type": "object"
+    },
+    "OutsideListen": {
+      "additionalProperties": false,
+      "properties": {
+        "host": {
+          "default": "127.0.0.1",
+          "title": "Host",
+          "type": "string"
+        },
+        "port": {
+          "default": 8110,
+          "exclusiveMaximum": 65536,
+          "exclusiveMinimum": 0,
+          "title": "Port",
+          "type": "integer"
+        }
+      },
+      "title": "OutsideListen",
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "agent": {
+      "title": "Agent",
+      "type": "string"
+    },
+    "auth": {
+      "$ref": "#/$defs/OutsideAuth"
+    },
+    "listen": {
+      "$ref": "#/$defs/OutsideListen",
+      "default": {
+        "host": "127.0.0.1",
+        "port": 8110
+      }
+    },
+    "mask_results": {
+      "default": "external",
+      "enum": [
+        "external",
+        "always",
+        "never"
+      ],
+      "title": "Mask Results",
+      "type": "string"
+    }
+  },
+  "required": [
+    "agent",
+    "auth"
+  ],
+  "title": "outside.yaml",
+  "type": "object"
+}

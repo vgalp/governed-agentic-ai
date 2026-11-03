@@ -42,7 +42,7 @@ classifier:
   model: llama-guard3:8b
   policy: classifier_policy.md
   categories:
-    - {code: S1, name: suicide, self-harm or abuse risk, category: crisis}
+    - {code: S1, name: "suicide, self-harm or abuse risk", category: crisis}
     - {code: S2, name: professional decision, category: professional_decision}
   default_category: professional_decision
   input_engine: guard_model

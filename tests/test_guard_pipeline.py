@@ -107,7 +107,7 @@ def write_profile(tmp_path, classifier_extra: str):
 
 
 def test_bad_guard_settings_are_refused(tmp_path):
-    with pytest.raises(ProfileError, match="input_engine must be one of"):
+    with pytest.raises(ProfileError, match="input_engine: Input should be"):
         load_profile_from(write_profile(tmp_path / "a", "  input_engine: bert"))
     with pytest.raises(ProfileError, match="guard_model"):
         load_profile_from(write_profile(tmp_path / "b", "  input_engine: guard_model\n  decision_category: medical_advice"))

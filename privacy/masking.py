@@ -6,6 +6,7 @@ active profile (privacy section of profiles/<name>/profile.yaml).
 
 from presidio_analyzer import AnalyzerEngine
 
+from privacy.tokens import entity_type, restore_types, unmask  # noqa: F401  re-exported: the same API as before
 from profiles.loader import Profile, load_profile
 
 # Loading the analyzer takes a few seconds, so it is created once.
@@ -53,19 +54,3 @@ def mask(text: str, profile: Profile | None = None) -> tuple[str, dict[str, str]
         masked = masked[:r.start] + token + masked[r.end:]
 
     return masked, mapping
-
-
-def restore_types(text: str, mapping: dict[str, str], types: tuple[str, ...]) -> str:
-    """The masked text with only the tokens of these entity types put back (e.g. LOCATION), so a
-    tool can see a place name without ever seeing a person's name or contact details."""
-    for token, original in mapping.items():
-        if token.strip("[]").rsplit("_", 1)[0] in types:
-            text = text.replace(token, original)
-    return text
-
-
-def unmask(text: str, mapping: dict[str, str]) -> str:
-    """Put the original values back in place of their tokens."""
-    for token, original in mapping.items():
-        text = text.replace(token, original)
-    return text

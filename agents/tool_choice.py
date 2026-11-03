@@ -37,7 +37,7 @@ def route(profile: Profile, agent: str, role: str | None, message: str) -> dict:
               policies/actions.rego: the role may propose that change)
     tools     the tools that would be called (for general: those the role may use)
     """
-    from agents import actions                       # here, so tool_choice stays importable on its own
+    from agents import actions  # here, so tool_choice stays importable on its own
     roles = profile.roles
     action = actions.detect(profile, message) if profile.actions else None
     if action:

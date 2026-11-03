@@ -45,7 +45,7 @@ def fetch(name: str, registry: Path = REGISTRY, models_dir: Path = MODELS, downl
     if weights.exists() and sha256(weights) == r["sha256"]:
         return target
     if download is None:
-        from huggingface_hub import snapshot_download     # comes with transformers (train group)
+        from huggingface_hub import snapshot_download  # comes with transformers (train group)
         download = snapshot_download
     tmp = models_dir / f".{name}.download"
     if tmp.exists():

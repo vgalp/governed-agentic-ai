@@ -508,7 +508,7 @@ def run(set_name: str, judge: str, limit: int | None) -> Path:
         print(f"[{n}/{len(items)}] {item['id']} ({item['expected']}, {len(item['turns'])} turns)", flush=True)
         transcripts[item["id"]] = {}
         for system, ask in (("plain", lambda h, t: {"answer": plain_reply(model, profile.system_prompt, h, t)}),
-                            ("governed", lambda h, t: governed_reply(h, t, role))):
+                            ("governed", lambda h, t, role=role: governed_reply(h, t, role))):
             try:
                 transcripts[item["id"]][system] = play(item, system, ask)
                 last = transcripts[item["id"]][system][-1]

@@ -416,7 +416,7 @@ def build(model: str, result_paths: list[Path], models_dir: Path = MODELS, data_
 
 
 def upload(folder: Path, repo: str, private: bool) -> str:
-    from huggingface_hub import HfApi                      # comes with transformers (train group)
+    from huggingface_hub import HfApi  # comes with transformers (train group)
     api = HfApi()                                          # token: HF_TOKEN or `hf auth login`
     api.create_repo(repo, repo_type="model", private=private, exist_ok=True)
     commit = api.upload_folder(folder_path=str(folder), repo_id=repo, repo_type="model",
@@ -440,7 +440,7 @@ def main() -> None:
         out = build(args.model, args.results, benchmark_paths=args.benchmark,
                     benchmark_seen=args.benchmark_seen)
     except PublishError as e:
-        raise SystemExit(f"Not published: {e}")
+        raise SystemExit(f"Not published: {e}") from e
     print(f"Release ready: {out}  (read README.md before uploading)")
     if args.upload:
         commit = upload(out, args.upload, args.private)

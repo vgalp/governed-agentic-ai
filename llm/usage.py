@@ -135,7 +135,7 @@ def outcome_of(guardrail: dict | None, approval: dict | None) -> str:
     if not guardrail:
         return "answered"
     category, stage = guardrail.get("category"), guardrail.get("stage")
-    if category in ("guardrail_unavailable", "model_unavailable", "action_unclear"):
+    if category in ("guardrail_unavailable", "model_unavailable", "action_unclear", "pipeline_error"):
         return "failed"
     if stage == "output":
         return "withheld"

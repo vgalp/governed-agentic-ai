@@ -17,7 +17,7 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 from fhir.client import FhirClient, FhirError, SmartBackendAuth, SmartBackendSettings, client_from_settings
 from mcp_servers.fhir_records.server import name_candidates, search
 from mcp_servers.medication_review.server import load_config, review
-from profiles.fhir_map import FhirMappingError, get_path, human_name, parse, render, Text
+from profiles.fhir_map import FhirMappingError, Text, get_path, human_name, parse, render
 from profiles.loader import ProfileError, load_profile, load_profile_from
 
 BASE = "https://fhir.example.test/api/FHIR/R4"

@@ -15,6 +15,8 @@ Organizations want to use AI agents, but running them on sensitive data is risky
 
 ## Architecture
 
+The one-page version, with the request flow, where each concern lives and the threat model: [docs/architecture.md](docs/architecture.md).
+
 Every request passes through layered controls before and after the model:
 
 ```

@@ -1,0 +1,67 @@
+{
+  "$defs": {
+    "RoleSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "data_classes": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Data Classes",
+          "type": "array"
+        },
+        "responses": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "default": {},
+          "title": "Responses",
+          "type": "object"
+        },
+        "title": {
+          "title": "Title",
+          "type": "string"
+        },
+        "tools": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Tools",
+          "type": "array"
+        }
+      },
+      "required": [
+        "title"
+      ],
+      "title": "RoleSpec",
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "roles.yaml",
+  "properties": {
+    "data_classes": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "title": "Data Classes",
+      "type": "object"
+    },
+    "roles": {
+      "additionalProperties": {
+        "$ref": "#/$defs/RoleSpec"
+      },
+      "title": "Roles",
+      "type": "object"
+    }
+  },
+  "required": [
+    "data_classes",
+    "roles"
+  ],
+  "title": "roles.yaml",
+  "type": "object"
+}

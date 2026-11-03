@@ -117,7 +117,8 @@ def fetch_into(labels: dict, medications: list[dict], sections: list[str]) -> li
     """Look up what the label file lacks for these medications (name, rxcui) and add it, in place.
     Returns what was fetched, for the audit: [{"medication", "ingredients", "labels": [{ingredient,
     set_id, effective_time}]}]. A lookup that fails is skipped (the review says "not checked")."""
-    labels.setdefault("medications", {}); labels.setdefault("rxcui", {}); labels.setdefault("ingredients", {})
+    for key in ("medications", "rxcui", "ingredients"):
+        labels.setdefault(key, {})
     fetched = []
     for m in medications:
         name, code = m["name"], m.get("rxcui")

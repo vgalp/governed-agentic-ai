@@ -22,8 +22,7 @@ can't be changed, because its cited ID can't be traced back to exactly one row.
 
 from dataclasses import dataclass
 
-from profiles.records_map import (FILTERS, IDENT_RE, MappingError, RecordsMap, Template,
-                                  placeholders)
+from profiles.records_map import FILTERS, IDENT_RE, MappingError, RecordsMap, Template, placeholders
 
 
 @dataclass(frozen=True)

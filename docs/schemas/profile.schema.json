@@ -1,0 +1,619 @@
+{
+  "$defs": {
+    "Agent": {
+      "additionalProperties": false,
+      "properties": {
+        "tools": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Tools",
+          "type": "array"
+        }
+      },
+      "title": "Agent",
+      "type": "object"
+    },
+    "Category": {
+      "additionalProperties": false,
+      "properties": {
+        "category": {
+          "title": "Category",
+          "type": "string"
+        },
+        "code": {
+          "title": "Code",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        }
+      },
+      "required": [
+        "code",
+        "name",
+        "category"
+      ],
+      "title": "Category",
+      "type": "object"
+    },
+    "Classifier": {
+      "additionalProperties": false,
+      "properties": {
+        "categories": {
+          "items": {
+            "$ref": "#/$defs/Category"
+          },
+          "title": "Categories",
+          "type": "array"
+        },
+        "decision_category": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Decision Category"
+        },
+        "default_category": {
+          "title": "Default Category",
+          "type": "string"
+        },
+        "guard_model": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Guard Model"
+        },
+        "guard_policy": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Guard Policy"
+        },
+        "guard_policy_of": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Guard Policy Of"
+        },
+        "input_agent": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Input Agent"
+        },
+        "input_engine": {
+          "default": "llamaguard",
+          "enum": [
+            "llamaguard",
+            "guard_model"
+          ],
+          "title": "Input Engine",
+          "type": "string"
+        },
+        "model": {
+          "title": "Model",
+          "type": "string"
+        },
+        "policy": {
+          "title": "Policy",
+          "type": "string"
+        }
+      },
+      "required": [
+        "model",
+        "policy",
+        "categories",
+        "default_category"
+      ],
+      "title": "Classifier",
+      "type": "object"
+    },
+    "Faithfulness": {
+      "additionalProperties": false,
+      "properties": {
+        "for_tools": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "For Tools",
+          "type": "array"
+        },
+        "judge": {
+          "title": "Judge",
+          "type": "string"
+        },
+        "mode": {
+          "default": "withhold",
+          "enum": [
+            "withhold",
+            "warn"
+          ],
+          "title": "Mode",
+          "type": "string"
+        },
+        "strict": {
+          "default": true,
+          "title": "Strict",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "judge"
+      ],
+      "title": "Faithfulness",
+      "type": "object"
+    },
+    "Model": {
+      "additionalProperties": false,
+      "properties": {
+        "api_key_env": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Api Key Env"
+        },
+        "base_url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Base Url"
+        },
+        "location": {
+          "enum": [
+            "local",
+            "external"
+          ],
+          "title": "Location",
+          "type": "string"
+        },
+        "max_tokens": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Tokens"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "price": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Price"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "provider": {
+          "enum": [
+            "ollama",
+            "openai",
+            "gemini",
+            "anthropic",
+            "openai_compatible",
+            "mock"
+          ],
+          "title": "Provider",
+          "type": "string"
+        },
+        "temperature": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Temperature"
+        }
+      },
+      "required": [
+        "provider",
+        "name",
+        "location"
+      ],
+      "title": "Model",
+      "type": "object"
+    },
+    "Price": {
+      "additionalProperties": false,
+      "properties": {
+        "input_per_million": {
+          "minimum": 0,
+          "title": "Input Per Million",
+          "type": "number"
+        },
+        "output_per_million": {
+          "minimum": 0,
+          "title": "Output Per Million",
+          "type": "number"
+        }
+      },
+      "required": [
+        "input_per_million",
+        "output_per_million"
+      ],
+      "title": "Price",
+      "type": "object"
+    },
+    "Privacy": {
+      "additionalProperties": false,
+      "properties": {
+        "allow_list": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Allow List",
+          "type": "array"
+        },
+        "allow_list_files": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Allow List Files",
+          "type": "array"
+        },
+        "entities": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Entities",
+          "type": "array"
+        },
+        "local_model_sees": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Local Model Sees",
+          "type": "array"
+        }
+      },
+      "title": "Privacy",
+      "type": "object"
+    },
+    "Routing": {
+      "additionalProperties": false,
+      "properties": {
+        "external_allowed": {
+          "default": false,
+          "title": "External Allowed",
+          "type": "boolean"
+        },
+        "external_model": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "External Model"
+        },
+        "fallback": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Fallback",
+          "type": "array"
+        },
+        "local_input": {
+          "default": "masked",
+          "enum": [
+            "masked",
+            "original"
+          ],
+          "title": "Local Input",
+          "type": "string"
+        },
+        "local_model": {
+          "title": "Local Model",
+          "type": "string"
+        },
+        "never_external_entities": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Never External Entities",
+          "type": "array"
+        },
+        "never_external_labels": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Never External Labels",
+          "type": "array"
+        },
+        "send_external_when": {
+          "default": "no_personal_info",
+          "enum": [
+            "no_personal_info",
+            "masked"
+          ],
+          "title": "Send External When",
+          "type": "string"
+        }
+      },
+      "required": [
+        "local_model"
+      ],
+      "title": "Routing",
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "profile.yaml",
+  "properties": {
+    "actions": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Actions"
+    },
+    "agents": {
+      "additionalProperties": {
+        "$ref": "#/$defs/Agent"
+      },
+      "title": "Agents",
+      "type": "object"
+    },
+    "cite_sources": {
+      "default": false,
+      "title": "Cite Sources",
+      "type": "boolean"
+    },
+    "classifier": {
+      "$ref": "#/$defs/Classifier"
+    },
+    "description": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Description"
+    },
+    "examples": {
+      "default": [],
+      "items": {
+        "type": "string"
+      },
+      "title": "Examples",
+      "type": "array"
+    },
+    "faithfulness": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Faithfulness"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "fhir": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Fhir"
+    },
+    "knowledge_base": {
+      "title": "Knowledge Base",
+      "type": "string"
+    },
+    "models": {
+      "additionalProperties": {
+        "$ref": "#/$defs/Model"
+      },
+      "title": "Models",
+      "type": "object"
+    },
+    "name": {
+      "pattern": "^[a-z0-9][a-z0-9-]*$",
+      "title": "Name",
+      "type": "string"
+    },
+    "outside": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Outside"
+    },
+    "privacy": {
+      "$ref": "#/$defs/Privacy",
+      "default": {
+        "allow_list": [],
+        "allow_list_files": [],
+        "entities": [],
+        "local_model_sees": []
+      }
+    },
+    "prompt": {
+      "title": "Prompt",
+      "type": "string"
+    },
+    "records_db": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Records Db"
+    },
+    "records_map": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Records Map"
+    },
+    "responses": {
+      "title": "Responses",
+      "type": "string"
+    },
+    "roles": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Roles"
+    },
+    "routing": {
+      "$ref": "#/$defs/Routing"
+    },
+    "rules": {
+      "title": "Rules",
+      "type": "string"
+    },
+    "source_id_pattern": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Source Id Pattern"
+    },
+    "title": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Title"
+    },
+    "tools": {
+      "title": "Tools",
+      "type": "string"
+    },
+    "version": {
+      "default": 1,
+      "title": "Version",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "name",
+    "models",
+    "routing",
+    "tools",
+    "prompt",
+    "responses",
+    "rules",
+    "classifier",
+    "knowledge_base",
+    "agents"
+  ],
+  "title": "profile.yaml",
+  "type": "object"
+}

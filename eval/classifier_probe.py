@@ -23,7 +23,7 @@ Results of the 2026-10-07 run (Mistral 7B, Llama Guard 3 8B): now 10/12, defer 8
 
 from guardrails.classifier import classify
 from guardrails.grounding import check_citations
-from guardrails.rules import check_input, check_output, classifier_exemption, GuardrailDecision
+from guardrails.rules import GuardrailDecision, check_input, check_output, classifier_exemption
 from llm.providers import chat
 from profiles.loader import load_profile
 

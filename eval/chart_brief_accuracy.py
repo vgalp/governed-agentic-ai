@@ -30,6 +30,7 @@ sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "profiles/clinic-assistant/data"))
 
 import build_db  # noqa: E402
+
 from mcp_servers.chart_brief import server as cb  # noqa: E402
 from profiles.loader import load_profile  # noqa: E402
 
@@ -53,7 +54,7 @@ VITALS = [("Systolic blood pressure", 100, 138, "mmHg", 150, 175), ("Diastolic b
           ("Body temperature", 36.0, 37.6, "Cel", 38.2, 39.5)]
 
 
-NAMES = [f"{f} {l}" for f in FIRST for l in LAST]           # 625 distinct names
+NAMES = [f"{f} {ln}" for f in FIRST for ln in LAST]           # 625 distinct names
 
 
 def make_chart(i: int, rng: random.Random) -> dict:
@@ -198,7 +199,7 @@ def main() -> int:
         prec = t / (t + f_p) if t + f_p else 1.0
         rec = t / (t + f_n) if t + f_n else 1.0
         rows.append((kind, t, f_p, f_n, prec, rec))
-    report = [f"# Chart brief accuracy (ADR 023)", "",
+    report = ["# Chart brief accuracy (ADR 023)", "",
               f"{len(charts)} synthetic charts (seed {args.seed}), {lines_total} cited lines, built through the real tool code.",
               "", f"**Faithfulness: {len(errors)} error(s) in {lines_total} cited lines.** Every line was checked against the "
               "row it cites: the ID exists, belongs to the patient, and the line carries the record's text and value.", ""]

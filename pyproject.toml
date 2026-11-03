@@ -21,6 +21,7 @@ dependencies = [
 dev = [
     "pip>=26.2.1",
     "pytest>=9.1.1",
+    "ruff>=0.14",
 ]
 train = [
     "torch>=2.14.1",
@@ -30,3 +31,20 @@ train = [
 [tool.pytest.ini_options]
 pythonpath = ["."]
 testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 130
+target-version = "py311"
+extend-exclude = ["scratchpad", "docs"]
+
+[tool.ruff.lint]
+# E/W style, F correctness, I import order, B likely bugs. B905 (zip strict=) and B007 (unused loop
+# variable) are style choices this code base does not make; E501 is enforced at 130 columns.
+select = ["E", "F", "W", "I", "B"]
+ignore = ["B905", "B007"]
+
+[tool.ruff.lint.per-file-ignores]
+# Model prompts and test fixtures hold long literal strings that must not be rewrapped.
+"eval/*" = ["E501"]
+"tests/*" = ["E501"]
+"guardrails/classifier.py" = ["E501"]

@@ -164,7 +164,7 @@ def github_file(src: dict) -> bytes:
 
 
 def aegis_file(src: dict, revision: str | None) -> tuple[bytes, str]:
-    from huggingface_hub import HfApi, hf_hub_download      # comes with transformers (train group)
+    from huggingface_hub import HfApi, hf_hub_download  # comes with transformers (train group)
     rev = revision or HfApi().dataset_info(src["repo"], revision="main").sha
     path = hf_hub_download(src["repo"], src["file"], repo_type="dataset", revision=rev,
                            local_dir=str(RAW / "aegis2"))
@@ -183,7 +183,8 @@ def read_json_records(data: bytes) -> list[dict]:
 def training_overlap(rows: list[dict]) -> dict:
     """How close any benchmark message is to the guard's current training and dev messages
     (classifier/clean.py's measure). Expected: nothing at 0.75 or above."""
-    from classifier.clean import DEV, TRAIN, TOO_CLOSE, _words, norm as cnorm, too_close
+    from classifier.clean import DEV, TOO_CLOSE, TRAIN, _words, too_close
+    from classifier.clean import norm as cnorm
     seen = []
     for path in (TRAIN, DEV):
         if path.exists():

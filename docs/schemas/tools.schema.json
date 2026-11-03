@@ -1,0 +1,106 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "answer": {
+      "default": "model",
+      "enum": [
+        "model",
+        "direct"
+      ],
+      "title": "Answer",
+      "type": "string"
+    },
+    "data_label": {
+      "title": "Data Label",
+      "type": "string"
+    },
+    "description": {
+      "default": "",
+      "title": "Description",
+      "type": "string"
+    },
+    "keeps": {
+      "default": [],
+      "items": {
+        "type": "string"
+      },
+      "title": "Keeps",
+      "type": "array"
+    },
+    "kind": {
+      "enum": [
+        "read",
+        "change"
+      ],
+      "title": "Kind",
+      "type": "string"
+    },
+    "lane": {
+      "anyOf": [
+        {
+          "enum": [
+            "knowledge",
+            "records"
+          ],
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Lane"
+    },
+    "on_empty": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "On Empty"
+    },
+    "receives_identifiers": {
+      "default": false,
+      "title": "Receives Identifiers",
+      "type": "boolean"
+    },
+    "role_filtered": {
+      "default": false,
+      "title": "Role Filtered",
+      "type": "boolean"
+    },
+    "server": {
+      "title": "Server",
+      "type": "string"
+    },
+    "tenant_scoped": {
+      "default": false,
+      "title": "Tenant Scoped",
+      "type": "boolean"
+    },
+    "when": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "When"
+    }
+  },
+  "required": [
+    "server",
+    "kind",
+    "data_label"
+  ],
+  "title": "tools.yaml (each entry)",
+  "type": "object"
+}

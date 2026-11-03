@@ -1,0 +1,151 @@
+{
+  "$defs": {
+    "Pattern": {
+      "additionalProperties": false,
+      "properties": {
+        "regex": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Regex"
+        },
+        "terms": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Terms"
+        }
+      },
+      "title": "Pattern",
+      "type": "object"
+    },
+    "Rule": {
+      "additionalProperties": false,
+      "properties": {
+        "all": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "All",
+          "type": "array"
+        },
+        "any": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Any",
+          "type": "array"
+        },
+        "category": {
+          "title": "Category",
+          "type": "string"
+        },
+        "none": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "None",
+          "type": "array"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reason"
+        },
+        "scope": {
+          "anyOf": [
+            {
+              "enum": [
+                "text",
+                "sentence"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Scope"
+        }
+      },
+      "required": [
+        "category"
+      ],
+      "title": "Rule",
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "rules.yaml",
+  "properties": {
+    "classifier_exemptions": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/Rule"
+      },
+      "title": "Classifier Exemptions",
+      "type": "array"
+    },
+    "input": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/Rule"
+      },
+      "title": "Input",
+      "type": "array"
+    },
+    "output": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/Rule"
+      },
+      "title": "Output",
+      "type": "array"
+    },
+    "patterns": {
+      "additionalProperties": {
+        "$ref": "#/$defs/Pattern"
+      },
+      "title": "Patterns",
+      "type": "object"
+    }
+  },
+  "required": [
+    "patterns"
+  ],
+  "title": "rules.yaml",
+  "type": "object"
+}

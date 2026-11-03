@@ -27,10 +27,8 @@ from pathlib import Path
 import yaml
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from mcp_servers.medication_review.labels import FIELDS, OPENFDA, RXNAV, get, label, rxcui_ingredients, rxnorm  # noqa: E402,F401
 from profiles.loader import load_profile  # noqa: E402
-
-from mcp_servers.medication_review.labels import (FIELDS, OPENFDA, RXNAV, get, label,  # noqa: E402,F401
-                                                     rxcui_ingredients, rxnorm)
 
 
 def medications_from_fhir(profile, cfg: dict, patients: list[str]) -> list[tuple[str, str | None]]:
@@ -58,7 +56,8 @@ def main() -> None:
                     help="FHIR profiles: a test patient whose medications to cover (repeat for several)")
     args = ap.parse_args()
     import os
-    from scripts.epic_check import load_env          # EPIC_CLIENT_ID etc., as dev.sh does
+
+    from scripts.epic_check import load_env  # EPIC_CLIENT_ID etc., as dev.sh does
     load_env(Path(__file__).resolve().parent.parent / ".env")
     profile = load_profile(args.profile or os.environ.get("PROFILE") or "clinic-assistant")
     cfg_path = profile.path / "medication_review.yaml"

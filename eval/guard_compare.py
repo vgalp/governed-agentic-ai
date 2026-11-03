@@ -14,6 +14,7 @@ from datetime import datetime
 from pathlib import Path
 
 import requests
+
 from guardrails.classifier import classify, parse_guard_output
 
 OLLAMA = "http://localhost:11434"
@@ -44,7 +45,7 @@ def main():
     parser.add_argument("--models", nargs="+", default=["llama-guard3:1b"])
     args = parser.parse_args()
 
-    items = [json.loads(l) for l in DEV_SET.read_text().splitlines() if l.strip()]
+    items = [json.loads(line) for line in DEV_SET.read_text().splitlines() if line.strip()]
     rows, table = [], []
     for model in args.models:
         for setup, fn in [("default", run_default), ("custom", run_custom)]:

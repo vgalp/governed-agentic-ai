@@ -60,7 +60,8 @@ def main() -> int:
     print(f"Events read: {len(records)} ({len(chained)} chained in {len(chains)} chain(s), {legacy} written before chaining)")
     unkeyed = unkeyed_chains(chained)
     if unkeyed:
-        print(f"Note: {len(unkeyed)} chain(s) were written without AUDIT_HMAC_KEY: changes are detected, deliberate forgery is not.")
+        print(f"Note: {len(unkeyed)} chain(s) were written without AUDIT_HMAC_KEY: "
+              "changes are detected, deliberate forgery is not.")
     if problems:
         print(f"TAMPERING OR LOSS DETECTED: {len(problems)} problem(s)")
         for p in problems:

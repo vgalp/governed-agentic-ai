@@ -20,12 +20,13 @@ from pathlib import Path
 
 import yaml
 
+from profiles import schema
 from profiles.changes import Change
 from profiles.changes import parse as parse_change
-from profiles.records_map import MappingError, RecordsMap
-from profiles.records_map import parse as parse_records_map
 from profiles.fhir_map import FhirMap, FhirMappingError
 from profiles.fhir_map import parse as parse_fhir_map
+from profiles.records_map import MappingError, RecordsMap
+from profiles.records_map import parse as parse_records_map
 
 PROFILES_DIR = Path(__file__).resolve().parent
 DEFAULT_PROFILE = "adhd-assistant"
@@ -301,6 +302,16 @@ def _file(base: Path, rel: str, where: str) -> Path:
     if not p.is_file():
         raise ProfileError(f"{where}: file not found: {rel}")
     return p
+
+
+def _shaped(raw: dict, where: str, check) -> dict:
+    """The file against its schema (profiles/schema.py) before any semantic check: a misspelled or
+    unknown key, a wrong type or a missing required key is reported with its field path."""
+    try:
+        check(raw, where)
+    except schema.SchemaError as e:
+        raise ProfileError(str(e)) from None
+    return raw
 
 
 def _yaml(path: Path) -> dict:
@@ -717,8 +728,9 @@ def load_profile_from(path: Path) -> Profile:
     path = Path(path)
     if not path.is_dir():
         raise ProfileError(f"profile folder not found: {path}")
-    p = _yaml(_file(path, "profile.yaml", path.name))
     where = f"{path.name}/profile.yaml"
+    p = _shaped(_yaml(_file(path, "profile.yaml", path.name)), where,
+                lambda raw, w: schema.validate(schema.ProfileFile, raw, w))
 
     name = _require(p, "name", where)
     if not NAME_RE.match(name):
@@ -735,8 +747,10 @@ def load_profile_from(path: Path) -> Profile:
     models = _models(p.get("models"), where)
     routing = _routing(p.get("routing"), models, where)
 
-    responses = _yaml(_file(path, _require(p, "responses", where), where))
-    rules_raw = _yaml(_file(path, _require(p, "rules", where), where))
+    responses = _shaped(_yaml(_file(path, p["responses"], where)), f"{path.name}/{p['responses']}",
+                        schema.ResponsesFile.check)
+    rules_raw = _shaped(_yaml(_file(path, p["rules"], where)), f"{path.name}/{p['rules']}",
+                        lambda raw, w: schema.validate(schema.RulesFile, raw, w))
     patterns = {n: compile_pattern(n, s) for n, s in (rules_raw.get("patterns") or {}).items()}
     input_rules = _rules(rules_raw.get("input", []), "input", patterns)
     output_rules = _rules(rules_raw.get("output", []), "output", patterns)
@@ -811,7 +825,8 @@ def load_profile_from(path: Path) -> Profile:
         raise ProfileError(f"{path.name}/responses.yaml: every response must be non-empty text")
 
     tools_file = _require(p, "tools", where)
-    tools = _tools(_yaml(_file(path, tools_file, where)), f"{path.name}/{tools_file}", patterns, responses)
+    tools = _tools(_shaped(_yaml(_file(path, tools_file, where)), f"{path.name}/{tools_file}", schema.ToolsFile.check),
+                   f"{path.name}/{tools_file}", patterns, responses)
     if any(t.when for t in tools.values()) and p.get("roles") and "tool_denied" not in responses:
         raise ProfileError(f"{path.name}/responses.yaml: no response for tool_denied (needed because a "
                            "tool is called for some questions only, and a role may not have it)")
@@ -830,7 +845,8 @@ def load_profile_from(path: Path) -> Profile:
     roles, data_classes = {}, {}
     if p.get("roles"):
         roles, data_classes = _roles(
-            _yaml(_file(path, p["roles"], where)), granted, f"{path.name}/{p['roles']}",
+            _shaped(_yaml(_file(path, p["roles"], where)), f"{path.name}/{p['roles']}",
+                    lambda raw, w: schema.validate(schema.RolesFile, raw, w)), granted, f"{path.name}/{p['roles']}",
             set(responses))
         if "role_required" not in responses:
             raise ProfileError(f"{path.name}/responses.yaml: no response for role_required "
@@ -867,7 +883,8 @@ def load_profile_from(path: Path) -> Profile:
 
     actions = {}
     if p.get("actions"):
-        actions = _actions(_yaml(_file(path, p["actions"], where)), f"{path.name}/{p['actions']}",
+        actions = _actions(_shaped(_yaml(_file(path, p["actions"], where)), f"{path.name}/{p['actions']}",
+                                   schema.ActionsFile.check), f"{path.name}/{p['actions']}",
                            patterns, agents, roles, tools, records_map)
         missing = [r for r in ACTION_RESPONSES if r not in responses]
         if missing:
@@ -878,7 +895,8 @@ def load_profile_from(path: Path) -> Profile:
 
     outside = None
     if p.get("outside"):
-        outside = _outside(_yaml(_file(path, p["outside"], where)), tools, agents,
+        outside = _outside(_shaped(_yaml(_file(path, p["outside"], where)), f"{path.name}/{p['outside']}",
+                                   lambda raw, w: schema.validate(schema.Outside, raw, w)), tools, agents,
                            f"{path.name}/{p['outside']}")
     scoped = [t.name for t in tools.values() if t.tenant_scoped and t.name in granted]
     if scoped and outside is None:

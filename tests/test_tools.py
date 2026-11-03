@@ -43,9 +43,8 @@ def test_old_settings_are_derived_from_the_registry():
     assert p.tool_data_labels == {"search_knowledge": "approved_content", "search_records": "patient_record",
                                   "reschedule_appointment": "patient_record", "medication_review": "patient_record",
                                   "chart_brief": "patient_record", "drug_reference": "approved_content"}
-    assert p.identifier_tools == ("search_records", "medication_review")
-    assert p.role_filtered_tools == ("search_records", "medication_review")
-
+    assert p.identifier_tools == ("search_records", "medication_review", "chart_brief")
+    assert p.role_filtered_tools == ("search_records", "medication_review", "chart_brief")
 
 def test_policy_data_names_each_tool_kind_and_the_change_owner():
     tools = load_profile("clinic-assistant").policy_data()["tools"]
@@ -137,11 +136,11 @@ def test_role_filter_needs_roles(tmp_path):
 
 @pytest.mark.parametrize("change, message", [
     (lambda t: t.update(server="ftp://x"), "http:// or https://"),
-    (lambda t: t.pop("server"), "missing 'server'"),
-    (lambda t: t.update(kind="write"), "kind must be read or change"),
-    (lambda t: t.pop("kind"), "missing 'kind'"),
-    (lambda t: t.update(lane="router"), "lane must be one of"),
-    (lambda t: t.update(role_filtered="yes"), "must be true or false"),
+    (lambda t: t.pop("server"), "server: Field required"),
+    (lambda t: t.update(kind="write"), "kind: Input should be 'read' or 'change'"),
+    (lambda t: t.pop("kind"), "kind: Field required"),
+    (lambda t: t.update(lane="router"), "lane: Input should be 'knowledge' or 'records'"),
+    (lambda t: t.update(role_filtered="yes"), "role_filtered: Input should be a valid boolean"),
 ])
 def test_bad_tool_entries_are_refused(clinic_copy, change, message):
     with pytest.raises(ProfileError, match=message):

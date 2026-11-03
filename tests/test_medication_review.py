@@ -9,7 +9,7 @@ import pytest
 import yaml
 
 from agents.tool_choice import tool_denied_reply, tools_to_call
-from guardrails.rules import check_input, classifier_exemption, GuardrailDecision
+from guardrails.rules import GuardrailDecision, check_input, classifier_exemption
 from mcp_servers.medication_review.server import fetch_missing, ingredients_of, load_config, quote, review
 from profiles.loader import ProfileError, load_profile, load_profile_from
 

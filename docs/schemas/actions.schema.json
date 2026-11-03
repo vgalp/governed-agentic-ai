@@ -1,0 +1,247 @@
+{
+  "$defs": {
+    "ActionField": {
+      "additionalProperties": false,
+      "properties": {
+        "description": {
+          "title": "Description",
+          "type": "string"
+        },
+        "pattern": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Pattern"
+        },
+        "type": {
+          "enum": [
+            "source",
+            "datetime",
+            "text"
+          ],
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "description"
+      ],
+      "title": "ActionField",
+      "type": "object"
+    },
+    "AllowedTimes": {
+      "additionalProperties": false,
+      "properties": {
+        "end_hour": {
+          "anyOf": [
+            {
+              "maximum": 24,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "End Hour"
+        },
+        "field": {
+          "title": "Field",
+          "type": "string"
+        },
+        "start_hour": {
+          "anyOf": [
+            {
+              "maximum": 24,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Start Hour"
+        },
+        "weekdays": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "integer"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Weekdays"
+        }
+      },
+      "required": [
+        "field"
+      ],
+      "title": "AllowedTimes",
+      "type": "object"
+    },
+    "Change": {
+      "additionalProperties": false,
+      "properties": {
+        "id_field": {
+          "title": "Id Field",
+          "type": "string"
+        },
+        "only_if": {
+          "additionalProperties": true,
+          "default": {},
+          "title": "Only If",
+          "type": "object"
+        },
+        "record": {
+          "title": "Record",
+          "type": "string"
+        },
+        "set": {
+          "additionalProperties": true,
+          "default": {},
+          "title": "Set",
+          "type": "object"
+        },
+        "set_from": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "default": {},
+          "title": "Set From",
+          "type": "object"
+        }
+      },
+      "required": [
+        "record",
+        "id_field"
+      ],
+      "title": "Change",
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "agent": {
+      "default": "executor",
+      "title": "Agent",
+      "type": "string"
+    },
+    "allowed_times": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/AllowedTimes"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "approve_roles": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Approve Roles",
+      "type": "array"
+    },
+    "change": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Change"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "description": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Description"
+    },
+    "done_text": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Done Text"
+    },
+    "expires_minutes": {
+      "default": 30,
+      "minimum": 1,
+      "title": "Expires Minutes",
+      "type": "integer"
+    },
+    "fields": {
+      "additionalProperties": {
+        "$ref": "#/$defs/ActionField"
+      },
+      "default": {},
+      "title": "Fields",
+      "type": "object"
+    },
+    "intent": {
+      "title": "Intent",
+      "type": "string"
+    },
+    "propose_roles": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Propose Roles",
+      "type": "array"
+    },
+    "title": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Title"
+    },
+    "tool": {
+      "title": "Tool",
+      "type": "string"
+    }
+  },
+  "required": [
+    "intent",
+    "tool",
+    "propose_roles",
+    "approve_roles"
+  ],
+  "title": "actions.yaml (each entry)",
+  "type": "object"
+}

@@ -41,13 +41,13 @@ DAILYMED = "https://dailymed.nlm.nih.gov/dailymed/lookup.cfm?setid={set_id}"
 @dataclass(frozen=True)
 class Config:
     store: Path
-    fetch: str                                   # on_demand or never
-    sections: dict[str, dict]                    # key -> {title, ask: [words]}
+    fetch: str  # on_demand or never
+    sections: dict[str, dict]  # key -> {title, ask: [words]}
     default_sections: tuple[str, ...]
     max_chars: int
     max_drugs: int
     not_a_drug: frozenset[str]
-    class_terms: dict | None = None              # medication_review.yaml's class words, for the two-drug check
+    class_terms: dict | None = None  # medication_review.yaml's class words, for the two-drug check
 
 
 def load_config(profile: Profile) -> Config | None:
@@ -55,13 +55,17 @@ def load_config(profile: Profile) -> Config | None:
     if not path.exists():
         return None
     raw = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
-    sections = {k: {"title": str(v.get("title", k)), "ask": [str(a).lower() for a in v.get("ask") or []]}
-                for k, v in (raw.get("sections") or {}).items()}
+    sections = {
+        k: {"title": str(v.get("title", k)), "ask": [str(a).lower() for a in v.get("ask") or []]}
+        for k, v in (raw.get("sections") or {}).items()
+    }
     if not sections:
         raise ValueError(f"{path.name}: sections is empty")
     if "dosage_and_administration" in sections:
-        print("drug reference: dosage_and_administration is quotable in this profile (an office choice; "
-              "dose questions are still caught by rules.yaml)")
+        print(
+            "drug reference: dosage_and_administration is quotable in this profile (an office choice; "
+            "dose questions are still caught by rules.yaml)"
+        )
     default = tuple(raw.get("default_sections") or list(sections)[:1])
     unknown = [d for d in default if d not in sections]
     if unknown:
@@ -71,12 +75,19 @@ def load_config(profile: Profile) -> Config | None:
         raise ValueError(f"{path.name}: fetch must be on_demand or never")
     class_terms = {}
     mr_path = profile.path / "medication_review.yaml"
-    if mr_path.exists():                               # the review's class words ("anticoagulants" for warfarin)
+    if mr_path.exists():  # the review's class words ("anticoagulants" for warfarin)
         mr_raw = yaml.safe_load(mr_path.read_text(encoding="utf-8")) or {}
         class_terms = {k.lower(): v for k, v in (mr_raw.get("class_terms") or {}).items()}
-    return Config((profile.path / raw.get("store", "data/drug_reference.json")).resolve(), fetch, sections, default,
-                  int(raw.get("max_chars_per_section", 1500)), int(raw.get("max_drugs_per_question", 2)),
-                  frozenset(str(w).lower() for w in raw.get("not_a_drug") or []), class_terms)
+    return Config(
+        (profile.path / raw.get("store", "data/drug_reference.json")).resolve(),
+        fetch,
+        sections,
+        default,
+        int(raw.get("max_chars_per_section", 1500)),
+        int(raw.get("max_drugs_per_question", 2)),
+        frozenset(str(w).lower() for w in raw.get("not_a_drug") or []),
+        class_terms,
+    )
 
 
 def load_store(cfg: Config) -> dict:
@@ -91,6 +102,7 @@ def save_store(cfg: Config, store: dict) -> None:
 
 
 # --- which drugs and which sections the question asks about ---------------------------------------
+
 
 def sections_asked(query: str, cfg: Config) -> list[str]:
     q = query.lower()
@@ -131,11 +143,11 @@ def resolve(query: str, cfg: Config, store: dict) -> tuple[list[str], list[str]]
     not_drugs = []
     if cfg.fetch == "never":
         return found[: cfg.max_drugs], not_drugs
-    words = store.setdefault("lookups", {})       # word -> ingredients ([] = RxNorm had no such drug)
+    words = store.setdefault("lookups", {})  # word -> ingredients ([] = RxNorm had no such drug)
     for w in candidate_words(query, cfg, store):
         if len(found) >= cfg.max_drugs:
             break
-        if w in words:                                   # looked up before
+        if w in words:  # looked up before
             for ing in words[w]:
                 if ing not in found:
                     found.append(ing)
@@ -143,7 +155,7 @@ def resolve(query: str, cfg: Config, store: dict) -> tuple[list[str], list[str]]
         try:
             _, ings = fda.rxnorm(w, strict=True)
         except (OSError, ValueError, KeyError):
-            continue                                     # offline: this word stays unknown
+            continue  # offline: this word stays unknown
         words[w] = ings
         if not ings:
             not_drugs.append(w)
@@ -174,6 +186,7 @@ def ensure_labels(ingredients: list[str], cfg: Config, store: dict) -> list[str]
 
 # --- the answer -------------------------------------------------------------------------------------
 
+
 def label_id(lab: dict) -> str:
     return "lbl-" + lab["set_id"].replace("-", "")[:8]
 
@@ -196,6 +209,7 @@ def section_text(lab: dict, key: str, max_chars: int) -> str | None:
 def pair_mentions(a: str, b: str, cfg: Config, store: dict) -> list[dict]:
     """Where a's label mentions b, using the medication review's matching on this store."""
     from mcp_servers.medication_review import server as mr
+
     fake = type("C", (), {"labels": store, "sections": tuple(cfg.sections), "class_terms": cfg.class_terms or {}})()
     return mr.mentions(a, b, fake)
 
@@ -205,18 +219,25 @@ def reference(query: str, cfg: Config | None, store: dict | None = None) -> dict
     if cfg is None:
         return {"results": [], "note": "drug reference is not set up for this profile"}
     if MASK_TOKEN.search(query):
-        return {"results": [], "answer": "The drug reference is about medications, not patients, so I did not look "
-                                         "anything up for a named person. For a patient's own medications, ask for "
-                                         "the medication review or the chart brief, which read the record. (If you "
-                                         "named a medication and no person, it was taken for a name: an "
-                                         "administrator can add it to privacy/drug_names.txt, or run "
-                                         "scripts/fetch_drug_names.py to load every name RxNorm knows.)"}
+        return {
+            "results": [],
+            "answer": "The drug reference is about medications, not patients, so I did not look "
+            "anything up for a named person. For a patient's own medications, ask for "
+            "the medication review or the chart brief, which read the record. (If you "
+            "named a medication and no person, it was taken for a name: an "
+            "administrator can add it to privacy/drug_names.txt, or run "
+            "scripts/fetch_drug_names.py to load every name RxNorm knows.)",
+        }
     store = store if store is not None else load_store(cfg)
     ingredients, not_drugs = resolve(query, cfg, store)
     if not ingredients:
         hint = f" ({', '.join(not_drugs)} did not match a medication name)" if not_drugs else ""
-        return {"results": [], "answer": "I couldn't tell which medication to look up" + hint +
-                                         ". Please name the drug, for example: what does the label say about apixaban?"}
+        return {
+            "results": [],
+            "answer": "I couldn't tell which medication to look up"
+            + hint
+            + ". Please name the drug, for example: what does the label say about apixaban?",
+        }
     fetched = ensure_labels(ingredients, cfg, store)
     if fetched:
         save_store(cfg, store)
@@ -229,21 +250,33 @@ def reference(query: str, cfg: Config | None, store: dict | None = None) -> dict
             continue
         lid = label_id(lab)
         brands = f" ({', '.join(lab['brand_names'][:3])})" if lab.get("brand_names") else ""
-        results.append({"id": lid, "title": f"FDA label: {lab.get('title', ing)}",
-                        "text": f"{lab.get('title', ing)}, label version {_date(lab.get('effective_time'))}, "
-                                f"{DAILYMED.format(set_id=lab['set_id'])}", "data_classes": []})
-        lines += [f"FDA label for {lab.get('title', ing.title())}{brands}, version {_date(lab.get('effective_time'))}"
-                  f"{', fetched today' if ing in fetched else ''} [{lid}]. The label's own words, quoted; not advice."]
+        results.append(
+            {
+                "id": lid,
+                "title": f"FDA label: {lab.get('title', ing)}",
+                "text": f"{lab.get('title', ing)}, label version {_date(lab.get('effective_time'))}, "
+                f"{DAILYMED.format(set_id=lab['set_id'])}",
+                "data_classes": [],
+            }
+        )
+        lines += [
+            f"FDA label for {lab.get('title', ing.title())}{brands}, version {_date(lab.get('effective_time'))}"
+            f"{', fetched today' if ing in fetched else ''} [{lid}]. The label's own words, quoted; not advice."
+        ]
         shown = 0
         for key in asked:
             text = section_text(lab, key, cfg.max_chars)
             if text:
-                lines += ["", f"{cfg.sections[key]['title']}:", f"\"{text}\""]
+                lines += ["", f"{cfg.sections[key]['title']}:", f'"{text}"']
                 shown += 1
         if not shown:
-            lines += ["", f"This label has no {', '.join(cfg.sections[k]['title'].lower() for k in asked)} section on file. "
-                          "Sections on file: " + ", ".join(cfg.sections[k]["title"].lower() for k in lab.get("sections", {})
-                                                          if k in cfg.sections) + "."]
+            lines += [
+                "",
+                f"This label has no {', '.join(cfg.sections[k]['title'].lower() for k in asked)} section on file. "
+                "Sections on file: "
+                + ", ".join(cfg.sections[k]["title"].lower() for k in lab.get("sections", {}) if k in cfg.sections)
+                + ".",
+            ]
         lines += ["", f"Full label: {DAILYMED.format(set_id=lab['set_id'])}", ""]
     if len(ingredients) == 2 and all(i in store["ingredients"] for i in ingredients):
         a, b = ingredients
@@ -251,27 +284,41 @@ def reference(query: str, cfg: Config | None, store: dict | None = None) -> dict
         lines.append(f"{a.title()} and {b.title()} together:")
         if hits:
             for x, y, h in hits:
-                lines.append(f"- {x.title()} label, {cfg.sections.get(h['section'], {}).get('title', h['section'])} "
-                             f"[{label_id(store['ingredients'][x])}], mentions \"{h['term']}\": \"{h['quote']}\"")
+                lines.append(
+                    f"- {x.title()} label, {cfg.sections.get(h['section'], {}).get('title', h['section'])} "
+                    f'[{label_id(store["ingredients"][x])}], mentions "{h["term"]}": "{h["quote"]}"'
+                )
         else:
             lines.append("- Neither label mentions the other in the sections on file. That does not mean they are safe together.")
         lines.append("")
     if missing:
-        lines.append(f"No FDA prescription label was found for: {', '.join(missing)}"
-                     + (" (not fetched: this profile only uses labels already on file)" if cfg.fetch == "never" else "") + ".")
+        lines.append(
+            f"No FDA prescription label was found for: {', '.join(missing)}"
+            + (" (not fetched: this profile only uses labels already on file)" if cfg.fetch == "never" else "")
+            + "."
+        )
     if "dosage_and_administration" not in cfg.sections and re.search(r"\b(dos(e|es|ing|age)|how much|how many)\b", query, re.I):
         lines.append("Dosage is not quoted here: a dose is the prescriber's decision for a specific patient.")
-    lines.append("Source: FDA drug labels (openFDA), resolved through RxNorm (NLM). Labels may be out of date or "
-                 "incomplete; this is reference text for a clinician's judgment, not a recommendation.")
+    lines.append(
+        "Source: FDA drug labels (openFDA), resolved through RxNorm (NLM). Labels may be out of date or "
+        "incomplete; this is reference text for a clinician's judgment, not a recommendation."
+    )
     out = {"results": results, "answer": "\n".join(lines).strip()}
     if fetched:
-        out["fetched"] = [{"ingredient": i, "set_id": store["ingredients"][i]["set_id"],
-                           "effective_time": store["ingredients"][i].get("effective_time")} for i in fetched]
+        out["fetched"] = [
+            {
+                "ingredient": i,
+                "set_id": store["ingredients"][i]["set_id"],
+                "effective_time": store["ingredients"][i].get("effective_time"),
+            }
+            for i in fetched
+        ]
     return out
 
 
 if __name__ == "__main__":
     from mcp.server.fastmcp import FastMCP
+
     PROFILE = load_profile()
     try:
         CONFIG = load_config(PROFILE)
@@ -290,6 +337,8 @@ if __name__ == "__main__":
         print(f"Drug reference for profile {PROFILE.name}: not set up (no drug_reference.yaml)")
     else:
         n = len(load_store(CONFIG).get("ingredients") or {})
-        print(f"Drug reference for profile {PROFILE.name}: {n} label(s) on file, fetch {CONFIG.fetch}, "
-              f"{len(CONFIG.sections)} quotable section(s)")
+        print(
+            f"Drug reference for profile {PROFILE.name}: {n} label(s) on file, fetch {CONFIG.fetch}, "
+            f"{len(CONFIG.sections)} quotable section(s)"
+        )
     mcp.run(transport="streamable-http")
