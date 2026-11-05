@@ -170,6 +170,25 @@ class ApprovalState:
                      decided_by=event.get("approver"), decided_role=event.get("approver_role"))
         return a
 
+    def apply_raw(self, topic: str, raw: bytes | str | None) -> bool:
+        """Apply one event as read from Kafka. A malformed event (not JSON, not an object, a
+        missing field) is skipped and reported, never raised: one bad event must not stop the
+        executor from starting, or silently end the API's reader thread. Returns False if skipped."""
+        try:
+            event = json.loads(raw)
+            if not isinstance(event, dict):
+                raise TypeError("not an object")
+            self.apply(topic, event)
+            return True
+        except (ValueError, KeyError, TypeError, UnicodeDecodeError) as e:
+            print(f"Skipped a malformed event on {topic} ({type(e).__name__})", flush=True)
+            return False
+
+    def approved_not_executed(self) -> list[dict]:
+        """Approved, but no result recorded: the executor was down, or stopped, between the
+        decision and the change. Kept so that the executor can finish them on start."""
+        return [a for a in self.approvals.values() if a["status"] == "approved"]
+
     def pending(self) -> list[dict]:
         return [a for a in self.approvals.values() if a["status"] == "pending"]
 

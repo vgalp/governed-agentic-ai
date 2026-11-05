@@ -1,6 +1,8 @@
 """Governed web research (ADR 022): nothing personal leaves, only allowed sites are read, every page
 is a dated snapshot with an ID to cite, and a second model judges the answer. No network, no model."""
 
+import json
+
 import pytest
 
 from guardrails import faithfulness as fj
@@ -509,3 +511,76 @@ def test_a_more_precise_date_that_fits_the_pages_is_not_a_contradiction():
     assert d.allowed and info["warning"] and info["contradicted"] == 0
     reply = '{"unsupported": [{"claim": "Joe Biden is president", "why": "contradicted: Donald Trump"}], "verdict": "unsupported"}'
     assert not fj.check("x", pages, warn, lambda *a, **k: reply, ["web_research"], P)[0].allowed
+
+
+
+def test_a_contradiction_naming_the_person_the_answer_already_gives_is_not_one():
+    """Seen in testing: answer "Mark Carney"; judge: contradicted, "Mark Carney was Prime Minister since 2025"."""
+    answer = "The current Prime Minister of Canada is Mark Carney [web-c0dda199]."
+    why = "contradicted: Mark Carney was Prime Minister since 2025, but the sources state news from 2026"
+    assert fj.judge_agrees_with_the_answer(why, answer)
+    assert not fj.judge_agrees_with_the_answer("contradicted: Donald Trump", "The president is Joe Biden.")
+    warn = fj.FaithfulnessConfig(CFG.judge, CFG.for_tools, strict=True, mode="warn")
+    reply = json.dumps({"unsupported": [{"claim": "current Prime Minister of Canada", "why": why}], "verdict": "unsupported"})
+    d, info = fj.check(answer, "pages", warn, lambda *a, **k: reply, ["web_research"], P)
+    assert d.allowed and info["warning"]
+    reply = json.dumps({"unsupported": [{"claim": "Joe Biden is president", "why": "contradicted: Donald Trump"}],
+                        "verdict": "unsupported"})
+    assert not fj.check("The president is Joe Biden.", "pages", warn, lambda *a, **k: reply, ["web_research"], P)[0].allowed
+
+
+class Redirects(FakeSession):
+    """pages: url -> page text, or ("redirect", target)."""
+
+    def get(self, url, **kw):
+        self.fetched.append(url)
+        assert kw.get("allow_redirects") is False          # redirects are followed by hand, never by requests
+        page = self.pages.get(url)
+        if isinstance(page, tuple):
+            r = FakeResponse("", status=302)
+            r.headers["location"] = page[1]
+            return r
+        return FakeResponse(page, status=200) if page else FakeResponse("", status=404)
+
+
+@pytest.mark.parametrize("target", ["http://127.0.0.1:8080/", "https://127.0.0.1/", "https://evil.example.com/x",
+                                    "http://cdc.gov/insecure", "https://10.0.0.5/intranet"])
+def test_a_redirect_off_the_allowed_sites_or_to_this_network_is_not_followed(target):
+    sess = Redirects([], {"https://cdc.gov/go": ("redirect", target), target: PAGE})
+    assert wr.fetch("https://cdc.gov/go", SETTINGS, sess) is None
+    assert sess.fetched == ["https://cdc.gov/go"]          # the target was never requested
+
+
+def test_a_redirect_within_the_allowed_sites_is_followed_and_the_real_url_recorded():
+    sess = Redirects([], {"https://cdc.gov/old": ("redirect", "/new"), "https://cdc.gov/new": PAGE})
+    page = wr.fetch("https://cdc.gov/old", SETTINGS, sess)
+    assert page and page["url"] == "https://cdc.gov/new"
+
+
+def test_too_many_redirects_give_no_page():
+    pages = {f"https://cdc.gov/{i}": ("redirect", f"https://cdc.gov/{i + 1}") for i in range(10)}
+    assert wr.fetch("https://cdc.gov/0", SETTINGS, Redirects([], pages)) is None
+
+
+def test_local_addresses_are_private():
+    assert wr.host_is_private("127.0.0.1") and wr.host_is_private("192.168.1.10") and wr.host_is_private("::1")
+    assert not wr.host_is_private("8.8.8.8")
+
+
+@pytest.mark.parametrize("content, message", [
+    ("alow: [cdc.gov]\n", "unknown key"),               # misspelled: must not open every site
+    ("allow: []\n", "allow: must list"),
+    ("max_pages: 2\n", "allow: must list"),
+])
+def test_a_misspelled_or_empty_allow_list_is_refused(tmp_path, content, message):
+    (tmp_path / "web_research.yaml").write_text(content)
+
+    class P:
+        path = tmp_path
+    with pytest.raises(ValueError, match=message):
+        wr.load_settings(P())
+
+
+@pytest.mark.parametrize("name", ["general-assistant", "clinic-assistant", "clinic-epic", "county-benefits", "adhd-assistant"])
+def test_every_shipped_web_research_file_passes_the_key_check(name):
+    assert wr.load_settings(load_profile(name))["allow"]

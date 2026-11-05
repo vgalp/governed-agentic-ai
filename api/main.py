@@ -47,8 +47,12 @@ def consume_responses():
         msg = consumer.poll(1.0)
         if msg is None or msg.error():
             continue
-        data = json.loads(msg.value())
-        responses[data["request_id"]] = data
+        try:
+            data = json.loads(msg.value())
+            responses[data["request_id"]] = data
+        except (ValueError, KeyError, TypeError, UnicodeDecodeError) as e:
+            # One bad event must not end this thread: the API would answer "pending" forever.
+            print(f"Skipped a malformed event on chat.responses ({type(e).__name__})", flush=True)
 
 
 def consume_approvals():
@@ -63,7 +67,7 @@ def consume_approvals():
         msg = consumer.poll(1.0)
         if msg is None or msg.error():
             continue
-        approvals.apply(msg.topic(), json.loads(msg.value()))
+        approvals.apply_raw(msg.topic(), msg.value())
 
 
 @asynccontextmanager
@@ -94,8 +98,8 @@ class Turn(BaseModel):
 
 
 class ChatRequest(BaseModel):
-    user_id: str
-    message: str
+    user_id: str = Field(max_length=200)
+    message: str = Field(min_length=1, max_length=4000)   # same limit as a history turn; bounds work per request
     role: str | None = None     # demo only: a real deployment takes the role from sign-in
     history: list[Turn] = Field(default_factory=list, max_length=40)   # earlier turns, oldest first (ADR 019)
     web: bool | None = None     # the chat page's "Search the web" switch; None: the wording decides

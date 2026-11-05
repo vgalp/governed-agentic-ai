@@ -7,10 +7,9 @@ import sqlite3
 
 import pytest
 
+import mcp_servers.records.server as server  # noqa: E402  (a broken import must fail the run, not skip it)
 from guardrails.rules import check_input, check_output
 from profiles.loader import load_profile
-
-server = pytest.importorskip("mcp_servers.records.server")
 
 P = load_profile("county-benefits")
 MAP = P.records_map

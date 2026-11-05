@@ -26,7 +26,9 @@ Settings come from the profile's web_research.yaml:
 import asyncio
 import hashlib
 import html
+import ipaddress
 import re
+import socket
 import sys
 import urllib.parse
 from datetime import datetime, timezone
@@ -51,6 +53,8 @@ DEFAULTS = {
     "timeout_seconds": 10,
     "max_results": 8,
 }
+KNOWN_KEYS = set(DEFAULTS) | {"url"}
+MAX_REDIRECTS = 3
 
 
 def load_settings(profile: Profile) -> dict | None:
@@ -58,6 +62,11 @@ def load_settings(profile: Profile) -> dict | None:
     if not path.exists():
         return None
     raw = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    unknown = sorted(set(raw) - KNOWN_KEYS)
+    if unknown:                                  # a misspelled "alow:" must not silently allow every site
+        raise ValueError(f"{path.name}: unknown key(s) {', '.join(unknown)} (misspelled?)")
+    if not raw.get("allow"):
+        raise ValueError(f"{path.name}: allow: must list the sites that may be read (an empty list would allow every site)")
     s = {**DEFAULTS, **raw}
     s["allow"] = [d.lower().lstrip(".") for d in s["allow"] or []]
     s["deny"] = [d.lower().lstrip(".") for d in s["deny"] or []]
@@ -243,10 +252,39 @@ def wikipedia_search(query: str, settings: dict, s) -> list[dict]:
         return []
 
 
+def host_is_private(host: str) -> bool:
+    """True if the host is, or resolves to, an address on this machine or the local network
+    (loopback, private, link-local, reserved). A page must never be read from there: an allowed
+    site's redirect could otherwise point the reader at Kafka UI or an intranet page. A host that
+    does not resolve is not private here; the request then fails on its own."""
+    try:
+        addrs = [ipaddress.ip_address(host)]
+    except ValueError:
+        try:
+            addrs = [ipaddress.ip_address(a[4][0].split("%")[0]) for a in socket.getaddrinfo(host, 443)]
+        except (socket.gaierror, UnicodeError, ValueError):
+            return False
+    return any(a.is_private or a.is_loopback or a.is_link_local or a.is_reserved or a.is_unspecified for a in addrs)
+
+
 def fetch(url: str, settings: dict, session=None) -> dict | None:
+    """Read one page. Redirects are followed by hand, at most MAX_REDIRECTS, and every hop is checked
+    again (https, the allow-list, not a local address): an open redirect on an allowed site must
+    not lead anywhere else. The page is recorded under the URL it was actually read from."""
     s = session or requests.Session()
     try:
-        r = s.get(url, headers={"User-Agent": UA}, timeout=settings["timeout_seconds"], stream=True)
+        for _ in range(MAX_REDIRECTS + 1):
+            host = urllib.parse.urlparse(url).hostname or ""
+            if not domain_allowed(url, settings) or host_is_private(host):
+                return None
+            r = s.get(url, headers={"User-Agent": UA}, timeout=settings["timeout_seconds"], stream=True,
+                      allow_redirects=False)
+            if r.status_code in (301, 302, 303, 307, 308) and r.headers.get("location"):
+                url = urllib.parse.urljoin(url, r.headers["location"])
+                continue
+            break
+        else:
+            return None                          # too many redirects
         if r.status_code != 200 or "html" not in (r.headers.get("content-type") or ""):
             return None
         body = r.raw.read(400_000, decode_content=True).decode(r.encoding or "utf-8", errors="replace")
@@ -294,7 +332,7 @@ def research(query: str, settings: dict | None, session=None, progress=None) -> 
             pages.append(page)
             say(
                 f"Read {host}: {len(page['text']):,} characters, "
-                f"snapshot {snapshot_id(h['url'], page['text'][: settings['max_chars']])}"
+                f"snapshot {snapshot_id(page['url'], page['text'][: settings['max_chars']])}"
             )
         else:
             say(f"Could not read {host} (not HTML, too short, or no answer)")

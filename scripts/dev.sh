@@ -19,6 +19,10 @@ cd "$(dirname "$0")/.."
 LOG_DIR="logs"
 PY=".venv/bin/python"
 TOPICS="chat.requests chat.responses audit.model_inputs audit.tool_calls audit.guardrails audit.routing audit.approvals audit.input_agent agent.trace approvals.requested approvals.decided actions.executed"
+# Kept for good: the audit log and the approval history (the executor rebuilds its state from them).
+# Kafka's default deletes events after 7 days, and the audit check then reports clean chains as broken.
+# Chat and trace topics keep the default: they hold message text and should not be kept longer.
+KEEP_FOREVER="audit.model_inputs audit.tool_calls audit.guardrails audit.routing audit.approvals audit.input_agent approvals.requested approvals.decided actions.executed"
 export PYTHONUNBUFFERED=1   # write logs immediately
 export PROFILE="${PROFILE:-adhd-assistant}"   # which profile every service loads (see profiles/)
 # The Ollama models every profile needs, plus the active profile's own (read from its profile.yaml).
@@ -89,6 +93,10 @@ start_infra() {
   docker exec broker kafka-topics --bootstrap-server broker:29092 --list >/dev/null 2>&1 || fail "Kafka did not start"
   for t in $TOPICS; do
     docker exec broker kafka-topics --bootstrap-server broker:29092 --create --if-not-exists --topic "$t" >/dev/null
+  done
+  for t in $KEEP_FOREVER; do   # also fixes topics created before this setting existed
+    docker exec broker kafka-configs --bootstrap-server broker:29092 --alter --entity-type topics \
+      --entity-name "$t" --add-config retention.ms=-1 >/dev/null || fail "Could not set retention on $t"
   done
   ok "Kafka, topics"
   wait_for_port 8181 30 && ok "OPA" || fail "OPA did not start"

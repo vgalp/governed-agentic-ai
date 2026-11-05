@@ -15,7 +15,8 @@ _spec = importlib.util.spec_from_file_location("build_db", DATA / "build_db.py")
 build_db = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(build_db)
 
-server = pytest.importorskip("mcp_servers.records.server")
+import mcp_servers.records.server as server  # noqa: E402  (a broken import must fail the run, not skip it)
+
 ALL = list(load_profile("clinic-assistant").data_classes)      # everything: the clinician's view
 MAP = load_profile("clinic-assistant").records_map             # records.yaml
 

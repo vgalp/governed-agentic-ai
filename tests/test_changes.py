@@ -9,9 +9,8 @@ import sqlite3
 import pytest
 import yaml
 
+import mcp_servers.changes.server as server  # noqa: E402  (a broken import must fail the run, not skip it)
 from profiles.loader import ProfileError, load_profile, load_profile_from
-
-server = pytest.importorskip("mcp_servers.changes.server")
 
 COUNTY = load_profile("county-benefits")
 RELEASE = COUNTY.actions["release_payment"]

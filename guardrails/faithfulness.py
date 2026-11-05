@@ -115,6 +115,18 @@ MONTHS = {"january", "february", "march", "april", "may", "june", "july", "augus
           "november", "december"}
 
 
+NAME = re.compile(r"\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)+\b")   # two or more capitalised words: "Mark Carney"
+
+
+def judge_agrees_with_the_answer(why: str, answer: str) -> bool:
+    """A check on the judge. Seen in testing: the answer said "Mark Carney" and the judge called it
+    contradicted because "Mark Carney was Prime Minister since 2025". If the person the judge says the
+    pages name is already the person in the answer, the answer does not contradict the pages."""
+    said = why.split(":", 1)[1] if ":" in why else why
+    names = [n for n in NAME.findall(said) if n.split()[0].lower() not in MONTHS]
+    return any(n.lower() in answer.lower() for n in names)
+
+
 def is_a_real_contradiction(claim: str, notes_text: str) -> bool:
     """A check on the judge, which is a small model. Seen in testing: it called "term started January
     20, 2025" contradicted by pages saying "since 2025": a more precise date that fits. A date-only
@@ -158,7 +170,7 @@ def check(answer: str, notes_text: str, cfg: FaithfulnessConfig, chat, tools_use
         return (_withhold(profile, "judge reply unreadable") if cfg.strict else GuardrailDecision(True)), info
     if v["contradicted"]:                         # the judge's contradictions, checked (dates only)
         v["contradicted"] = sum(why.lower().startswith("contradicted") and is_a_real_contradiction(c, notes_text)
-                                for c, why in v["claims"])
+                                and not judge_agrees_with_the_answer(why, answer) for c, why in v["claims"])
     info["verdict"], info["unsupported"], info["contradicted"] = v["verdict"], len(v["unsupported"]), v["contradicted"]
     if not v["unsupported"]:                               # the list decides; a bare "unsupported" verdict
         return GuardrailDecision(True), info               # with nothing named is not a finding

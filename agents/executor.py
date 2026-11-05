@@ -12,8 +12,13 @@ The executor never talks to a language model and never reads the request text: i
 only on the validated arguments in the approval request.
 
 On start it first reads every approval event already in Kafka without acting on them,
-to rebuild its view of what is pending, then acts on new decisions only. The tool also
-refuses to make the same change twice (one change per approval ID).
+to rebuild its view of what is pending. Approvals that were approved but have no result (the
+executor was down, or stopped, between the decision and the change) are then finished: the
+change tool refuses to make the same change twice (one change per approval ID), so finishing one
+that was in fact made only records its result. After that it acts on new decisions.
+
+Nothing runs at import: main() connects to Kafka. Tests set PROFILE, producer and audit and call
+the functions directly.
 """
 
 import json
@@ -33,10 +38,11 @@ from profiles.loader import load_profile
 
 AGENT_NAME = "executor"
 BOOTSTRAP = "localhost:9092"
-PROFILE = load_profile()
 
-producer = Producer({"bootstrap.servers": BOOTSTRAP, "enable.idempotence": True})
-audit = get_audit_chain(AGENT_NAME)
+# Set by main() (or by a test).
+PROFILE = None
+producer = None
+audit = None
 state = actions.ApprovalState()
 
 
@@ -132,6 +138,33 @@ def on_decision(approval: dict, decision: dict) -> None:
                    reasons=None if status == "done" else [result.get("reason", "failed")])
 
 
+def handle_decision(approval: dict, decision: dict) -> None:
+    """on_decision, guarded: an unexpected error (a renamed action, a malformed date) is recorded
+    as a failed result instead of stopping the executor, which would leave the approval approved
+    and never carried out."""
+    try:
+        on_decision(approval, decision)
+    except Exception as e:
+        print(f"Executor error on {approval.get('approval_id')} ({type(e).__name__})", flush=True)
+        try:
+            audit_approval(approval, "failed", reasons=[f"executor error ({type(e).__name__})"])
+            publish_result(approval, "failed", decision, reasons=[f"executor error ({type(e).__name__})"])
+        except Exception as e2:              # Kafka itself is failing: nothing more to do here
+            print(f"Could not record the failure ({type(e2).__name__})", flush=True)
+
+
+def finish_interrupted() -> int:
+    """After catch-up: carry out approvals that were approved but have no result. Safe to repeat:
+    the change tool does each approval ID once and answers "already_done" for a repeat."""
+    todo = state.approved_not_executed()
+    for a in todo:
+        decision = {"decision": "approve", "approver": a.get("decided_by"), "approver_role": a.get("decided_role"),
+                    "decided_at": a.get("decided_at"), "note": a.get("note")}
+        handle_decision(a, decision)
+        a["status"] = "executing"            # the result event comes back around and sets the final status
+    return len(todo)
+
+
 def expire_overdue() -> None:
     """Approvals not decided in time expire. The decision is published like any other."""
     for a in state.overdue(datetime.now()):
@@ -162,42 +195,57 @@ def catch_up(consumer: Consumer) -> None:
         msg = consumer.poll(1.0)
         if msg is None or msg.error():
             continue
-        state.apply(msg.topic(), json.loads(msg.value()))
+        state.apply_raw(msg.topic(), msg.value())     # a malformed event is skipped, not fatal
         if msg.offset() + 1 >= ends[(msg.topic(), msg.partition())]:
             done.add((msg.topic(), msg.partition()))
 
 
-consumer = Consumer({
-    "bootstrap.servers": BOOTSTRAP,
-    "group.id": f"executor-{uuid.uuid4()}",     # reads from the start every time; state comes from Kafka
-    "auto.offset.reset": "earliest",
-    "enable.auto.commit": False,
-})
-catch_up(consumer)
-print(f"Executor agent listening on approvals (profile {PROFILE.name}, actions {list(PROFILE.actions)}, "
-      f"{len(state.pending())} pending)...")
-
-last_sweep = 0.0
-while True:
-    if time.time() - last_sweep > 5:
-        expire_overdue()
-        last_sweep = time.time()
-    msg = consumer.poll(1.0)
-    if msg is None or msg.error():
-        continue
+def on_event(topic: str, raw) -> None:
+    """One live event from Kafka."""
     try:
-        topic, event = msg.topic(), json.loads(msg.value())
-    except (json.JSONDecodeError, UnicodeDecodeError):
-        print(f"Skipped an event that is not JSON on {msg.topic()}", flush=True)   # one bad event, not a dead executor
-        continue
+        event = json.loads(raw)
+    except (ValueError, UnicodeDecodeError):
+        print(f"Skipped an event that is not JSON on {topic}", flush=True)   # one bad event, not a dead executor
+        return
     if not isinstance(event, dict):
-        continue
+        return
     if topic == actions.DECIDED:
         approval = state.approvals.get(event.get("approval_id"))
         if approval is None or approval["status"] not in {"pending", "expiring"}:
-            continue                           # unknown, or already decided: ignore
+            return                             # unknown, or already decided: ignore
         approval["status"] = "pending"
-        state.apply(topic, event)
-        on_decision(approval, event)
+        state.apply_raw(topic, raw)
+        handle_decision(approval, event)
     else:
-        state.apply(topic, event)
+        state.apply_raw(topic, raw)
+
+
+def main() -> None:
+    global PROFILE, producer, audit
+    PROFILE = load_profile()
+    producer = Producer({"bootstrap.servers": BOOTSTRAP, "enable.idempotence": True})
+    audit = get_audit_chain(AGENT_NAME)
+    consumer = Consumer({
+        "bootstrap.servers": BOOTSTRAP,
+        "group.id": f"executor-{uuid.uuid4()}",     # reads from the start every time; state comes from Kafka
+        "auto.offset.reset": "earliest",
+        "enable.auto.commit": False,
+    })
+    catch_up(consumer)
+    finished = finish_interrupted()
+    print(f"Executor agent listening on approvals (profile {PROFILE.name}, actions {list(PROFILE.actions)}, "
+          f"{len(state.pending())} pending, {finished} interrupted approval(s) finished)...", flush=True)
+
+    last_sweep = 0.0
+    while True:
+        if time.time() - last_sweep > 5:
+            expire_overdue()
+            last_sweep = time.time()
+        msg = consumer.poll(1.0)
+        if msg is None or msg.error():
+            continue
+        on_event(msg.topic(), msg.value())
+
+
+if __name__ == "__main__":
+    main()

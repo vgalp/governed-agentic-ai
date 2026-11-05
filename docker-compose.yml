@@ -1,9 +1,12 @@
+# Every port is published on 127.0.0.1 only: Kafka (plaintext, no sign-in), OPA (its REST API can
+# replace policies) and Kafka UI must never be reachable from the office network. A deployment beyond
+# one machine needs Kafka SASL/TLS with ACLs and OPA authentication (docs/audit-2026-11.md, B2).
 services:
   opa:
     image: openpolicyagent/opa:1.21.1
     container_name: opa
     ports:
-      - "8181:8181"
+      - "127.0.0.1:8181:8181"
     command: ["run", "--server", "--addr", ":8181", "--watch", "/policies"]
     volumes:
       - ./policies:/policies
@@ -12,7 +15,7 @@ services:
     hostname: broker
     container_name: broker
     ports:
-      - "9092:9092"
+      - "127.0.0.1:9092:9092"
     environment:
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: 'broker,controller'
@@ -38,7 +41,7 @@ services:
     depends_on:
       - broker
     ports:
-      - "8081:8081"
+      - "127.0.0.1:8081:8081"
     environment:
       SCHEMA_REGISTRY_HOST_NAME: schema-registry
       SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: 'broker:29092'
@@ -51,7 +54,7 @@ services:
       - broker
       - schema-registry
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
     environment:
       KAFKA_CLUSTERS_0_NAME: local
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: broker:29092
