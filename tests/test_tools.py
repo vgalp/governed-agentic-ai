@@ -205,3 +205,25 @@ def test_records_questions_never_go_to_the_web(name):
     for q in ["What are the current medications for Harold Brinkley?", "What is the latest visit for Jesse Wolf?",
               "What documents is Maria Lopez missing?", "What is our cancellation policy?"]:
         assert "web_research" not in tools_to_call(p, "planner", q)[1], q
+
+
+
+@pytest.mark.parametrize("name", WEB_PROFILES)
+def test_the_web_switch_decides_when_the_person_sets_it(name):
+    """The chat page's "Search the web" switch: on, the web alone; off, never the web, whatever the
+    wording; not sent (API callers), the wording decides as before."""
+    from agents.tool_choice import tools_to_call
+    p = load_profile(name)
+    plain = "What are the CDC's flu vaccine recommendations?"
+    worded = "Search the web for the CDC's flu vaccine recommendations"
+    assert tools_to_call(p, "planner", plain, web=True) == (["web_research"], ["web_research"])
+    on, _ = tools_to_call(p, "planner", worded, web=False)
+    assert "web_research" not in on and tools_to_call(p, "planner", worded, web=False)[1] == []
+    assert tools_to_call(p, "planner", worded)[1] == ["web_research"]
+
+
+def test_the_web_switch_never_bypasses_the_role():
+    from agents.tool_choice import route
+    p = load_profile("clinic-assistant")
+    assert route(p, "planner", "compliance", "flu vaccine guidance", web=True)["tools"] == ["web_research"]
+    assert route(p, "planner", "nobody", "flu vaccine guidance", web=True)["allowed"] is False

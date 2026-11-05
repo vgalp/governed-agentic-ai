@@ -38,7 +38,8 @@ models:
     api_key_env: ANTHROPIC_API_KEY
   judge:
     provider: ollama
-    name: llama3.1:8b           # a different family judges answers written from web pages (ADR 022)
+    name: qwen2.5:7b            # judges answers written from web pages (ADR 022); a different model from the answering one.
+                                # Chosen over llama3.1:8b, which held back correct answers in testing (2026-11-04)
     location: local
     temperature: 0
 

@@ -98,6 +98,7 @@ class ChatRequest(BaseModel):
     message: str
     role: str | None = None     # demo only: a real deployment takes the role from sign-in
     history: list[Turn] = Field(default_factory=list, max_length=40)   # earlier turns, oldest first (ADR 019)
+    web: bool | None = None     # the chat page's "Search the web" switch; None: the wording decides
 
 
 @app.get("/", include_in_schema=False)
@@ -173,6 +174,7 @@ def profile_info():
         "title": PROFILE.title,
         "roles": [{"key": k, "title": r.title} for k, r in PROFILE.roles.items()],
         "examples": list(PROFILE.examples),
+        "web": any(t.data_label == "web_page" for t in PROFILE.tools.values()),   # show the web switch
         # Off for a profile served only through the governed endpoint (no pipeline chat running).
         "chat": os.environ.get("DASHBOARD_CHAT", "on") != "off",
     }
@@ -183,11 +185,13 @@ def health():
     return {"status": "ok"}
 
 
-def submit(user_id: str, message: str, role: str | None, history: list[dict]) -> str:
+def submit(user_id: str, message: str, role: str | None, history: list[dict], web: bool | None = None) -> str:
     """Put a message on the pipeline. Every entry point (/chat, /v1/chat/completions) goes through here."""
     request_id = str(uuid.uuid4())
     event = {"request_id": request_id, "user_id": user_id, "message": message, "role": role,
              "profile": PROFILE.name, "history": history}
+    if web is not None:
+        event["web"] = web
     producer.produce("chat.requests", key=request_id, value=json.dumps(event))
     producer.flush()
     return request_id
@@ -195,7 +199,7 @@ def submit(user_id: str, message: str, role: str | None, history: list[dict]) ->
 
 @app.post("/chat")
 def send_chat(req: ChatRequest):
-    return {"request_id": submit(req.user_id, req.message, req.role, [t.model_dump() for t in req.history])}
+    return {"request_id": submit(req.user_id, req.message, req.role, [t.model_dump() for t in req.history], req.web)}
 
 
 @app.get("/v1/models")

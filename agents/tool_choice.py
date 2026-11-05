@@ -11,9 +11,22 @@ evaluation scores (eval/run_tool_use.py).
 from profiles.loader import Profile
 
 
-def tools_to_call(profile: Profile, agent: str, message: str) -> tuple[list[str], list[str]]:
-    """(tools to call, of those the ones the question triggered)."""
+def web_tools(profile: Profile, agent: str) -> list[str]:
+    """The agent's tools that read the public web (data label web_page)."""
+    return [t for t in profile.agents.get(agent, ()) if profile.tools[t].data_label == "web_page"]
+
+
+def tools_to_call(profile: Profile, agent: str, message: str, web: bool | None = None) -> tuple[list[str], list[str]]:
+    """(tools to call, of those the ones the question triggered).
+
+    web is the person's own switch ("Search the web" in the chat page). True: the web tools alone,
+    as if the question had asked for them. False: never a web tool, whatever the wording. None (a
+    caller without the switch, such as the OpenAI-compatible API): the wording decides, as before."""
     granted = profile.agents.get(agent, ())
+    if web is True and web_tools(profile, agent):
+        return web_tools(profile, agent), web_tools(profile, agent)
+    if web is False:
+        granted = tuple(t for t in granted if t not in web_tools(profile, agent))
     triggered = [t for t in granted if profile.tools[t].when and profile.tools[t].when.search(message)]
     return (triggered or [t for t in granted if not profile.tools[t].when]), triggered
 
@@ -27,7 +40,7 @@ def tool_denied_reply(profile: Profile, tool: str, role: str | None) -> str:
         roles=", ".join(who) or "no role in this organization")
 
 
-def route(profile: Profile, agent: str, role: str | None, message: str) -> dict:
+def route(profile: Profile, agent: str, role: str | None, message: str, web: bool | None = None) -> dict:
     """Where the planner sends a question that passed the input checks, and whether the role may go there.
 
     path      "change:<action>" (a proposal for a person to approve), "tool:<name>" (a tool the
@@ -43,7 +56,7 @@ def route(profile: Profile, agent: str, role: str | None, message: str) -> dict:
     if action:
         allowed = not roles or role in action.propose_roles
         return {"path": f"change:{action.name}", "allowed": allowed, "tools": [action.tool] if allowed else []}
-    to_call, triggered = tools_to_call(profile, agent, message)
+    to_call, triggered = tools_to_call(profile, agent, message, web)
     may = (lambda t: True) if not roles else (lambda t: role in roles and t in roles[role].tools)
     if triggered:
         tool = triggered[0]

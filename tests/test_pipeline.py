@@ -331,3 +331,19 @@ def test_the_stages_and_checks_are_lists_a_reviewer_can_read():
         "check_answer",
     ]
     assert [c.layer for c in checks.OUTPUT_CHECKS] == ["rules", "grounding", "classifier", "faithfulness"]
+
+
+
+def test_the_web_switch_from_the_chat_page_reaches_the_tool_choice(monkeypatch):
+    page = {"id": "web-1a2b3c4d", "title": "Page", "text": "Flu shots are advised every year.", "url": "https://x.gov/a"}
+    results = {"web_research": {"results": [page], "query_sent": "flu", "hits": 1, "searched": "duckduckgo"},
+               "search_knowledge": {"results": []}}
+    rt = make_runtime("general-assistant", results, answer="Every year [web-1a2b3c4d].",
+                      judge='{"unsupported": [], "verdict": "supported"}', monkeypatch=monkeypatch)
+    out = handle(rt, {"request_id": "w1", "message": "How often should adults get a flu shot?", "web": True})
+    assert [c[0] for c in rt.calls["tools"]] == ["web_research"]    # no web words, but the switch was on
+    assert out.sources and out.sources[0]["id"] == "web-1a2b3c4d"
+    rt = make_runtime("general-assistant", results, answer="Once a year, in general.", monkeypatch=monkeypatch)
+    out = handle(rt, {"request_id": "w2", "message": "Search the web: how often should adults get a flu shot?",
+                      "web": False})
+    assert "web_research" not in [c[0] for c in rt.calls["tools"]]   # switched off: no page read, whatever the wording

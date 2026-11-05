@@ -26,7 +26,7 @@ from agents import actions, conversation
 from agents.pipeline import checks
 from agents.pipeline.context import Outcome, Request
 from agents.pipeline.runtime import Runtime
-from agents.tool_choice import tool_denied_reply, tools_to_call
+from agents.tool_choice import tool_denied_reply, tools_to_call, web_tools
 from agents.trace import Trace, ids_text, masking_summary
 from gateway.gateway import ToolCallDenied, ToolFailed
 from guardrails.classifier import crisis_over_rule, input_check
@@ -334,7 +334,11 @@ def call_tools(rt: Runtime, r: Request) -> Outcome | None:
     as receiving identifiers (a records lookup needs the real name); the audit still records masked
     text. A tool with `when` is called only for questions matching its pattern, and then alone."""
     P, t = rt.profile, r.trace
-    to_call, r.triggered = tools_to_call(P, rt.agent_name, r.message)
+    web = r.raw.get("web") if isinstance(r.raw.get("web"), bool) else None   # the chat page's switch
+    to_call, r.triggered = tools_to_call(P, rt.agent_name, r.message, web)
+    if web is not None and web_tools(P, rt.agent_name):
+        t.step("knowledge", "web_switch", "info", "Web search on (the person's choice)" if web
+               else "Web search off (the person's choice): records and approved notes only")
     for tool in to_call:
         spec = P.tools[tool]
         receives_ids = tool in P.identifier_tools
