@@ -44,9 +44,26 @@ def test_crisis_flags_are_never_exempt():
 
 
 def test_profile_without_exemptions_never_overrides():
-    adhd = load_profile("adhd-assistant")
-    assert adhd.classifier_exemptions == () and adhd.source_id_pattern is None
-    assert classifier_exemption("What medications is she taking?", S2, adhd) is None
+    general = load_profile("general-assistant")
+    assert general.classifier_exemptions == ()
+    flag = GuardrailDecision(False, "professional_decision", "classifier: S2", "x")
+    assert classifier_exemption("What medications is she taking?", flag, general) is None
+
+
+@pytest.mark.parametrize("name", ["clinic-assistant", "clinic-epic", "adhd-assistant"])
+def test_a_web_search_is_exempt_only_without_decision_words(name):
+    p = load_profile(name)
+    assert classifier_exemption("Search the web for the CDC guidance on flu season", S2, p)
+    assert classifier_exemption("Search the web for how much apixaban we should give", S2, p) is None
+    crisis = GuardrailDecision(False, "crisis", "classifier: S1", "x")
+    assert classifier_exemption("Search the web for ways to end my life", crisis, p) is None
+
+
+def test_a_county_web_search_asking_for_an_eligibility_call_is_not_exempt():
+    p = load_profile("county-benefits")
+    flag = GuardrailDecision(False, "eligibility_decision", "classifier: S2", "x")
+    assert classifier_exemption("Search the web for SNAP income limits in Ohio", flag, p)
+    assert classifier_exemption("Search the web: is this applicant eligible for SNAP?", flag, p) is None
 
 
 # --- answers -------------------------------------------------------------------
@@ -99,3 +116,13 @@ def test_exemption_without_cancelling_words_is_rejected(copy_of_clinic):
     _edit(copy_of_clinic / "rules.yaml", lambda d: d["classifier_exemptions"][0].pop("none"))
     with pytest.raises(ProfileError, match="needs 'none'"):
         load_profile_from(copy_of_clinic)
+
+
+def test_an_invented_citation_in_parentheses_is_blocked():
+    """Seen in testing: a clinic answer from general knowledge cited "(wik-1)", a source it was never given."""
+    d = check_citations("(wik-1) The current Prime Minister of Canada is Justin Trudeau.", [], CLINIC)
+    assert not d.allowed and "wik-1" in d.reason
+    assert check_citations("Clinic hours are 8 to 5 (kb-cl-002).", ["kb-cl-002"], CLINIC).allowed
+    for prose in ("Take it with food (5 mg tablets are listed).", "Updated guidance (2024) applies.",
+                  "This is general information (not from the clinic's records)."):
+        assert check_citations(prose, [], CLINIC).allowed, prose

@@ -372,7 +372,8 @@ def call_tools(rt: Runtime, r: Request) -> Outcome | None:
             continue
         except Exception as e:  # noqa: BLE001  a tool that fails is "no results", not a dead planner
             kind = "failed" if isinstance(e, ToolFailed) else f"unreachable ({type(e).__name__})"
-            print(f"Tool {tool} {kind}: {str(e)[:300]}", flush=True)
+            # No error text in the log: it can hold record data.
+            print(f"Tool {tool} {kind} ({type(e).__name__}): {r.request_id}", flush=True)
             t.step(lane, tool, "error", f"{tool} {kind}; treated as no results", returned=0)
             r.empty_notes[tool] = f"the {tool.replace('_', ' ')} tool {kind}"
             if receives_ids:
@@ -800,6 +801,6 @@ def fail(rt: Runtime, raw: dict, error: Exception) -> None:
             else "Sorry, I can't answer right now. Please try again shortly.",
             [],
             {"stage": "model", "layer": "pipeline", "category": "pipeline_error"},
-            log=f"Request failed ({type(error).__name__}: {str(error)[:300]}): {request_id}",
+            log=f"Request failed ({type(error).__name__}): {request_id}",   # the type only: error text can hold record data
         ),
     )

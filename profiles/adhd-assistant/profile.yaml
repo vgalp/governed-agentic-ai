@@ -28,6 +28,12 @@ models:
 
 # Which model answers each request. Decided by OPA (policies/routing.rego) and audited;
 # the router also enforces that external models only ever receive masked text.
+  judge:
+    provider: ollama
+    name: llama3.1:8b           # a different family judges answers written from web pages (ADR 022)
+    location: local
+    temperature: 0
+
 routing:
   local_model: local
   external_model: null        # key in models, or null for none
@@ -65,6 +71,9 @@ privacy:
   # Dates and times are left out for now: planning answers depend on them.
   # Medication names are not personal information; never mask them
   # (Presidio sometimes mistakes brand names for people's names).
+  # The model runs on this computer; it sees place names so a question about a place can be answered.
+  # People and contact details stay masked.
+  local_model_sees: [LOCATION]
   allow_list: [Adderall, Ritalin, Vyvanse, Concerta, Focalin, Dexedrine, Strattera, Qelbree,
                Intuniv, Wellbutrin, methylphenidate, atomoxetine, guanfacine, clonidine, bupropion]
 
@@ -74,7 +83,7 @@ knowledge_base: data/knowledge_base.json
 # Which tools each agent may call. Sent to OPA, which denies everything else.
 agents:
   planner:
-    tools: [search_knowledge]
+    tools: [search_knowledge, web_research]
 
 # Shown as example buttons on the chat page.
 examples:
@@ -83,3 +92,12 @@ examples:
   - Everyone would be better off without me.
   - Do I have ADHD?
   - Remind Sarah Lee to call me at 416-555-0199 about the report.
+
+# A second model checks answers written from web pages against the pages (ADR 022). The judge must
+# not be an answering model. strict: an unreadable judge reply withholds the answer in mode withhold;
+# in mode warn it is sent with the warning note, since nothing was found contradicted.
+faithfulness:
+  judge: judge
+  for_tools: [web_research]
+  strict: true
+  mode: warn                # a fact the pages contradict withholds; one they do not mention is sent with a warning

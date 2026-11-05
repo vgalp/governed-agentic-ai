@@ -19,6 +19,7 @@ call without a tenant, and any returned record for another tenant, or with none,
 
 import asyncio
 import json
+from datetime import timedelta
 
 from mcp import ClientSession
 from mcp.client.streamable_http import streamablehttp_client
@@ -71,14 +72,30 @@ def filter_results(results: list[dict], allowed: list[str]) -> tuple[list[dict],
     return kept, len(results) - len(kept)
 
 
-async def _call(server_url: str, tool: str, args: dict, on_progress=None) -> dict:
+DEFAULT_TOOL_TIMEOUT = 30.0   # seconds; a tool may set its own in tools.yaml (timeout:)
+
+
+async def _call(server_url: str, tool: str, args: dict, on_progress=None,
+                timeout: float | None = None) -> dict:
     """on_progress(message): a tool's MCP log messages, as it works (web research reports each
-    page read); the planner shows them in the trace. Text only, never results."""
+    page read); the planner shows them in the trace. Text only, never results.
+
+    timeout bounds the whole call: a tool server that accepts the connection and then hangs
+    fails the request (ToolFailed) instead of holding the planner until Kafka evicts it."""
+    limit = timeout or DEFAULT_TOOL_TIMEOUT
+    try:
+        return await asyncio.wait_for(_call_once(server_url, tool, args, on_progress, limit), limit)
+    except TimeoutError:
+        raise ToolFailed(f"{tool} did not answer within {limit:g} s") from None
+
+
+async def _call_once(server_url: str, tool: str, args: dict, on_progress, limit: float) -> dict:
     async def logged(params) -> None:
         if on_progress is not None and params.level in ("info", "notice", "warning"):
             on_progress(str(params.data)[:300])
-    async with streamablehttp_client(server_url) as (read, write, _):
-        async with ClientSession(read, write, logging_callback=logged if on_progress else None) as session:
+    async with streamablehttp_client(server_url, timeout=min(limit, 30.0), sse_read_timeout=limit) as (read, write, _):
+        async with ClientSession(read, write, read_timeout_seconds=timedelta(seconds=limit),
+                                 logging_callback=logged if on_progress else None) as session:
             await session.initialize()
             result = await session.call_tool(tool, args)
             text = result.content[0].text if result.content and hasattr(result.content[0], "text") else ""
@@ -141,7 +158,8 @@ def call_tool(agent: str, tool: str, args: dict, request_id: str,
         args = {**args, "allowed_classes": classes}
         event["args"]["allowed_classes"] = classes
     try:
-        result = asyncio.run(_call(profile.tools[tool].server, tool, args, on_progress))
+        result = asyncio.run(_call(profile.tools[tool].server, tool, args, on_progress,
+                                 profile.tools[tool].timeout))
     except Exception as e:
         _audit({**event, "decision": "allow", "error": type(e).__name__})
         raise

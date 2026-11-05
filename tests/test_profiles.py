@@ -21,9 +21,9 @@ def test_adhd_profile_contents():
     p = load_profile("adhd-assistant")
     assert p.local_model["provider"] == "ollama" and p.local_model["location"] == "local"
     assert p.routing["external_allowed"] is False and p.external_model is None
-    assert p.agents == {"planner": ("search_knowledge",)}
+    assert p.agents == {"planner": ("search_knowledge", "web_research")}
     data = p.policy_data()
-    assert data["agents"] == {"planner": {"tools": ["search_knowledge"]}}
+    assert data["agents"] == {"planner": {"tools": ["search_knowledge", "web_research"]}}
     assert data["routing"]["external_allowed"] is False
     assert [c.category for c in p.classifier.categories][0] == "crisis"   # crisis first
     assert "988" in p.response("crisis")

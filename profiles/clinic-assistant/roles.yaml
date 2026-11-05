@@ -20,7 +20,7 @@ data_classes:
 roles:
   clinician:
     title: Clinician
-    tools: [search_knowledge, search_records, reschedule_appointment, medication_review, chart_brief, drug_reference]   # may approve changes
+    tools: [search_knowledge, search_records, reschedule_appointment, medication_review, chart_brief, drug_reference, web_research]   # may approve changes
     data_classes: [patient_details, appointments, visit_dates, visit_clinical, medications, problems, allergies, vitals, claims]
     # The same requests are blocked for every role; only the wording changes.
     # This assistant never recommends treatment, even to clinicians.
@@ -38,13 +38,13 @@ roles:
         such as current medications and past visits, to support your decision.
   nurse:
     title: Nurse
-    tools: [search_knowledge, search_records, reschedule_appointment, chart_brief, drug_reference]   # may approve changes
+    tools: [search_knowledge, search_records, reschedule_appointment, chart_brief, drug_reference, web_research]   # may approve changes
     data_classes: [patient_details, appointments, visit_dates, visit_clinical, medications, problems, allergies, vitals]
   front_desk:
     title: Front desk and billing
-    tools: [search_knowledge, search_records]
+    tools: [search_knowledge, search_records, web_research]
     data_classes: [patient_details, appointments, visit_dates, claims]
   compliance:
     title: Compliance officer
-    tools: [search_knowledge]          # no patient records; the audit tool comes in phase 6
+    tools: [search_knowledge, web_research]          # no patient records; the audit tool comes in phase 6
     data_classes: []

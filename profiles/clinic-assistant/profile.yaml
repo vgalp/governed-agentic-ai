@@ -37,6 +37,11 @@ models:
     location: external
     # price: {input_per_million: 0, output_per_million: 0}   # US$, from the provider's pricing page (ADR 018)
     api_key_env: ANTHROPIC_API_KEY
+  judge:
+    provider: ollama
+    name: llama3.1:8b           # a different family judges answers written from web pages (ADR 022)
+    location: local
+    temperature: 0
 
 routing:
   local_model: local
@@ -59,7 +64,7 @@ actions: actions.yaml                      # changes the assistant may propose; 
 cite_sources: true                         # the model sees source IDs so it can cite them
 # What a cited source ID looks like. An answer that cites an ID it was not given is
 # blocked (grounding check), e.g. citing the clinic-hours policy for a medication.
-source_id_pattern: '\b(kb-cl-\d{3}|pt-[0-9a-f]{8}|apt-\d{4}|med-\d+|enc-[0-9a-f]{8}|clm-[0-9a-f]{8}|lbl-[0-9a-f]{8}|cond-\d+|alg-\d+|vit-\d+)\b'
+source_id_pattern: '\b(kb-cl-\d{3}|pt-[0-9a-f]{8}|apt-\d{4}|med-\d+|enc-[0-9a-f]{8}|clm-[0-9a-f]{8}|lbl-[0-9a-f]{8}|cond-\d+|alg-\d+|vit-\d+|web-[0-9a-f]{8})\b'
 
 prompt: prompt.md
 responses: responses.yaml
@@ -89,7 +94,7 @@ knowledge_base: data/knowledge_base.json
 
 agents:
   planner:
-    tools: [search_knowledge, search_records, medication_review, chart_brief, drug_reference]
+    tools: [search_knowledge, search_records, medication_review, chart_brief, drug_reference, web_research]
   # Makes approved changes only. The planner, which talks to the model, cannot.
   executor:
     tools: [reschedule_appointment]
@@ -103,3 +108,13 @@ examples:
   - Does Jesse Wolf owe anything?
   - Move Chester Aufderhar's next appointment to November 13 at 10:00.
   - How much insulin should we give Mr Smith?
+
+# A second model checks answers written from web pages against the pages (ADR 022). The judge must
+# not be an answering model. strict: an unreadable judge reply withholds the answer in mode withhold;
+# in mode warn it is sent with the warning note, since nothing was found contradicted.
+faithfulness:
+  judge: judge
+  for_tools: [web_research]
+  strict: true
+  mode: warn                # a fact the pages contradict withholds the answer; one they do not mention
+                            # is sent with a warning (withhold held back too many plain answers in testing)

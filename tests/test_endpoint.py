@@ -140,7 +140,7 @@ def gateway_fakes(monkeypatch, rows):
     monkeypatch.setattr(gateway, "_is_allowed", lambda p, a, t, r, tenant=None: True)
     monkeypatch.setattr(gateway, "_audit", events.append)
 
-    async def fake_call(url, tool, args, on_progress=None):
+    async def fake_call(url, tool, args, on_progress=None, timeout=None):
         seen.update(args)
         return {"results": rows}
     monkeypatch.setattr(gateway, "_call", fake_call)
@@ -331,6 +331,22 @@ def test_introspection_is_cached_briefly_and_rechecked():
     t["now"] = 31.0                                                # a revoked client stops within 30 s
     i.identify("tok")
     assert len(asked) == 2
+
+
+def test_the_token_cache_is_bounded_and_drops_the_least_recently_used():
+    answers = {f"t{n}": Resp(200, {"active": True, "client_id": f"c{n}"}) for n in range(5)}
+    i, asked, _ = introspector(answers)
+    i.max_entries = 3
+    for n in range(3):
+        i.identify(f"t{n}")
+    i.identify("t0")                                   # t0 used again: t1 is now the oldest
+    i.identify("t3")
+    assert len(i._cache) == 3
+    before = len(asked)
+    i.identify("t0")                                   # still cached
+    assert len(asked) == before
+    i.identify("t1")                                   # dropped, asked again
+    assert len(asked) == before + 1
 
 
 def test_unknown_location_is_treated_as_external():

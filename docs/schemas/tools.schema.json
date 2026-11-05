@@ -83,6 +83,20 @@
       "title": "Tenant Scoped",
       "type": "boolean"
     },
+    "timeout": {
+      "anyOf": [
+        {
+          "exclusiveMinimum": 0,
+          "maximum": 600,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Timeout"
+    },
     "when": {
       "anyOf": [
         {

@@ -154,6 +154,7 @@ class ToolSpec(Strict):
     answer: Literal["model", "direct"] = "model"
     keeps: list[str] = []  # masked entity types restored in the query (never PERSON)
     on_empty: str | None = None  # a reply in responses.yaml
+    timeout: float | None = Field(default=None, gt=0, le=600)  # seconds; default 30 (gateway)
 
 
 class ToolsFile(Strict):

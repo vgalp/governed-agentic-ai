@@ -20,3 +20,4 @@ web_research:
   keeps: [LOCATION]                        # a place is the question ("rules in Ontario"); people never
   on_empty: no_web_pages                   # responses.yaml: if no page could be read, say so; no model
                                            # answers a current-events question from memory
+  timeout: 90                              # seconds: a search plus several pages at 10 s each

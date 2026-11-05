@@ -40,6 +40,9 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Verify the tamper-evident audit trail.")
     parser.add_argument("--file", help="verify a saved JSONL file instead of reading Kafka")
     parser.add_argument("--export", help="save the events read from Kafka to this JSONL file")
+    parser.add_argument("--allow-unkeyed", action="store_true",
+                        help="accept chains written without AUDIT_HMAC_KEY even though a key is set "
+                             "(only for chains written before the key existed)")
     args = parser.parse_args()
 
     if args.file:
@@ -54,7 +57,7 @@ def main() -> int:
 
     chained = [r for r in records if "audit" in r]
     legacy = len(records) - len(chained)
-    problems = verify_chain(chained, key_from_env())
+    problems = verify_chain(chained, key_from_env(), allow_unkeyed=args.allow_unkeyed)
     chains = {r["audit"]["chain_id"] for r in chained}
 
     print(f"Events read: {len(records)} ({len(chained)} chained in {len(chains)} chain(s), {legacy} written before chaining)")

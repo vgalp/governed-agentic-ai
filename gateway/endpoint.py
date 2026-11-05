@@ -51,6 +51,7 @@ import re
 import threading
 import time
 import uuid
+from collections import OrderedDict
 from dataclasses import dataclass, field
 
 import anyio
@@ -94,12 +95,16 @@ class Unauthorized(Exception):
 
 class Introspector:
     """Asks the organization's own system who a token belongs to (RFC 7662 style), and trusts the
-    answer for a short time. Fails closed: no answer, or anything malformed, means no access."""
+    answer for a short time. Fails closed: no answer, or anything malformed, means no access.
 
-    def __init__(self, url: str, secret: str, cache_seconds: int, post=requests.post, clock=time.monotonic):
+    The cache holds at most max_entries tokens, least recently used dropped first: a caller sending
+    random tokens cannot grow it without bound (each failed token is kept 2 s, to slow retries)."""
+
+    def __init__(self, url: str, secret: str, cache_seconds: int, post=requests.post, clock=time.monotonic,
+                 max_entries: int = 10_000):
         self.url, self.secret, self.cache_seconds = url, secret, cache_seconds
-        self._post, self._clock = post, clock
-        self._cache: dict[str, tuple[Identity | None, float]] = {}
+        self._post, self._clock, self.max_entries = post, clock, max_entries
+        self._cache: OrderedDict[str, tuple[Identity | None, float]] = OrderedDict()
         self._lock = threading.Lock()
 
     def identify(self, token: str | None) -> Identity | None:
@@ -110,10 +115,14 @@ class Introspector:
         with self._lock:
             hit = self._cache.get(key)
             if hit and hit[1] > now:
+                self._cache.move_to_end(key)
                 return hit[0]
         identity = self._ask(token)
         with self._lock:
             self._cache[key] = (identity, now + (self.cache_seconds if identity else 2))
+            self._cache.move_to_end(key)
+            while len(self._cache) > self.max_entries:
+                self._cache.popitem(last=False)
         return identity
 
     def _ask(self, token: str) -> Identity | None:

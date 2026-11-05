@@ -111,7 +111,9 @@ def faithfulness_judge(rt: Runtime, r: Request) -> GuardrailDecision | None:
         "faithfulness",
         "pass" if d.allowed else "block",
         (
-            f"{verdict['judge']}: {verdict['unsupported']} claim(s) not found in the pages, none contradicted; "
+            f"{verdict['judge']}: its reply could not be read; nothing found contradicted, answer sent with a warning"
+            if verdict.get("warning") and verdict.get("unreadable")
+            else f"{verdict['judge']}: {verdict['unsupported']} claim(s) not found in the pages, none contradicted; "
             "answer sent with a warning"
             if verdict.get("warning")
             else f"{verdict['judge']}: every claim is in the sources"

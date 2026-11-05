@@ -48,7 +48,7 @@ class FakeSession:
 
 
 def test_settings_come_from_the_profile_and_only_https_allowed_sites_pass():
-    assert SETTINGS["search"] == "duckduckgo" and SETTINGS["max_pages"] == 3
+    assert SETTINGS["search"] == "duckduckgo" and SETTINGS["max_pages"] == 2
     assert wr.domain_allowed("https://988lifeline.org/chat", SETTINGS)
     assert wr.domain_allowed("https://www.cdc.gov/x", SETTINGS)  # suffix match
     assert wr.domain_allowed("https://www.samhsa.gov/x", SETTINGS)  # any .gov
@@ -168,7 +168,8 @@ def test_the_judge_runs_only_for_answers_from_judged_tools():
 
 
 def test_strict_withholds_when_the_judge_cannot_be_read_or_reached():
-    d, info = fj.check("x", NOTES, CFG, lambda *a, **k: "I think it is fine.", ["web_research"], P)
+    withhold = fj.FaithfulnessConfig(CFG.judge, CFG.for_tools, strict=True, mode="withhold")
+    d, info = fj.check("x", NOTES, withhold, lambda *a, **k: "I think it is fine.", ["web_research"], P)
     assert not d.allowed and info["unreadable"] and "unreadable" in d.reason
 
     def down(*a, **k):
@@ -186,13 +187,32 @@ def test_parse_verdict_is_forgiving_about_wrapping_but_not_shape():
         "verdict": "supported",
         "unsupported": [],
         "contradicted": 0,
+        "claims": [],
     }
     assert fj.parse_verdict('{"unsupported": "not a list", "verdict": "x"}') == {
         "verdict": "x",
         "unsupported": [],
         "contradicted": 0,
+        "claims": [],
     }
     assert fj.parse_verdict("{}") is None and fj.parse_verdict("no json") is None
+
+
+@pytest.mark.parametrize("reply", [
+    '```json\n{"unsupported": [], "verdict": "supported"}\n```',
+    'Here is my check:\n{"unsupported": [], "verdict": "supported",}\nAll good.',
+    '{"unsupported": []}',
+])
+def test_the_judge_reply_is_read_through_fences_prose_and_trailing_commas(reply):
+    assert fj.parse_verdict(reply)["verdict"] == "supported"
+
+
+def test_in_warn_mode_an_unreadable_judge_reply_sends_the_answer_with_the_note():
+    """Seen in testing: llama3.1 answered in prose, and every web answer in the clinic was withheld.
+    Nothing was found contradicted, so in warn mode the answer goes out with the not_confirmed note."""
+    warn = fj.FaithfulnessConfig(CFG.judge, CFG.for_tools, strict=True, mode="warn")
+    d, info = fj.check("x", NOTES, warn, lambda *a, **k: "I think it is fine.", ["web_research"], P)
+    assert d.allowed and info["unreadable"] and info["warning"]
 
 
 def test_the_loader_refuses_a_judge_that_also_answers(tmp_path):
@@ -473,3 +493,19 @@ def test_the_loader_checks_the_faithfulness_mode(tmp_path):
     (dst / "profile.yaml").write_text(yaml.safe_dump(y, sort_keys=False))
     with pytest.raises(ProfileError, match="faithfulness.mode: Input should be"):
         load_profile_from(dst)
+
+
+
+def test_a_more_precise_date_that_fits_the_pages_is_not_a_contradiction():
+    """Seen in testing: llama3.1 called "term started January 20, 2025" contradicted by "since 2025"."""
+    pages = "Donald Trump, 45th and 47th president, in office 2017-2021 and since 2025."
+    assert not fj.is_a_real_contradiction("Term started: January 20, 2025", pages)
+    assert fj.is_a_real_contradiction("Joe Biden is the current president", pages)        # a name: as judged
+    assert fj.is_a_real_contradiction("The current president is Biden, since 2021", pages)
+    assert fj.is_a_real_contradiction("Term started January 20, 2029", pages)              # year not in pages
+    warn = fj.FaithfulnessConfig(CFG.judge, CFG.for_tools, strict=True, mode="warn")
+    reply = '{"unsupported": [{"claim": "Term started: January 20, 2025", "why": "contradicted: 2017-2021; since 2025"}], "verdict": "unsupported"}'
+    d, info = fj.check("x", pages, warn, lambda *a, **k: reply, ["web_research"], P)
+    assert d.allowed and info["warning"] and info["contradicted"] == 0
+    reply = '{"unsupported": [{"claim": "Joe Biden is president", "why": "contradicted: Donald Trump"}], "verdict": "unsupported"}'
+    assert not fj.check("x", pages, warn, lambda *a, **k: reply, ["web_research"], P)[0].allowed

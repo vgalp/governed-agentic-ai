@@ -310,12 +310,12 @@ def test_medication_review_reads_medication_requests_and_uses_rxnorm_codes(tmp_p
 # --- the profile -----------------------------------------------------------------------------------
 
 def test_the_epic_profile_is_the_clinic_with_another_records_source():
-    for f in ("rules.yaml", "responses.yaml", "prompt.md", "classifier_policy.md"):
+    for f in ("rules.yaml", "responses.yaml", "prompt.md", "classifier_policy.md", "web_research.yaml"):
         assert (EPIC.path / f).read_text() == (CLINIC.path / f).read_text(), f"{f} drifted from clinic-assistant"
     assert EPIC.classifier.guard_policy == CLINIC.classifier.guard_policy
     assert EPIC.records_map is None and EPIC.fhir_map is not None and not EPIC.actions
     assert EPIC.roles["clinician"].tools == ("search_knowledge", "search_records", "medication_review",
-                                             "medication_list", "chart_brief", "drug_reference")
+                                             "medication_list", "chart_brief", "drug_reference", "web_research")
     assert "medication_review" not in EPIC.roles["nurse"].tools and "medication_list" in EPIC.roles["nurse"].tools
     assert "medication_list" not in EPIC.roles["front_desk"].tools
     assert EPIC.tools["search_records"].server.endswith(":8104/mcp")
@@ -378,3 +378,29 @@ def test_a_medication_list_is_the_record_s_own_lines_with_no_model(tmp_path):
     assert "not available to your role (Front desk and billing)" in tool_denied_reply(p, "medication_list", "front_desk")
     assert "date of birth" in medication_list(None, p, load_config(p), "What medications is Nora Testwell taking?",
                                               ["medications"], FhirClient(BASE, session=FakeServer()))["answer"]
+
+
+def test_links_outside_the_server_are_refused_by_host_not_by_string_prefix():
+    """Audit finding SC-14: `startswith(base)` let a look-alike host through."""
+    c = FhirClient("https://fhir.example.org/api/FHIR/R4", session=FakeServer())
+    assert c._inside_base("https://fhir.example.org/api/FHIR/R4/Patient?x=1")
+    assert not c._inside_base("https://fhir.example.org.evil.net/api/FHIR/R4/Patient")
+    assert not c._inside_base("http://fhir.example.org/api/FHIR/R4/Patient")             # scheme
+    assert not c._inside_base("https://fhir.example.org/api/FHIR/R4other/Patient")       # path prefix
+    with pytest.raises(FhirError, match="refusing to follow a link outside"):
+        c._get("https://fhir.example.org.evil.net/api/FHIR/R4/Patient")
+
+
+def test_an_error_message_carries_the_path_not_the_search():
+    class Fails:
+        def get(self, url, params=None, headers=None, timeout=None):
+            class R:
+                status_code, headers, text = 500, {}, "oops"
+
+                def json(self):
+                    raise ValueError
+            return R()
+    c = FhirClient("https://fhir.example.org/R4", session=Fails())
+    with pytest.raises(FhirError) as e:
+        c._get("https://fhir.example.org/R4/Condition?patient=eXYZ123&_count=20")
+    assert "/Condition" in str(e.value) and "eXYZ123" not in str(e.value) and "patient=" not in str(e.value)

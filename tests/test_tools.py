@@ -31,7 +31,7 @@ def clinic_copy(tmp_path):
 def test_clinic_tools_are_described_in_one_place():
     p = load_profile("clinic-assistant")
     assert set(p.tools) == {"search_knowledge", "search_records", "reschedule_appointment", "medication_review",
-                            "chart_brief", "drug_reference"}
+                            "chart_brief", "drug_reference", "web_research"}
     records = p.tools["search_records"]
     assert records.server == "http://127.0.0.1:8101/mcp" and records.kind == "read"
     assert records.receives_identifiers and records.role_filtered
@@ -42,7 +42,8 @@ def test_old_settings_are_derived_from_the_registry():
     p = load_profile("clinic-assistant")
     assert p.tool_data_labels == {"search_knowledge": "approved_content", "search_records": "patient_record",
                                   "reschedule_appointment": "patient_record", "medication_review": "patient_record",
-                                  "chart_brief": "patient_record", "drug_reference": "approved_content"}
+                                  "chart_brief": "patient_record", "drug_reference": "approved_content",
+                                  "web_research": "web_page"}
     assert p.identifier_tools == ("search_records", "medication_review", "chart_brief")
     assert p.role_filtered_tools == ("search_records", "medication_review", "chart_brief")
 
@@ -57,7 +58,7 @@ def test_gateway_uses_the_profile_server(monkeypatch):
     p = load_profile("adhd-assistant")
     seen = {}
 
-    async def fake_call(url, tool, args, on_progress=None):
+    async def fake_call(url, tool, args, on_progress=None, timeout=None):
         seen["url"] = url
         return {"results": []}
     monkeypatch.setattr(gateway, "_call", fake_call)
@@ -157,3 +158,50 @@ def test_old_tool_settings_point_to_tools_yaml(clinic_copy):
         clinic_copy("profile.yaml", lambda d: d.update(tool_data_labels={"search_knowledge": "x"}))
     with pytest.raises(ProfileError, match="moved to tools.yaml"):
         clinic_copy("roles.yaml", lambda d: d.update(filtered_tools=["search_records"]))
+
+
+def test_a_tool_that_hangs_fails_within_its_timeout_instead_of_holding_the_planner(monkeypatch):
+    import asyncio
+
+    from gateway.gateway import ToolFailed
+
+    async def hangs(server_url, tool, args, on_progress, limit):
+        await asyncio.sleep(10)
+    monkeypatch.setattr(gateway, "_call_once", hangs)
+    with pytest.raises(ToolFailed, match="did not answer within 0.05 s"):
+        asyncio.run(gateway._call("http://x/mcp", "slow_tool", {}, timeout=0.05))
+
+
+def test_a_tool_timeout_is_read_from_tools_yaml_and_checked():
+    from profiles import schema
+    assert load_profile("general-assistant").tools["web_research"].timeout == 90
+    assert load_profile("general-assistant").tools["search_knowledge"].timeout is None
+    with pytest.raises(schema.SchemaError, match="timeout"):
+        schema.validate(schema.ToolSpec, {"server": "http://x", "kind": "read", "data_label": "d", "timeout": 0}, "t")
+
+
+WEB_PROFILES = ["general-assistant", "clinic-assistant", "clinic-epic", "county-benefits", "adhd-assistant"]
+
+
+@pytest.mark.parametrize("name", WEB_PROFILES)
+def test_every_profile_can_search_the_web_with_a_judge_and_no_personal_details(name):
+    from agents.tool_choice import tools_to_call
+    p = load_profile(name)
+    web = p.tools["web_research"]
+    assert web.data_label == "web_page" and not web.receives_identifiers and web.keeps == ("LOCATION",)
+    assert web.on_empty == "no_web_pages" and (p.path / "web_research.yaml").exists()
+    assert "web_research" in p.agents["planner"]
+    assert all("web_research" in r.tools for r in p.roles.values())
+    assert p.faithfulness["judge"] == "judge" and "web_research" in p.faithfulness["for_tools"]
+    for q in ["Search the web for who the prime minister of Canada is", "Do a websearch who is the current pm of canada?",
+              "do a web-search on flu season", "google it: SNAP income limits"]:
+        assert tools_to_call(p, "planner", q)[1] == ["web_research"], q
+
+
+@pytest.mark.parametrize("name", ["clinic-assistant", "clinic-epic", "county-benefits"])
+def test_records_questions_never_go_to_the_web(name):
+    from agents.tool_choice import tools_to_call
+    p = load_profile(name)
+    for q in ["What are the current medications for Harold Brinkley?", "What is the latest visit for Jesse Wolf?",
+              "What documents is Maria Lopez missing?", "What is our cancellation policy?"]:
+        assert "web_research" not in tools_to_call(p, "planner", q)[1], q

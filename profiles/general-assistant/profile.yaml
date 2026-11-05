@@ -80,7 +80,8 @@ agents:
     tools: [search_knowledge, web_research]
 
 # A second model checks answers written from web pages against the pages (ADR 022). The judge must
-# not be an answering model. strict: an unreadable judge reply withholds the answer.
+# not be an answering model. strict: an unreadable judge reply withholds the answer in mode withhold;
+# in mode warn it is sent with the warning note, since nothing was found contradicted.
 faithfulness:
   judge: judge
   for_tools: [web_research]

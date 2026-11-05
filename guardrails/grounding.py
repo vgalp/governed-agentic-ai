@@ -11,6 +11,9 @@ a check on the pattern alone passes it. Any bracketed token that looks like an i
 (letters with digits, no spaces) and is not a given ID is therefore also blocked. Masking
 placeholders such as [PERSON_1] are not citations and are left alone. Fabricated placeholders
 such as [METFORMIN_DOSE] are caught by the profile's output rules, not here.
+
+Models also cite in parentheses. A clinic answer to "who is the PM of Canada", given no pages,
+cited "(wik-1)": an ID-shaped token in parentheses that is not a given ID is blocked the same way.
 """
 
 import re
@@ -21,6 +24,9 @@ from profiles.loader import Profile
 # [web-1a2b3c4d] [W1234567890] [2023-10-01] [doc 12] but not [PERSON_1] (a masking placeholder),
 # not [see below] and not plain prose in brackets.
 ID_LIKE = re.compile(r"\[(?![A-Z_]+_\d+\])([A-Za-z0-9][A-Za-z0-9 _.:/-]{2,40})\]")
+# The same in parentheses, where models also cite: "(kb-cl-002)", and invented ones like "(wik-1)".
+# Only the shape of a source ID (lowercase prefix, hyphen, a digit), so "(5 mg)" or "(2024)" are prose.
+PAREN_ID = re.compile(r"\(([a-z]{2,8}(?:-[a-z]{1,4})?-[0-9a-z]*\d[0-9a-z]*)\)")
 
 
 def looks_like_an_id(token: str) -> bool:
@@ -34,7 +40,7 @@ def check_citations(answer: str, given_ids: list[str], profile: Profile) -> Guar
     given = set(given_ids)
     cited = {m.group(0) for m in profile.source_id_pattern.finditer(answer)}
     unknown = sorted(cited - given)
-    invented = sorted({m.group(1) for m in ID_LIKE.finditer(answer)
+    invented = sorted({m.group(1) for m in (*ID_LIKE.finditer(answer), *PAREN_ID.finditer(answer))
                        if looks_like_an_id(m.group(1)) and m.group(1) not in given
                        and not profile.source_id_pattern.fullmatch(m.group(1))})
     if unknown or invented:

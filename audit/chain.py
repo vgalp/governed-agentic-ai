@@ -8,9 +8,12 @@ If AUDIT_HMAC_KEY is set, hashes are HMAC-SHA256 with that key, so someone who
 can edit the log but does not hold the key cannot recompute a valid chain.
 Without a key, plain SHA-256 still detects accidental or careless changes.
 
-Each event records which algorithm signed it ("hmac-sha256" or "sha256"), so
-chains written before a key was configured can still be checked, and are
-reported as unkeyed rather than as tampered.
+Each event records which algorithm signed it ("hmac-sha256" or "sha256"). The
+verifier does not take that field on trust: when a key is configured here, a
+record that claims "sha256" is a problem, because anyone can rewrite a chain,
+relabel it "sha256" and recompute plain hashes. Chains written before a key was
+configured are checked only when the caller says so (allow_unkeyed=True), and
+a chain that switches algorithm part way is always a problem.
 
 Known limit: deleting the most recent events (truncation) leaves a valid chain.
 Publishing the latest hash somewhere separate (a checkpoint) closes that gap;
@@ -26,8 +29,10 @@ import time
 import uuid
 
 GENESIS = "0" * 64
+# Every topic an AuditChain writes to. A topic missing here is never read by the verifier or the
+# dashboard, so its events show as gaps in the chain (audit.input_agent was missing until 2026-11).
 AUDIT_TOPICS = ["audit.guardrails", "audit.model_inputs", "audit.tool_calls", "audit.routing",
-                "audit.approvals"]
+                "audit.approvals", "audit.input_agent"]
 
 
 def _canonical(record: dict) -> bytes:
@@ -81,10 +86,15 @@ class AuditChain:
         return record
 
 
-def verify_chain(records: list[dict], key: bytes | None) -> list[str]:
+ALGS = ("hmac-sha256", "sha256")
+
+
+def verify_chain(records: list[dict], key: bytes | None, allow_unkeyed: bool = False) -> list[str]:
     """Check chained audit records. Returns a list of problems; empty means intact.
 
-    Unkeyed chains are checked with plain SHA-256; see `unkeyed_chains` to list them.
+    The algorithm is decided by the verifier, not by the record: with a key configured, every
+    record must be keyed, unless allow_unkeyed=True (checking chains written before the key
+    existed, on purpose). Without a key, keyed records cannot be checked and are reported.
     """
     problems = []
     chains: dict[str, list[dict]] = {}
@@ -94,6 +104,10 @@ def verify_chain(records: list[dict], key: bytes | None) -> list[str]:
     for chain_id, entries in chains.items():
         entries.sort(key=lambda r: r["audit"]["seq"])
         expected_seq, expected_prev = 0, GENESIS
+        algs = {r["audit"].get("alg") for r in entries}
+        if len(algs) > 1:
+            problems.append(f"{chain_id}: mixes signing algorithms ({', '.join(sorted(map(str, algs)))}); "
+                            "a chain is written with one, so this one was rewritten")
         for r in entries:
             a = r["audit"]
             if a["seq"] != expected_seq:
@@ -101,10 +115,15 @@ def verify_chain(records: list[dict], key: bytes | None) -> list[str]:
             if a["prev_hash"] != expected_prev:
                 problems.append(f"{chain_id} seq {a['seq']}: does not link to the previous event")
             unhashed = {**r, "audit": {k: v for k, v in a.items() if k != "hash"}}
-            keyed = a.get("alg") == "hmac-sha256"
-            if keyed and key is None:
+            alg = a.get("alg")
+            if alg not in ALGS:
+                problems.append(f"{chain_id} seq {a['seq']}: unknown signing algorithm {alg!r}")
+            elif alg == "hmac-sha256" and key is None:
                 problems.append(f"{chain_id} seq {a['seq']}: signed with a key, but AUDIT_HMAC_KEY is not set here")
-            elif compute_hash(unhashed, key if keyed else None) != a["hash"]:
+            elif alg == "sha256" and key is not None and not allow_unkeyed:
+                problems.append(f"{chain_id} seq {a['seq']}: not signed with the key, though a key is configured "
+                                "(a rewritten chain looks exactly like this)")
+            elif compute_hash(unhashed, key if alg == "hmac-sha256" else None) != a["hash"]:
                 problems.append(f"{chain_id} seq {a['seq']}: content does not match its hash (changed after writing)")
             expected_seq, expected_prev = a["seq"] + 1, a["hash"]
     return problems

@@ -29,6 +29,12 @@ year, a number, a price, a rule or law, a direct quotation, a place. Names and d
 facts most often invented from memory: check each one against the SOURCES' own words, and if
 the SOURCES say a different person or date, the claim is unsupported.
 
+"contradicted" means the SOURCES give a DIFFERENT value for the same fact: another person, a year
+that cannot be the same one, another number. A claim that is more precise than the SOURCES but fits
+them is "not in sources", never "contradicted". Example: SOURCES "in office 2017-2021 and since
+2025", ANSWER "his term started January 20, 2025": the year fits, the day is not stated, so
+{"claim": "term started January 20, 2025", "why": "not in sources"}.
+
 The following are SUPPORTED and must not be listed: summaries or paraphrases of what the
 SOURCES say; general descriptions ("a manga series about pirates") when the SOURCES describe the
 same thing; the assistant's advice to see a professional or to read the pages; statements that
@@ -62,19 +68,35 @@ def load_config(profile) -> FaithfulnessConfig | None:
                               str(raw.get("mode", "withhold")))
 
 
+def _json_object(text: str) -> dict | None:
+    """The judge's JSON object, read leniently: local models wrap it in ```json fences, add a
+    sentence before or after it, or leave a trailing comma. Anything still unreadable is None."""
+    text = re.sub(r"```(?:json)?", "", text or "")
+    start = text.find("{")
+    while start != -1:
+        end = text.rfind("}")
+        while end > start:
+            chunk = re.sub(r",\s*([}\]])", r"\1", text[start:end + 1])
+            try:
+                d = json.loads(chunk)
+                if isinstance(d, dict):
+                    return d
+            except json.JSONDecodeError:
+                pass
+            end = text.rfind("}", start, end)
+        start = text.find("{", start + 1)
+    return None
+
+
 def parse_verdict(text: str) -> dict | None:
     """The judge's JSON, or None if it did not answer in JSON."""
-    m = re.search(r"\{.*\}", text or "", re.S)
-    if not m:
+    d = _json_object(text)
+    if d is None or ("verdict" not in d and "unsupported" not in d):
         return None
-    try:
-        d = json.loads(m.group(0))
-    except json.JSONDecodeError:
-        return None
-    if not isinstance(d, dict) or "verdict" not in d:
-        return None
+    if "verdict" not in d:                                # the list alone is enough to decide
+        d["verdict"] = "unsupported" if d.get("unsupported") else "supported"
     claims = d.get("unsupported")
-    unsupported, contradicted = [], 0
+    unsupported, contradicted, pairs = [], 0, []
     for c in claims if isinstance(claims, list) else []:
         if isinstance(c, dict):                           # {"claim": ..., "why": ...}
             text = str(c.get("claim", "")).strip()
@@ -82,9 +104,29 @@ def parse_verdict(text: str) -> dict | None:
                 why = str(c.get("why") or "")
                 unsupported.append((text + (f" ({why})" if why else ""))[:200])
                 contradicted += why.lower().startswith("contradicted")
+                pairs.append((text, why))
         elif str(c).strip():
             unsupported.append(str(c)[:200])
-    return {"verdict": str(d["verdict"]).lower().strip(), "unsupported": unsupported, "contradicted": contradicted}
+    return {"verdict": str(d["verdict"]).lower().strip(), "unsupported": unsupported, "contradicted": contradicted,
+            "claims": pairs}
+
+
+MONTHS = {"january", "february", "march", "april", "may", "june", "july", "august", "september", "october",
+          "november", "december"}
+
+
+def is_a_real_contradiction(claim: str, notes_text: str) -> bool:
+    """A check on the judge, which is a small model. Seen in testing: it called "term started January
+    20, 2025" contradicted by pages saying "since 2025": a more precise date that fits. A date-only
+    claim (no name, no number other than a day or year) whose years all appear in the pages is
+    treated as "not in sources", never "contradicted". A claim naming someone stays as the judge said."""
+    words = re.findall(r"[A-Za-z]+", claim)
+    names = [w for i, w in enumerate(words) if w[0].isupper() and i > 0 and w.lower() not in MONTHS]
+    years = set(re.findall(r"\b(1[89]\d\d|20\d\d)\b", claim))
+    other_numbers = [n for n in re.findall(r"\d+", claim) if n not in years and int(n) > 31]
+    if names or other_numbers or not years:
+        return True
+    return not years <= set(re.findall(r"\b(1[89]\d\d|20\d\d)\b", notes_text))
 
 
 def judge_messages(notes_text: str, answer: str) -> list[dict]:
@@ -108,7 +150,15 @@ def check(answer: str, notes_text: str, cfg: FaithfulnessConfig, chat, tools_use
     info = {"ran": True, "judge": cfg.judge["name"]}
     if v is None:
         info["unreadable"] = True
+        if os.environ.get("FAITHFULNESS_DEBUG"):  # development only: to the console, never the trace or audit
+            print("faithfulness: unreadable judge reply:", (raw or "")[:500], flush=True)
+        if cfg.mode == "warn":                    # nothing was found contradicted: send it, with the note
+            info["warning"] = True
+            return GuardrailDecision(True), info
         return (_withhold(profile, "judge reply unreadable") if cfg.strict else GuardrailDecision(True)), info
+    if v["contradicted"]:                         # the judge's contradictions, checked (dates only)
+        v["contradicted"] = sum(why.lower().startswith("contradicted") and is_a_real_contradiction(c, notes_text)
+                                for c, why in v["claims"])
     info["verdict"], info["unsupported"], info["contradicted"] = v["verdict"], len(v["unsupported"]), v["contradicted"]
     if not v["unsupported"]:                               # the list decides; a bare "unsupported" verdict
         return GuardrailDecision(True), info               # with nothing named is not a finding

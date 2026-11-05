@@ -19,6 +19,8 @@ deny:
   - facebook.com
   - x.com
   - twitter.com
-max_pages: 3
-max_chars: 6000
+# Kept small so the pages, the question and the instructions fit a local model's context window
+# (Ollama's default is a few thousand tokens; past it the start of the prompt is dropped).
+max_pages: 2
+max_chars: 4500
 timeout_seconds: 10

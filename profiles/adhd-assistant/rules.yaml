@@ -72,6 +72,13 @@ patterns:
       - '|should not be (mixed|combined|taken)|(is|are) (not )?(safe|unsafe|dangerous) to)\b'
 
 # Checked on the user's ORIGINAL message, before masking, tools or the model.
+  # An explicit request to look something up on the web (tools.yaml web_research `when`). Only these
+  # words: "current" or "latest" would catch "current medications" and send a records question to
+  # the web. The web never sees personal details (names are masked; only places are kept).
+  web_research:
+    regex: '\b(search (the )?(web|internet)|search online|web[ -]?search|look (it |this |that )?up online|find (it |this |that )?online|(on|from) the (web|internet)|google (it|this|that|for))\b'
+
+
 input:
   - {category: crisis, reason: crisis language in input, any: [crisis]}
   - {category: crisis, reason: suicide warning sign in input, any: [warning_sign]}
@@ -88,3 +95,10 @@ output:
      all: [medication], any: [output_advice, timing_advice, effect_claim]}
   - {category: crisis, reason: model answer contains crisis language, any: [crisis]}
   - {category: diagnosis, reason: model answer suggests a diagnosis, any: [diagnosis_affirm]}
+
+# Narrow cases where an INPUT classifier flag is overridden. Crisis flags never are (the loader
+# refuses it). Searching the web for public information (ADR 022), with no medication or diagnosis
+# question in it: the answer is checked against the pages and by the output rules.
+classifier_exemptions:
+  - {category: medical_advice, reason: "web search with no medication or diagnosis question (public pages, checked against them)",
+     any: [web_research], none: [medication, dose_intent, dose_amount, diagnosis_request]}

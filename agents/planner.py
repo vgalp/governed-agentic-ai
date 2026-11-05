@@ -53,7 +53,10 @@ def main() -> None:
                              "classifier input_engine to llamaguard.") from e
     toxicity.load()                   # now, so the first answer is not slowed by loading it
     consumer = Consumer({"bootstrap.servers": BOOTSTRAP, "group.id": "planner-agent",
-                         "auto.offset.reset": "earliest", "enable.auto.commit": False})
+                         "auto.offset.reset": "earliest", "enable.auto.commit": False,
+                         # one request can take minutes on a laptop (several model calls); without this the
+                         # broker evicts the planner after 5 minutes and the commit fails (audit OC-1)
+                         "max.poll.interval.ms": 900_000})
     producer = Producer({"bootstrap.servers": BOOTSTRAP, "enable.idempotence": True})
     consumer.subscribe(["chat.requests"])
     rt = build(profile, producer, get_audit_chain(AGENT_NAME), AGENT_NAME)
@@ -71,15 +74,34 @@ def main() -> None:
         if msg.error():
             print("Kafka error:", msg.error(), flush=True)
             continue
-        raw = json.loads(msg.value())
+        process(rt, msg.value())
         try:
-            handle(rt, raw)
-        except Exception as e:        # noqa: BLE001  one bad request must not stop the service
-            try:
-                fail(rt, raw, e)      # the person gets a reply, the audit gets the failure
-            except Exception as e2:   # noqa: BLE001
-                print(f"Request failed ({type(e).__name__}) and could not reply ({type(e2).__name__})", flush=True)
-        consumer.commit(message=msg)
+            consumer.commit(message=msg)
+        except Exception as e:        # noqa: BLE001  a failed commit means the message is seen again, not a dead planner
+            print(f"Commit failed ({type(e).__name__}); the request may be processed again", flush=True)
+
+
+def process(rt, value: bytes) -> str:
+    """One chat.requests message, never raising: a message that is not a request is skipped (and
+    committed by the caller, so it cannot crash the planner on every restart); a request that
+    raises gets the fixed reply and an audit entry. Returns what happened, for tests and logs."""
+    try:
+        raw = json.loads(value)
+    except (ValueError, TypeError):
+        print("Skipped a chat.requests message that is not JSON", flush=True)
+        return "skipped"
+    if not isinstance(raw, dict) or not isinstance(raw.get("request_id"), str) or not isinstance(raw.get("message"), str):
+        print("Skipped a chat.requests message without a request_id and message", flush=True)
+        return "skipped"
+    try:
+        handle(rt, raw)
+        return "handled"
+    except Exception as e:            # noqa: BLE001  one bad request must not stop the service
+        try:
+            fail(rt, raw, e)          # the person gets a reply, the audit gets the failure
+        except Exception as e2:       # noqa: BLE001
+            print(f"Request failed ({type(e).__name__}) and could not reply ({type(e2).__name__})", flush=True)
+        return "failed"
 
 
 if __name__ == "__main__":

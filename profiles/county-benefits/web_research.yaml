@@ -1,0 +1,22 @@
+# Web research (ADR 022) for the county benefits assistant: where it may read, and how much.
+# Searched only when someone asks to search the web (rules.yaml web_research). The query never
+# carries a person's name or contact details; results are checked for injected instructions, and
+# a second model checks the answer against the pages (profile.yaml faithfulness).
+search: duckduckgo
+# Only these sites are fetched. "gov" means any .gov site.
+allow:
+  - gov                 # usda.gov, medicaid.gov, ssa.gov, state and county .gov sites
+  - canada.ca
+  - gc.ca
+  - ontario.ca
+  - wikipedia.org       # general facts only; the judge checks the answer against the page
+deny:
+  - reddit.com
+  - facebook.com
+  - x.com
+  - twitter.com
+# Kept small so the pages, the question and the instructions fit a local model's context window
+# (Ollama's default is a few thousand tokens; past it the start of the prompt is dropped).
+max_pages: 2
+max_chars: 4500
+timeout_seconds: 10

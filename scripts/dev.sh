@@ -18,7 +18,7 @@ cd "$(dirname "$0")/.."
 
 LOG_DIR="logs"
 PY=".venv/bin/python"
-TOPICS="chat.requests chat.responses audit.model_inputs audit.tool_calls audit.guardrails audit.routing audit.approvals agent.trace approvals.requested approvals.decided actions.executed"
+TOPICS="chat.requests chat.responses audit.model_inputs audit.tool_calls audit.guardrails audit.routing audit.approvals audit.input_agent agent.trace approvals.requested approvals.decided actions.executed"
 export PYTHONUNBUFFERED=1   # write logs immediately
 export PROFILE="${PROFILE:-adhd-assistant}"   # which profile every service loads (see profiles/)
 # The Ollama models every profile needs, plus the active profile's own (read from its profile.yaml).

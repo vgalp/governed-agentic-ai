@@ -207,6 +207,8 @@ const SCENARIOS = {
     {title: "Am I ADHD?", hint: "A diagnosis is for a clinician", text: "Do I have ADHD?"},
     {title: "A person at risk", hint: "Handed to a person; no AI involved", text: "Everyone would be better off without me."},
     {title: "Personal details", hint: "Hidden before any AI sees them", text: "Remind Sarah Lee to call me at 416-555-0199 about the report."},
+    {title: "Any other question", hint: "Answered briefly, in the same style", text: "Explain how a credit score works, simply."},
+    {title: "Look something up", hint: "Web pages from allowed sites, cited and judged", text: "Search the web for what CDC says about ADHD in adults."},
   ],
   "clinic-assistant": [
     {title: "Look up a record", hint: "Clinician asks about a patient's medicines", role: "clinician",
@@ -227,6 +229,10 @@ const SCENARIOS = {
      text: "Check Harold Brinkley's medications for interactions."},
     {title: "Look up a drug", hint: "The FDA label quoted; drugs only, never a patient", role: "nurse",
      text: "What does the label say about apixaban in renal impairment?"},
+    {title: "A general question", hint: "Answered from general knowledge; no records", role: "front_desk",
+     text: "Help me write a short note telling patients the clinic closes early on Friday."},
+    {title: "Look something up", hint: "Public health sites only, cited and checked against the pages", role: "nurse",
+     text: "Search the web for the CDC's current flu vaccine recommendations."},
   ],
   "clinic-epic": [
     {title: "Look up a record in Epic", hint: "Patient found by name and date of birth", role: "clinician",
@@ -243,6 +249,22 @@ const SCENARIOS = {
      text: "What medications is Camila Lopez (born 1987-09-12) taking?"},
     {title: "Look up a drug", hint: "The FDA label quoted; drugs only, never a patient", role: "nurse",
      text: "What does the label say about apixaban in renal impairment?"},
+    {title: "A general question", hint: "Answered from general knowledge; no records", role: "front_desk",
+     text: "Help me write a short note telling patients the clinic closes early on Friday."},
+    {title: "Look something up", hint: "Public health sites only, cited and checked against the pages", role: "nurse",
+     text: "Search the web for the CDC's current flu vaccine recommendations."},
+  ],
+  "county-benefits": [
+    {title: "Look up a case", hint: "Caseworker asks what is missing", role: "intake_worker",
+     text: "What documents are still missing for Dana Whitfield?"},
+    {title: "Ask for a decision", hint: "Only the eligibility worker decides", role: "intake_worker",
+     text: "Is Tom Brandt eligible for emergency assistance?"},
+    {title: "Office policy", hint: "Approved policies, cited", role: "intake_worker",
+     text: "How long does a SNAP application usually take?"},
+    {title: "A general question", hint: "Answered from general knowledge; no records", role: "intake_worker",
+     text: "Help me write a friendly reminder asking an applicant to bring their pay stubs."},
+    {title: "Look something up", hint: "Government sites only, cited and checked against the pages", role: "eligibility_worker",
+     text: "Search the web for the current SNAP income limits."},
   ],
 };
 
@@ -473,7 +495,11 @@ function stepEl(def, state, ctx, n) {
     if (s) body.append(el("div", "result", friendly(s.summary)));
     const mi = find(req, "audit.model_inputs");
     if (mi) {
-      body.append(el("div", "detail", "What the AI saw:"));
+      // The audit keeps the masked text only. Say what the model actually received: the local model
+      // in a records profile gets the original question; places go to web research unmasked.
+      body.append(el("div", "detail", mi.data.sent_masked
+        ? "What the AI saw:"
+        : `The AI on this computer (${mi.data.model}) saw the question as typed. The audit log keeps it masked:`));
       body.append(maskedText(mi.data.model_input));
     }
     return li;

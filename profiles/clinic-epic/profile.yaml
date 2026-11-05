@@ -33,6 +33,11 @@ models:
     name: claude-haiku-4-5-20251001
     location: external
     api_key_env: ANTHROPIC_API_KEY
+  judge:
+    provider: ollama
+    name: qwen2.5:7b            # a different family judges answers written from web pages (ADR 022)
+    location: local
+    temperature: 0
 
 routing:
   local_model: local
@@ -49,7 +54,7 @@ fhir: fhir.yaml                            # records come from Epic (FHIR R4), r
 roles: roles.yaml
 cite_sources: true
 # Epic resource IDs are letters and digits; the last 8 are kept (fhir.yaml source_id).
-source_id_pattern: '\b(kb-cl-\d{3}|pt-[A-Za-z0-9]{8}|med-[A-Za-z0-9]{8}|enc-[A-Za-z0-9]{8}|lbl-[0-9a-f]{8}|cond-[A-Za-z0-9]{8}|alg-[A-Za-z0-9]{8}|vit-[A-Za-z0-9]{8})\b'
+source_id_pattern: '\b(kb-cl-\d{3}|pt-[A-Za-z0-9]{8}|med-[A-Za-z0-9]{8}|enc-[A-Za-z0-9]{8}|lbl-[0-9a-f]{8}|cond-[A-Za-z0-9]{8}|alg-[A-Za-z0-9]{8}|vit-[A-Za-z0-9]{8}|web-[0-9a-f]{8})\b'
 
 prompt: prompt.md
 responses: responses.yaml
@@ -77,7 +82,7 @@ knowledge_base: data/knowledge_base.json
 
 agents:
   planner:
-    tools: [search_knowledge, search_records, medication_review, medication_list, chart_brief, drug_reference]   # review before list
+    tools: [search_knowledge, search_records, medication_review, medication_list, chart_brief, drug_reference, web_research]   # review before list
 
 # Epic sandbox test patients (fhir.epic.com documentation lists them), found by name and date of
 # birth. Shown as example buttons.
@@ -87,3 +92,13 @@ examples:
   - Check Camila Lopez's medications for interactions, born 1987-09-12.
   - When was Camila Lopez (born 1987-09-12) last seen?
   - How much insulin should we give Camila Lopez?
+
+# A second model checks answers written from web pages against the pages (ADR 022). The judge must
+# not be an answering model. strict: an unreadable judge reply withholds the answer in mode withhold;
+# in mode warn it is sent with the warning note, since nothing was found contradicted.
+faithfulness:
+  judge: judge
+  for_tools: [web_research]
+  strict: true
+  mode: warn                # a fact the pages contradict withholds the answer; one they do not mention
+                            # is sent with a warning (withhold held back too many plain answers in testing)

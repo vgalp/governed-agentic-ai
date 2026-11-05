@@ -65,3 +65,15 @@ drug_reference:
   lane: knowledge
   when: drug_reference
   answer: direct
+
+web_research:
+  description: Web research (pages from allowed sites, fetched for this question and cited)
+  server: http://127.0.0.1:8105/mcp
+  kind: read
+  data_label: web_page                     # untrusted public text; never personal data
+  lane: knowledge
+  when: web_research                       # rules.yaml: only when asked to search the web
+  keeps: [LOCATION]                        # a place is the question ("rules in Ontario"); people never
+  on_empty: no_web_pages                   # responses.yaml: if no page could be read, say so; no model
+                                           # answers a current-events question from memory
+  timeout: 90                              # seconds: a search plus several pages at 10 s each

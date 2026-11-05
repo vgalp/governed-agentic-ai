@@ -14,6 +14,7 @@ key is published as a JWK Set, where the authorization server fetches it.
 import os
 import re
 import time
+import urllib.parse
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
@@ -80,15 +81,24 @@ class FhirClient:
         self.auth, self.session = auth, session or requests.Session()
         self.timeout, self.max_pages = timeout, max_pages
 
+    def _inside_base(self, url: str) -> bool:
+        """The URL is on the configured server: same scheme and host, path under the base path.
+        (A prefix check on the string let https://fhir.epic.com.example.org through.)"""
+        u, b = urllib.parse.urlsplit(url), urllib.parse.urlsplit(self.base)
+        return (u.scheme, (u.hostname or "").lower(), u.port) == (b.scheme, (b.hostname or "").lower(), b.port) \
+            and (u.path == b.path or u.path.startswith(b.path.rstrip("/") + "/"))
+
     def _get(self, url: str, params: dict | None = None) -> dict:
-        if not url.startswith(self.base):
+        if not self._inside_base(url):
             raise FhirError(f"refusing to follow a link outside {self.base}")
         headers = {"Accept": FHIR_JSON}
         if self.auth:
             headers["Authorization"] = f"Bearer {self.auth.token()}"
         r = self.session.get(url, params=params, headers=headers, timeout=self.timeout)
         if r.status_code != 200:
-            raise FhirError(f"GET {url.removeprefix(self.base)} failed ({r.status_code}): {_brief(r)}")
+            # the path only: a paged 'next' link carries the search (patient ids) in its query string
+            path = urllib.parse.urlsplit(url).path.removeprefix(urllib.parse.urlsplit(self.base).path)
+            raise FhirError(f"GET {path or '/'} failed ({r.status_code}): {_brief(r)}")
         return r.json()
 
     def capability(self) -> dict:

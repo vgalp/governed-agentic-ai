@@ -185,7 +185,13 @@ while True:
     msg = consumer.poll(1.0)
     if msg is None or msg.error():
         continue
-    topic, event = msg.topic(), json.loads(msg.value())
+    try:
+        topic, event = msg.topic(), json.loads(msg.value())
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        print(f"Skipped an event that is not JSON on {msg.topic()}", flush=True)   # one bad event, not a dead executor
+        continue
+    if not isinstance(event, dict):
+        continue
     if topic == actions.DECIDED:
         approval = state.approvals.get(event.get("approval_id"))
         if approval is None or approval["status"] not in {"pending", "expiring"}:

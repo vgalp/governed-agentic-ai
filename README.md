@@ -4,6 +4,11 @@
 An open-source reference architecture for running multi-agent AI systems safely in healthcare, government and other regulated environments.
 
 > **Status:** Research prototype (v0.2). Not production software and not a medical device.
+> A three-reviewer production-readiness audit (November 2026) found the pipeline, policy and
+> profile layers sound, and 7 blockers that stand between this and real data: identity from the
+> organization's own sign-in (OIDC, e.g. Entra ID or Keycloak) instead of a role in the request,
+> a secured message bus, and supervision. About 160 hours of work, scoped finding by finding in
+> [docs/audit-2026-11.md](docs/audit-2026-11.md). Use synthetic data only until those are done.
 
 **Try it on your own machine:** `./scripts/quickstart.sh` sets everything up, starts the pipeline and
 checks that it works, all locally ([quick start](docs/quickstart.md)). The guard classifier is

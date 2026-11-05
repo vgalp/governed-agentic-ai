@@ -115,6 +115,7 @@ class Tool:
     on_empty: str | None = None      # responses.yaml key sent, with no model, when the question was for
                                      # this tool (when) and it returned nothing. A current-events question
                                      # must not be answered from a model's memory when the search failed.
+    timeout: float | None = None     # seconds the gateway waits for this tool; None: the gateway default
 
 
 @dataclass(frozen=True)
@@ -542,7 +543,8 @@ def _tools(raw: dict, where: str, patterns: dict[str, re.Pattern] | None = None,
                 raise ProfileError(f"{w}: on_empty '{on_empty}' is not a reply in responses.yaml")
         tools[name] = Tool(name, str(t.get("description", "")), server, kind, label, lane,
                            flags["receives_identifiers"], flags["role_filtered"], flags["tenant_scoped"],
-                           when, answer, keeps, on_empty)
+                           when, answer, keeps, on_empty,
+                           float(t["timeout"]) if t.get("timeout") is not None else None)
     return tools
 
 

@@ -36,6 +36,11 @@ models:
     name: claude-haiku-4-5-20251001
     location: external
     api_key_env: ANTHROPIC_API_KEY
+  judge:
+    provider: ollama
+    name: llama3.1:8b           # a different family judges answers written from web pages (ADR 022)
+    location: local
+    temperature: 0
 
 routing:
   local_model: local
@@ -53,7 +58,7 @@ records_map: records.yaml                  # how the database becomes records (n
 roles: roles.yaml                          # who may see which case data
 actions: actions.yaml                      # changes a person must approve (release a held payment)
 cite_sources: true
-source_id_pattern: '\b(mc-\d{3}|apl-\d{4}|case-\d{4}|doc-\d{4}|inc-\d{4}|pay-\d{4})\b'
+source_id_pattern: '\b(mc-\d{3}|apl-\d{4}|case-\d{4}|doc-\d{4}|inc-\d{4}|pay-\d{4}|web-[0-9a-f]{8})\b'
 
 prompt: prompt.md
 responses: responses.yaml
@@ -81,7 +86,7 @@ knowledge_base: data/knowledge_base.json
 
 agents:
   planner:
-    tools: [search_knowledge, search_records]
+    tools: [search_knowledge, search_records, web_research]
   executor:                                # makes approved changes; never sees a question
     tools: [release_payment]
 
@@ -94,3 +99,13 @@ examples:
   - Is Tom Brandt eligible for emergency assistance?
   - Is Lena Kovacs lying about her income?
   - Release Lena Kovacs's held emergency assistance payment
+  - Search the web for the current SNAP income limits.
+
+# A second model checks answers written from web pages against the pages (ADR 022). The judge must
+# not be an answering model. strict: an unreadable judge reply withholds the answer in mode withhold;
+# in mode warn it is sent with the warning note, since nothing was found contradicted.
+faithfulness:
+  judge: judge
+  for_tools: [web_research]
+  strict: true
+  mode: warn                # a fact the pages contradict withholds; one they do not mention is sent with a warning

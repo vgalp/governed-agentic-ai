@@ -15,15 +15,15 @@ data_classes:
 roles:
   intake_worker:
     title: Intake worker
-    tools: [search_knowledge, search_records]
+    tools: [search_knowledge, search_records, web_research]
     data_classes: [contact, case_status, documents]      # no income, no payments
   eligibility_worker:
     title: Eligibility worker
-    tools: [search_knowledge, search_records]
+    tools: [search_knowledge, search_records, web_research]
     data_classes: [contact, case_status, documents, income, payments]
   supervisor:
     title: Supervisor
-    tools: [search_knowledge, search_records, release_payment]   # may approve releases
+    tools: [search_knowledge, search_records, release_payment, web_research]   # may approve releases
     data_classes: [contact, case_status, documents, income, payments]
     responses:
       eligibility_decision: >-
@@ -32,5 +32,5 @@ roles:
         the case record lists (status, documents, income, payments) to support it.
   auditor:
     title: Quality auditor
-    tools: [search_knowledge]          # policies only; no case records
+    tools: [search_knowledge, web_research]          # policies only; no case records
     data_classes: []

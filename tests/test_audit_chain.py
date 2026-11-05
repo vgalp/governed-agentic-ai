@@ -62,6 +62,42 @@ def test_chain_rewritten_without_the_key_is_flagged_as_unkeyed():
     assert unkeyed_chains(make_chain()) == []
 
 
+def test_a_rewritten_chain_relabelled_unkeyed_does_not_verify_where_a_key_is_set():
+    """Audit finding SC-7: the verifier used to take the record's own `alg` on trust, so a chain
+    rewritten without the key, relabelled "sha256" and rehashed, verified as intact."""
+    original = make_chain()
+    forged = make_chain(key=None)
+    for r in forged:
+        r["audit"]["chain_id"] = original[0]["audit"]["chain_id"]
+    forged[1]["decision"] = "approve"                       # the forger's change
+    rehashed, prev = [], "0" * 64
+    from audit.chain import compute_hash
+    for r in sorted(forged, key=lambda r: r["audit"]["seq"]):
+        r["audit"]["prev_hash"] = prev
+        r["audit"].pop("hash", None)
+        r["audit"]["hash"] = compute_hash(r, None)
+        prev = r["audit"]["hash"]
+        rehashed.append(r)
+    problems = verify_chain(rehashed, KEY)
+    assert problems and all("not signed with the key" in p for p in problems)
+    assert verify_chain(rehashed, KEY, allow_unkeyed=True) == []      # only on purpose, for old chains
+    assert verify_chain(rehashed, None) == []                          # no key here: nothing to compare against
+
+
+def test_a_chain_that_switches_algorithm_part_way_is_rewritten():
+    keyed = make_chain()
+    tail = make_chain(key=None)
+    tail[-1]["audit"]["chain_id"] = keyed[0]["audit"]["chain_id"]
+    tail[-1]["audit"]["seq"] = len(keyed)
+    assert any("mixes signing algorithms" in p for p in verify_chain(keyed + [tail[-1]], KEY, allow_unkeyed=True))
+
+
+def test_an_unknown_algorithm_is_a_problem():
+    records = make_chain()
+    records[0]["audit"]["alg"] = "none"
+    assert any("unknown signing algorithm" in p for p in verify_chain(records, KEY))
+
+
 def test_keyed_chain_with_wrong_key_is_detected():
     assert verify_chain(make_chain(), b"wrong-key")
 
@@ -123,3 +159,18 @@ def test_events_keep_the_time_they_happened_not_when_the_api_read_them():
     old, new = buf.events
     assert old["at"] == 1_793_000_000.0 and old["received_at"] > old["at"]
     assert new["at"] == new["received_at"]                                  # no Kafka time: when read
+
+
+def test_every_topic_the_code_writes_audit_events_to_is_read_by_the_verifier():
+    """A topic left out of AUDIT_TOPICS is invisible to the verifier: its events look like gaps."""
+    import re
+    from pathlib import Path
+
+    from audit.chain import AUDIT_TOPICS
+    root = Path(__file__).resolve().parent.parent
+    written = set()
+    for f in root.glob("**/*.py"):
+        if ".venv" in f.parts or "tests" in f.parts or not f.is_file():
+            continue
+        written |= set(re.findall(r'(?:emit|_audit)\(\s*"(audit\.[a-z_]+)"', f.read_text(encoding="utf-8")))
+    assert written and written <= set(AUDIT_TOPICS), sorted(written - set(AUDIT_TOPICS))

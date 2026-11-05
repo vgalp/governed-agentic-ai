@@ -57,3 +57,23 @@ action_unclear: >-
 tool_denied: >-
   {tool} is not available to your role ({role}). It is available to: {roles}.
   Please ask one of them. I can still show what your role may see in the record.
+
+# Asked to search the web, but no page from an allowed site could be read. No model answers:
+# current information answered from memory would be stale or invented.
+no_web_pages: >-
+  I searched the web for "{query}" but could not read any page from the sites I
+  am allowed to use ({note}). I won't guess at current information from memory.
+  You could try different wording, or check an official site directly.
+
+# The answer was written from web pages, and the second model found claims the pages do not
+# support (ADR 022). The pages are still listed as sources.
+unfaithful: >-
+  I looked this up, but the answer I drafted said things the pages I read do not
+  support, so I am not giving it. The pages I found are listed below; please read
+  them directly.
+
+# faithfulness mode: warn. A claim the pages do not mention (none they contradict): sent with this note.
+not_confirmed: >-
+  (A second model checked this answer against the pages listed and could not
+  confirm every detail from them. Please read the pages for anything that
+  matters.)
