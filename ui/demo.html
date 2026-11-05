@@ -90,10 +90,19 @@
              border: 1px solid var(--line); background: var(--panel); color: var(--text); }
   form button { padding: 0 20px; border: 0; border-radius: 10px; background: var(--brand); color: #fff; font-weight: 600; }
   form button:disabled { opacity: .5; cursor: default; }
-  .webswitch { display: flex; align-items: center; gap: 6px; padding: 0 12px; border: 1px solid var(--line);
-               border-radius: 10px; font-size: 13px; color: var(--muted); cursor: pointer; user-select: none; white-space: nowrap; }
-  .webswitch input { accent-color: var(--brand); width: 16px; height: 16px; margin: 0; }
-  .webswitch:has(input:checked) { color: var(--brand); border-color: var(--brand); }
+  /* "Search the web": a sliding switch. The real checkbox stays for keyboards and screen readers. */
+  .webswitch { display: flex; align-items: center; gap: 8px; padding: 0 4px; font-size: 13px; color: var(--muted);
+               cursor: pointer; user-select: none; white-space: nowrap; }
+  .webswitch input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+  .webswitch .track { position: relative; width: 44px; height: 24px; flex: none; border-radius: 999px;
+                      background: var(--line); transition: background .2s; }
+  .webswitch .track::after { content: ""; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px;
+                             border-radius: 50%; background: #fff; box-shadow: 0 2px 5px rgba(0,0,0,.25);
+                             transition: transform .2s; }
+  .webswitch input:checked + .track { background: linear-gradient(135deg, #6ee7b7, #60a5fa 70%, #6366f1); }
+  .webswitch input:checked + .track::after { transform: translateX(20px); }
+  .webswitch input:focus-visible + .track { outline: 2px solid var(--brand); outline-offset: 2px; }
+  .webswitch:has(input:checked) { color: var(--text); }
   .webswitch[hidden] { display: none; }
   .fine { font-size: 12px; color: var(--muted); padding: 0 18px 12px; }
 
@@ -179,7 +188,7 @@
         <textarea id="input" placeholder="Type a question for the assistant…"></textarea>
         <label class="webswitch" id="webSwitch" hidden
                title="On: the assistant searches allowed public sites for this question. Off: records and approved notes only. Personal details never go to the web.">
-          <input type="checkbox" id="web"> Search the web</label>
+          <input type="checkbox" id="web" role="switch"><span class="track" aria-hidden="true"></span> Search the web</label>
         <button id="send" type="submit">Send</button>
       </form>
       <div class="fine">Research prototype with synthetic data only. Not a medical device and not for emergencies.</div>
