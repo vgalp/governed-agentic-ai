@@ -37,7 +37,7 @@ from gateway.opa import decide
 from profiles.loader import load_profile
 
 AGENT_NAME = "executor"
-BOOTSTRAP = "localhost:9092"
+BOOTSTRAP = "127.0.0.1:9092"
 
 # Set by main() (or by a test).
 PROFILE = None

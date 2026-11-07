@@ -228,6 +228,11 @@
           "title": "Name",
           "type": "string"
         },
+        "no_think": {
+          "default": false,
+          "title": "No Think",
+          "type": "boolean"
+        },
         "price": {
           "anyOf": [
             {

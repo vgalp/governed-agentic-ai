@@ -40,6 +40,7 @@ class Model(Strict):
     api_key_env: str | None = None  # the NAME of the environment variable; never the key
     base_url: str | None = None
     price: Price | None = None  # US dollars per million tokens (ADR 018)
+    no_think: bool = False      # Qwen3: answer without the long reasoning pass (llm/providers.py)
 
 
 class Routing(Strict):

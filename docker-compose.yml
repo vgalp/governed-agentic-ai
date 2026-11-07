@@ -1,6 +1,8 @@
 # Every port is published on 127.0.0.1 only: Kafka (plaintext, no sign-in), OPA (its REST API can
 # replace policies) and Kafka UI must never be reachable from the office network. A deployment beyond
 # one machine needs Kafka SASL/TLS with ACLs and OPA authentication (docs/audit-2026-11.md, B2).
+# Clients use 127.0.0.1, not "localhost": on a Mac "localhost" tries IPv6 (::1) first, where nothing
+# listens now, and the Kafka client logs a "Connection refused" line for every attempt.
 services:
   opa:
     image: openpolicyagent/opa:1.21.1
@@ -21,7 +23,7 @@ services:
       KAFKA_PROCESS_ROLES: 'broker,controller'
       KAFKA_CONTROLLER_QUORUM_VOTERS: '1@broker:29093'
       KAFKA_LISTENERS: 'PLAINTEXT://broker:29092,CONTROLLER://broker:29093,PLAINTEXT_HOST://0.0.0.0:9092'
-      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://broker:29092,PLAINTEXT_HOST://localhost:9092'
+      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://broker:29092,PLAINTEXT_HOST://127.0.0.1:9092'
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT'
       KAFKA_INTER_BROKER_LISTENER_NAME: 'PLAINTEXT'
       KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'

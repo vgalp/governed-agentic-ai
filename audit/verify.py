@@ -19,7 +19,7 @@ from audit.chain import AUDIT_TOPICS, key_from_env, unkeyed_chains, verify_chain
 def read_from_kafka(idle_seconds: float = 5.0) -> list[dict]:
     from confluent_kafka import Consumer
     consumer = Consumer({
-        "bootstrap.servers": "localhost:9092",
+        "bootstrap.servers": "127.0.0.1:9092",
         "group.id": f"audit-verify-{uuid.uuid4()}",
         "auto.offset.reset": "earliest",
         "enable.auto.commit": False,

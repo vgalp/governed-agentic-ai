@@ -20,7 +20,7 @@ from api.events import buffer, consume_events, event_stream
 from audit.chain import chains_of_profile, key_from_env, unkeyed_chains, verify_chain
 from profiles.loader import load_profile
 
-BOOTSTRAP = "localhost:9092"
+BOOTSTRAP = "127.0.0.1:9092"
 UI_DIR = Path(__file__).resolve().parent.parent / "ui"
 
 producer = Producer({"bootstrap.servers": BOOTSTRAP, "enable.idempotence": True})

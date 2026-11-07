@@ -151,7 +151,7 @@ def get_audit_chain(source: str) -> AuditChain:
     with _default_lock:
         if _default_chain is None:
             from confluent_kafka import Producer
-            producer = Producer({"bootstrap.servers": "localhost:9092", "enable.idempotence": True})
+            producer = Producer({"bootstrap.servers": "127.0.0.1:9092", "enable.idempotence": True})
             key = key_from_env()
             if key is None:
                 print("Audit: AUDIT_HMAC_KEY not set, using plain SHA-256 (detects changes, not deliberate forgery).")

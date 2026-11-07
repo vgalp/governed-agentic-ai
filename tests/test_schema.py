@@ -77,3 +77,9 @@ def test_the_json_schema_files_are_current():
                          capture_output=True, text=True, cwd=ROOT)
     assert out.returncode == 0, out.stdout + out.stderr
     assert (ROOT / "docs" / "schemas" / "profile.schema.json").exists()
+
+
+def test_every_model_option_the_providers_read_is_in_the_schema():
+    """Found when a profile using no_think (llm/providers.py) stopped loading under the strict schema."""
+    assert schema.validate(schema.Model, {"provider": "ollama", "name": "qwen3:8b", "location": "local",
+                                          "no_think": True}, "m").no_think is True

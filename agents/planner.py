@@ -39,7 +39,7 @@ from guardrails.classifier import input_engine_name, load_guard
 from profiles.loader import load_profile
 
 AGENT_NAME = "planner"
-BOOTSTRAP = "localhost:9092"
+BOOTSTRAP = "127.0.0.1:9092"
 
 
 def main() -> None:

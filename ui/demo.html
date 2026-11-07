@@ -50,21 +50,25 @@
   .left { display: flex; flex-direction: column; gap: 14px; }
   .section { padding: 16px 18px; }
   .label { font-size: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
-  .roles { display: flex; flex-wrap: wrap; gap: 6px; }
-  .roles button { border: 1px solid var(--line); background: var(--panel); color: var(--text);
-                  border-radius: 999px; padding: 6px 14px; font-size: 14px; }
-  .roles button.on { background: var(--brand); border-color: var(--brand); color: #fff; }
-  .rolenote { font-size: 13px; color: var(--muted); margin-top: 8px; }
-  .scenarios { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px; }
+  /* One compact bar: who you are, then a few examples. */
+  .whorow { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; }
+  .whorow label { font-weight: 600; font-size: 15px; }
+  .whorow select { font: inherit; font-size: 15px; padding: 6px 10px; border-radius: 10px; border: 1px solid var(--line);
+                   background: var(--panel); color: var(--text); }
+  .rolenote { font-size: 13px; color: var(--muted); transition: color .2s; }
+  .rolenote.flash { color: var(--brand); font-weight: 600; }
+  .scenarios { display: flex; flex-wrap: wrap; gap: 8px; }
   .scn { text-align: left; border: 1px solid var(--line); background: var(--panel); color: var(--text);
-         border-radius: 12px; padding: 11px 13px; transition: border-color .12s, background .12s; }
+         border-radius: 999px; padding: 7px 14px; font-size: 14px; transition: border-color .12s, background .12s; }
   .scn:hover { border-color: var(--brand); background: var(--brand-soft); }
-  .scn b { display: block; font-size: 14px; }
-  .scn span { display: block; font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+  .scn small { color: var(--muted); font-size: 12px; margin-left: 6px; }
   .scn:disabled { opacity: .5; cursor: default; }
+  .scn.extra { display: none; }
+  .scenarios.open .scn.extra { display: inline-block; }
+  .more { border: 0; background: none; color: var(--brand); font-size: 14px; padding: 7px 4px; }
 
-  .chat { display: flex; flex-direction: column; min-height: 420px; }
-  #log { flex: 1; padding: 16px 18px; display: flex; flex-direction: column; gap: 14px; overflow-y: auto; max-height: 56vh; }
+  .chat { display: flex; flex-direction: column; min-height: 520px; }
+  #log { flex: 1; padding: 16px 18px; display: flex; flex-direction: column; gap: 14px; overflow-y: auto; max-height: 64vh; }
   .empty { color: var(--muted); text-align: center; margin: auto; font-size: 15px; padding: 40px 10px; max-width: 360px; line-height: 1.6; }
   .bubble { max-width: 88%; padding: 11px 14px; border-radius: 14px; white-space: pre-wrap; word-break: break-word; }
   .me { align-self: flex-end; background: var(--brand); color: #fff; border-bottom-right-radius: 4px; cursor: pointer; }
@@ -136,7 +140,13 @@
   .st-skip { padding-bottom: 8px; }
   .st-skip .why { display: none; }
   .st-skip .result { font-size: 13px; color: var(--skip); margin-top: 0; }
-  .why { font-size: 13.5px; color: var(--muted); }
+  .why { font-size: 13.5px; color: var(--muted); display: none; }
+  .step.open .why, .st-stop .why, .st-wait .why { display: block; }      /* explanations on click; always for a stop */
+  .body h3 { cursor: pointer; }
+  .notrun { margin: 0 18px 14px; font-size: 13.5px; color: var(--muted); }
+  .intro { padding: 16px 18px 6px; margin: 0; list-style: none; }
+  .intro li { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 10px; padding: 6px 0; font-size: 15px; }
+  .intro li b { color: var(--brand); }
   .result { font-size: 14px; margin-top: 4px; }
   .st-stop .result { color: var(--stop); font-weight: 600; }
   .detail { font: 12px var(--mono); color: var(--muted); margin-top: 4px; word-break: break-word; }
@@ -165,25 +175,24 @@
         <div class="tag" id="tag">Every message passes through safety and privacy checks. Watch them happen on the right.</div>
       </div>
     </div>
-    <div class="links"><a href="/chat" target="_blank">Plain chat</a><a href="/dashboard" target="_blank">Engineer view</a></div>
+    <div class="links"><a href="/dashboard" target="_blank">Engineer view</a></div>
   </div>
 </header>
 
 <div class="main">
   <div class="left">
     <div class="card section">
-      <div class="label">1 · Who are you?</div>
-      <div class="roles" id="roles"></div>
-      <div class="rolenote" id="rolenote">Your role decides which parts of the record can be used. In a real deployment it comes from your sign-in.</div>
-    </div>
-
-    <div class="card section">
-      <div class="label" id="scnLabel">2 · Try a situation</div>
+      <div class="whorow" id="whoRow">
+        <label for="roleSel">You are</label>
+        <select id="roleSel"></select>
+        <span class="rolenote" id="rolenote">Your role decides what you may see. In a real deployment it comes from your sign-in.</span>
+      </div>
+      <div class="label">Try an example</div>
       <div class="scenarios" id="scenarios"></div>
     </div>
 
     <div class="card chat">
-      <div id="log"><div class="empty" id="empty">Pick a situation above, or type your own message below. Each reply shows what the system decided, and the steps appear on the right.</div></div>
+      <div id="log"><div class="empty" id="empty">Pick an example above, or type your own question below.<br>Each reply says what happened; the checks appear on the right.</div></div>
       <form id="form">
         <textarea id="input" placeholder="Type a question for the assistant…"></textarea>
         <label class="webswitch" id="webSwitch" hidden
@@ -197,12 +206,13 @@
 
   <div class="right card">
     <div class="bts-head">
-      <h2>Behind the scenes</h2>
-      <p id="btsSub">What the system did with the selected message, step by step.</p>
+      <h2>What happened</h2>
+      <p id="btsSub">The checks every message goes through.</p>
     </div>
     <div class="summary" id="summary"></div>
     <ol class="steps" id="steps"></ol>
-    <div class="bts-foot">Personal details are never shown here: only what was checked, what was hidden and what was decided. Click any message on the left to see its steps.</div>
+    <p class="notrun" id="notrun"></p>
+    <div class="bts-foot">Click a step to see why it exists. Click any message on the left to see its checks. Personal details are never shown here.</div>
   </div>
 </div>
 
@@ -211,26 +221,24 @@
 const SCENARIOS = {
   "general-assistant": [
     {title: "An everyday question", hint: "Answered normally", text: "Help me write a polite email asking my landlord to fix the heating."},
-    {title: "Explain something", hint: "General information is fine", text: "What is sertraline used for, in general?"},
     {title: "A medical decision", hint: "Only a doctor or pharmacist may decide", text: "My doctor put me on sertraline, can I just stop, I feel fine"},
     {title: "A person at risk", hint: "Handed to a person; no AI involved", text: "I don't see the point in anything anymore."},
-    {title: "Someone being hurt", hint: "Abuse disclosed", text: "My partner checks my phone and won't let me see my friends. How do I plan around that?"},
     {title: "Personal details", hint: "Hidden before any AI sees them", text: "Can you call Maria Lopez at 416-555-0142 and tell her I'm running late?"},
+    {title: "Explain something", hint: "General information is fine", text: "What is sertraline used for, in general?"},
+    {title: "Someone being hurt", hint: "Abuse disclosed", text: "My partner checks my phone and won't let me see my friends. How do I plan around that?"},
     {title: "Look something up", hint: "Web pages from allowed sites, cited and judged", text: "Search the web for the current 988 Lifeline text and chat options."},
   ],
   "adhd-assistant": [
     {title: "Plan the day", hint: "Answered from approved tips", text: "Help me plan tomorrow."},
     {title: "A dose question", hint: "Only the prescriber may decide", text: "How much Adderall should I take?"},
-    {title: "Am I ADHD?", hint: "A diagnosis is for a clinician", text: "Do I have ADHD?"},
     {title: "A person at risk", hint: "Handed to a person; no AI involved", text: "Everyone would be better off without me."},
     {title: "Personal details", hint: "Hidden before any AI sees them", text: "Remind Sarah Lee to call me at 416-555-0199 about the report."},
+    {title: "Am I ADHD?", hint: "A diagnosis is for a clinician", text: "Do I have ADHD?"},
     {title: "Any other question", hint: "Answered briefly, in the same style", text: "Explain how a credit score works, simply."},
     {title: "Look something up", hint: "Web pages from allowed sites, cited and judged", text: "Search the web for what CDC says about ADHD in adults."},
   ],
   "clinic-assistant": [
     {title: "Look up a record", hint: "Clinician asks about a patient's medicines", role: "clinician",
-     text: "What medications is Chester Aufderhar taking?"},
-    {title: "Same question, front desk", hint: "The role may not see medicines", role: "front_desk",
      text: "What medications is Chester Aufderhar taking?"},
     {title: "Ask for a dose", hint: "Only a clinician may decide", role: "nurse",
      text: "How much insulin should we give Mr Smith?"},
@@ -238,32 +246,36 @@ const SCENARIOS = {
      text: "Chester told me at check-in that he wants to end his life."},
     {title: "Move an appointment", hint: "Needs a second person to approve", role: "front_desk",
      text: "Move Chester Aufderhar's next appointment to November 13 at 10:00."},
-    {title: "General clinic question", hint: "No patient data involved", role: "front_desk",
-     text: "What is our cancellation policy?"},
+    {title: "Same question, front desk", hint: "The role may not see medicines", role: "front_desk",
+     text: "What medications is Chester Aufderhar taking?"},
     {title: "Chart brief", hint: "The record assembled and checked; no AI writes a fact", role: "clinician",
      text: "Give me a brief on Harold Brinkley"},
     {title: "Medication review", hint: "Where FDA labels mention one medicine with another", role: "clinician",
      text: "Check Harold Brinkley's medications for interactions."},
     {title: "Look up a drug", hint: "The FDA label quoted; drugs only, never a patient", role: "nurse",
      text: "What does the label say about apixaban in renal impairment?"},
+    {title: "General clinic question", hint: "No patient data involved", role: "front_desk",
+     text: "What is our cancellation policy?"},
     {title: "A general question", hint: "Answered from general knowledge; no records", role: "front_desk",
      text: "Help me write a short note telling patients the clinic closes early on Friday."},
     {title: "Look something up", hint: "Public health sites only, cited and checked against the pages", role: "nurse",
      text: "Search the web for the CDC's current flu vaccine recommendations."},
   ],
   "clinic-epic": [
-    {title: "Look up a record in Epic", hint: "Patient found by name and date of birth", role: "clinician",
-     text: "What medications is Camila Lopez (born 1987-09-12) taking?"},
     {title: "Chart brief from Epic", hint: "The record assembled and checked; no AI writes a fact", role: "clinician",
      text: "Give me a brief on Camila Lopez, born 1987-09-12"},
     {title: "Medication review", hint: "Epic's list against FDA labels", role: "clinician",
      text: "Check Camila Lopez's medications for interactions, born 1987-09-12."},
-    {title: "Without the date of birth", hint: "Nothing is sent to Epic", role: "clinician",
-     text: "What medications is Camila Lopez taking?"},
     {title: "Ask for a dose", hint: "Only a clinician may decide", role: "nurse",
      text: "How much insulin should we give Camila Lopez?"},
+    {title: "A patient at risk", hint: "Crisis protocol, no AI involved", role: "nurse",
+     text: "Camila told me at check-in that she wants to end her life."},
+    {title: "Look up a record in Epic", hint: "Patient found by name and date of birth", role: "clinician",
+     text: "What medications is Camila Lopez (born 1987-09-12) taking?"},
     {title: "Same lookup, front desk", hint: "The role may not see medicines", role: "front_desk",
      text: "What medications is Camila Lopez (born 1987-09-12) taking?"},
+    {title: "Without the date of birth", hint: "Nothing is sent to Epic", role: "clinician",
+     text: "What medications is Camila Lopez taking?"},
     {title: "Look up a drug", hint: "The FDA label quoted; drugs only, never a patient", role: "nurse",
      text: "What does the label say about apixaban in renal impairment?"},
     {title: "A general question", hint: "Answered from general knowledge; no records", role: "front_desk",
@@ -278,10 +290,10 @@ const SCENARIOS = {
      text: "Is Tom Brandt eligible for emergency assistance?"},
     {title: "Office policy", hint: "Approved policies, cited", role: "intake_worker",
      text: "How long does a SNAP application usually take?"},
-    {title: "A general question", hint: "Answered from general knowledge; no records", role: "intake_worker",
-     text: "Help me write a friendly reminder asking an applicant to bring their pay stubs."},
     {title: "Look something up", hint: "Government sites only, cited and checked against the pages", role: "eligibility_worker",
      text: "Search the web for the current SNAP income limits."},
+    {title: "A general question", hint: "Answered from general knowledge; no records", role: "intake_worker",
+     text: "Help me write a friendly reminder asking an applicant to bring their pay stubs."},
   ],
 };
 
@@ -440,15 +452,25 @@ const find = (req, topic, pred = () => true) => req.events.find(e => e.topic ===
 function renderSteps() {
   const box = $("steps");
   const req = selected && requests.get(selected);
-  if (!req) {
-    box.replaceChildren(...STEPS.filter(s => !s.only || s.only === "answer" || (s.only === "roles" && profile.roles.length)).map((s, i) => stepEl(s, "idle", null, i + 1)));
+  if (!req) {                       // before any message: what will be checked, in five lines
+    $("summary").className = "summary";
+    $("notrun").textContent = "";
+    const intro = el("ol", "intro");
+    for (const [b, t] of [["Safety", V === VOCAB.public ? "someone at risk is handed to a person; decisions for a doctor, lawyer or adviser are declined" : "someone at risk is handed to a person; decisions only a clinician may make are refused"],
+                          ["Privacy", "names and contact details are hidden before any AI sees the text"],
+                          [profile.roles.length ? "Permissions" : "Sources", profile.roles.length ? "your role decides which records may be used" : "answers come from approved notes or allowed websites"],
+                          ["The answer", "checked again before you see it, and every fact must have a source"],
+                          ["The record", "every step is written to a log that cannot be changed unnoticed"]]) {
+      const li = el("li"); li.append(el("b", "", b), el("span", "", t)); intro.append(li);
+    }
+    box.replaceChildren(intro);
     return;
   }
   const steps = traceSteps(req);
   const resp = find(req, "chat.responses");
   const guard = resp && resp.data.guardrail;
   const isChange = steps.some(s => s.agent === "action") || (resp && resp.data.approval);
-  let stoppedAt = null;
+  let stoppedAt = null, skipped = 0;
   const items = [];
   for (const def of STEPS) {
     if (def.only === "change" && !isChange) continue;
@@ -464,8 +486,12 @@ function renderSteps() {
     else if (mine.length) state = "pass";
     else state = stoppedAt ? "skip" : resp ? "skip" : "idle";
     if (state === "stop" && !stoppedAt) stoppedAt = def.key;
+    if (state === "skip") { skipped++; continue; }          // only the checks that ran are listed
     items.push(stepEl(def, state, {req, mine, resp, guard, stoppedAt}, items.length + 1));
   }
+  $("notrun").textContent = !skipped ? "" : stoppedAt
+    ? `Stopped here: the ${skipped} later step${skipped === 1 ? "" : "s"} did not run.`
+    : `${skipped} other step${skipped === 1 ? " was" : "s were"} not needed for this message.`;
   // Show the step currently running as running, even before its first trace event arrives.
   if (!resp) {
     const firstIdle = items.find(i => i.classList.contains("st-idle"));
@@ -487,6 +513,7 @@ function stepEl(def, state, ctx, n) {
   const icon = el("div", "icon");
   const body = el("div", "body");
   const h = el("h3", "", typeof def.title === "function" ? def.title() : def.title);
+  h.onclick = () => li.classList.toggle("open");
   body.append(h, el("div", "why", typeof def.why === "function" ? def.why() : def.why));
   li.append(icon, body);
   setState(li, state);
@@ -670,7 +697,7 @@ function bubble(cls, text) {
 function select(id) {
   selected = id;
   document.querySelectorAll(".bubble").forEach(b => b.classList.toggle("sel", b.dataset.id === id));
-  $("btsSub").textContent = "What the system did with the selected message, step by step.";
+  $("btsSub").textContent = "The checks this message went through.";
   renderSteps();
 }
 
@@ -742,10 +769,22 @@ async function ask(text, asRole) {
   }
 }
 
-function setRole(k) {
+const NOTE = "Your role decides what you may see. In a real deployment it comes from your sign-in.";
+let noteTimer = null;
+function setRole(k, why) {
+  const changed = role && role !== k;
   role = k;
-  document.querySelectorAll(".roles button").forEach(b => b.classList.toggle("on", b.dataset.role === k));
+  if ($("roleSel")) $("roleSel").value = k;
+  const note = $("rolenote");
+  if (!note) return;
+  clearTimeout(noteTimer);
+  if (changed && why) {                 // an example switched the role: say so, so it never changes silently
+    note.textContent = `Switched to ${roleTitle(k)} for this example.`;
+    note.classList.add("flash");
+    noteTimer = setTimeout(() => { note.textContent = NOTE; note.classList.remove("flash"); }, 4000);
+  } else { note.textContent = NOTE; note.classList.remove("flash"); }
 }
+const MAIN_EXAMPLES = 4;                // the rest sit behind "More examples"
 
 fetch("/profile").then(r => r.json()).then(p => {
   profile = p;
@@ -758,31 +797,34 @@ fetch("/profile").then(r => r.json()).then(p => {
   renderSteps();
   $("webSwitch").hidden = !p.web;
   if (p.roles.length) {
-    for (const r of p.roles) {
-      const b = el("button", "", r.title);
-      b.type = "button";
-      b.dataset.role = r.key;
-      b.onclick = () => setRole(r.key);
-      $("roles").append(b);
-    }
+    for (const r of p.roles) $("roleSel").add(new Option(r.title, r.key));
+    $("roleSel").onchange = () => setRole($("roleSel").value);
     setRole(p.roles[0].key);
   } else {
-    $("roles").closest(".card").remove();
-    $("scnLabel").textContent = "Try a situation";
+    $("whoRow").remove();
   }
   const list = SCENARIOS[p.name] || p.examples.map(t => ({title: t, hint: "", role: null, text: t}));
-  for (const s of list) {
-    const b = el("button", "scn");
+  list.forEach((s, i) => {
+    const b = el("button", "scn" + (i >= MAIN_EXAMPLES ? " extra" : ""));
     b.type = "button";
-    b.append(el("b", "", s.title));
-    if (s.hint || s.role) b.append(el("span", "", [s.role ? `As ${roleTitle(s.role)}` : "", s.hint].filter(Boolean).join(" · ")));
-    b.title = s.text;
+    b.append(document.createTextNode(s.title));
+    if (s.role) b.append(el("small", "", `as ${roleTitle(s.role)}`));
+    b.title = [s.hint, `"${s.text}"`].filter(Boolean).join("\n");     // the details on hover
     b.onclick = () => {
-      if (s.role) setRole(s.role);
-      $("web").checked = /\bsearch the web\b/i.test(s.text);   // a "Look something up" situation turns it on
+      if (s.role) setRole(s.role, "example");
+      $("web").checked = /\bsearch the web\b/i.test(s.text);   // a "Look something up" example turns it on
       ask(s.text, s.role || role);
     };
     $("scenarios").append(b);
+  });
+  if (list.length > MAIN_EXAMPLES) {
+    const more = el("button", "more", `More examples (${list.length - MAIN_EXAMPLES})`);
+    more.type = "button";
+    more.onclick = () => {
+      const open = $("scenarios").classList.toggle("open");
+      more.textContent = open ? "Fewer examples" : `More examples (${list.length - MAIN_EXAMPLES})`;
+    };
+    $("scenarios").append(more);
   }
 }).catch(() => {});
 
