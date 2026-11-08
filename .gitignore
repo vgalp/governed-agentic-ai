@@ -18,3 +18,4 @@ eval/datasets/crisis_benchmark_v2.jsonl
 eval/external/raw/allenai__wildguardmix/
 eval/external/raw/bench-llm__or-bench/
 eval/external/raw/openai_samples-1680.jsonl.gz
+.keycloak.env

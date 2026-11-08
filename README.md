@@ -6,7 +6,8 @@ An open-source reference architecture for running multi-agent AI systems safely 
 > **Status:** Research prototype (v0.2). Not production software and not a medical device.
 > A three-reviewer production-readiness audit (November 2026) found the pipeline, policy and
 > profile layers sound, and 7 blockers that stand between this and real data: identity from the
-> organization's own sign-in (OIDC, e.g. Entra ID or Keycloak) instead of a role in the request,
+> organization's own sign-in (OIDC, e.g. Entra ID or Keycloak) instead of a role in the request
+> (now done for the chat API when sign-in is switched on: [ADR 028](docs/decisions/028-sign-in.md)),
 > a secured message bus, and supervision. About 160 hours of work, scoped finding by finding in
 > [docs/audit-2026-11.md](docs/audit-2026-11.md). Use synthetic data only until those are done.
 
@@ -266,7 +267,8 @@ docs/            Architecture notes and decision records
 - [ ] Fine-tuned safety classifier and grounding check (layer 3)
 - [ ] Clinician-reviewed knowledge base and fixed responses
 - [ ] Tracing, failure recovery (Saga pattern) and chaos tests
-- [ ] Redesigned chat page and dashboard, and a basic login so the role comes from sign-in (demo accounts only)
+- [x] Sign-in with the organization's identity provider (OIDC): the role comes from the person's groups, tested with a local Keycloak (ADR 028)
+- [ ] Redesigned chat page and dashboard
 - [ ] Technical report
 
 ## Important

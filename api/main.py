@@ -18,6 +18,7 @@ from agents import actions
 from api import openai_compat as compat
 from api.events import buffer, consume_events, event_stream
 from audit.chain import chains_of_profile, key_from_env, unkeyed_chains, verify_chain
+from auth.sign_in import Caller, SignIn, SignInRequired
 from profiles.loader import load_profile
 
 BOOTSTRAP = "127.0.0.1:9092"
@@ -31,6 +32,23 @@ approvals = actions.ApprovalState()   # rebuilt from Kafka at startup
 COMPAT_KEYS = [k.strip() for k in os.environ.get("OPENAI_COMPAT_API_KEYS", "").split(",") if k.strip()]
 COMPAT_TIMEOUT = float(os.environ.get("OPENAI_COMPAT_TIMEOUT", "180"))
 log = logging.getLogger("api")
+# Who is asking (ADR 028): from the identity provider's token when sign-in is oidc, from the request
+# body only in demo mode. owners: which signed-in person asked each request (only they may read it).
+SIGN_IN = SignIn.for_profile(PROFILE)
+owners: dict[str, str] = {}
+
+
+def who(request: Request, demo_user: str | None = None, demo_role: str | None = None) -> Caller:
+    """The caller of this request. In oidc mode the body's user and role are ignored."""
+    try:
+        return SIGN_IN.caller(request.headers.get("authorization"), demo_user, demo_role)
+    except SignInRequired as e:
+        raise HTTPException(401, str(e), headers={"WWW-Authenticate": 'Bearer realm="governed-api"'}) from None
+
+
+def signed_in(request: Request) -> Caller | None:
+    """In oidc mode: the signed-in caller (or 401). In demo mode: None (these routes are open)."""
+    return who(request) if SIGN_IN.on else None
 
 
 def consume_responses():
@@ -75,7 +93,12 @@ async def lifespan(app: FastAPI):
     threading.Thread(target=consume_responses, daemon=True).start()
     threading.Thread(target=consume_approvals, daemon=True).start()
     threading.Thread(target=consume_events, args=(BOOTSTRAP,), daemon=True).start()
-    if not COMPAT_KEYS:
+    if SIGN_IN.on:
+        log.warning("Sign-in: oidc, issuer %s. Requests without a valid access token are refused.",
+                    SIGN_IN.verifier.issuer)
+    else:
+        log.warning("Sign-in: demo. The request says who is asking and in which role (one machine only).")
+    if not COMPAT_KEYS and not SIGN_IN.on:
         log.warning("OPENAI_COMPAT_API_KEYS is not set: /v1/chat/completions accepts any caller "
                     "(local development only).")
     yield
@@ -87,8 +110,8 @@ app = FastAPI(title="Governed Agentic AI - Chat API", lifespan=lifespan)
 
 class Decision(BaseModel):
     decision: Literal["approve", "reject"]
-    user_id: str                # demo only: a real deployment takes the approver from sign-in
-    role: str | None = None
+    user_id: str = Field(default="demo-reviewer", max_length=200)   # demo mode only; oidc: from the token
+    role: str | None = None                                          # demo mode only; oidc: from the token
     note: str | None = None
 
 
@@ -98,9 +121,9 @@ class Turn(BaseModel):
 
 
 class ChatRequest(BaseModel):
-    user_id: str = Field(max_length=200)
+    user_id: str = Field(default="demo-user", max_length=200)   # demo mode only; oidc: from the token
     message: str = Field(min_length=1, max_length=4000)   # same limit as a history turn; bounds work per request
-    role: str | None = None     # demo only: a real deployment takes the role from sign-in
+    role: str | None = None     # demo mode only; oidc: the role comes from the person's groups
     history: list[Turn] = Field(default_factory=list, max_length=40)   # earlier turns, oldest first (ADR 019)
     web: bool | None = None     # the chat page's "Search the web" switch; None: the wording decides
 
@@ -129,8 +152,34 @@ def demo():
     return FileResponse(UI_DIR / "demo.html")
 
 
+@app.get("/auth.js", include_in_schema=False)
+def auth_js():
+    """Sign-in for the browser pages (authorization code with PKCE; no secret in the page)."""
+    return FileResponse(UI_DIR / "auth.js", media_type="text/javascript")
+
+
+@app.get("/auth/config")
+def auth_config():
+    """Where the pages send people to sign in (public settings only)."""
+    return SIGN_IN.public_config()
+
+
+@app.get("/auth/me")
+def auth_me(request: Request):
+    """Who the token belongs to and the role it gives here (oidc), or demo mode."""
+    if not SIGN_IN.on:
+        return {"mode": "demo"}
+    c = who(request)
+    return {"mode": "oidc", "user": c.user_id, "name": c.name, "role": c.role,
+            "role_title": PROFILE.roles[c.role].title if c.role in PROFILE.roles else None,
+            "may_watch": SIGN_IN.may_watch(c)}
+
+
 @app.get("/events", include_in_schema=False)
 async def events(request: Request):
+    c = await asyncio.to_thread(signed_in, request)     # a key fetch must not block the event loop
+    if c is not None and not SIGN_IN.may_watch(c):
+        raise HTTPException(403, "your role may not watch the live dashboard")
     last_id = int(request.headers.get("last-event-id", 0) or 0)
     return StreamingResponse(event_stream(last_id), media_type="text/event-stream",
                              headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
@@ -202,13 +251,19 @@ def submit(user_id: str, message: str, role: str | None, history: list[dict], we
 
 
 @app.post("/chat")
-def send_chat(req: ChatRequest):
-    return {"request_id": submit(req.user_id, req.message, req.role, [t.model_dump() for t in req.history], req.web)}
+def send_chat(req: ChatRequest, request: Request):
+    c = who(request, req.user_id, req.role)
+    request_id = submit(c.user_id, req.message, c.role, [t.model_dump() for t in req.history], req.web)
+    if SIGN_IN.on:
+        owners[request_id] = c.user_id
+    return {"request_id": request_id}
 
 
 @app.get("/v1/models")
 def compat_models(request: Request):
-    if not compat.authorized(request.headers.get("authorization"), COMPAT_KEYS):
+    if SIGN_IN.on:
+        who(request)
+    elif not compat.authorized(request.headers.get("authorization"), COMPAT_KEYS):
         return JSONResponse(compat.CompatError("Invalid API key.", 401, "invalid_api_key").body(), 401)
     return compat.models(PROFILE.name)
 
@@ -216,18 +271,28 @@ def compat_models(request: Request):
 @app.post("/v1/chat/completions")
 async def compat_chat(request: Request):
     """OpenAI-compatible chat (ADR 020): the same pipeline as /chat, in the OpenAI request and
-    response shapes, so an existing chatbot can be put behind the governance layer by its base URL."""
-    if not compat.authorized(request.headers.get("authorization"), COMPAT_KEYS):
+    response shapes, so an existing chatbot can be put behind the governance layer by its base URL.
+    With sign-in on (oidc) the bearer is the person's access token instead of an API key."""
+    if SIGN_IN.on:
+        try:
+            caller = await asyncio.to_thread(SIGN_IN.caller, request.headers.get("authorization"))
+        except SignInRequired as e:
+            return JSONResponse(compat.CompatError(str(e), 401, "invalid_api_key").body(), 401)
+    elif not compat.authorized(request.headers.get("authorization"), COMPAT_KEYS):
         return JSONResponse(compat.CompatError("Invalid API key.", 401, "invalid_api_key").body(), 401)
+    else:
+        caller = None
     try:
         req = compat.to_request(await request.json())
     except ValueError:
         return JSONResponse(compat.CompatError("The request body is not valid JSON.").body(), 400)
     except compat.CompatError as e:
         return JSONResponse(e.body(), e.status)
-    # Demo only, like /chat: a real deployment takes the role from the caller's sign-in.
-    role = request.headers.get("x-governed-role") or None
-    request_id = submit(req["user_id"], req["message"], role, req["history"])
+    if caller is not None:
+        user, role = caller.user_id, caller.role
+    else:   # demo mode, like /chat: the caller names the role
+        user, role = req["user_id"], request.headers.get("x-governed-role") or None
+    request_id = submit(user, req["message"], role, req["history"])
     waited = 0.0
     while request_id not in responses:
         if waited >= COMPAT_TIMEOUT:
@@ -244,20 +309,25 @@ async def compat_chat(request: Request):
 
 
 @app.get("/chat/{request_id}")
-def get_chat(request_id: str):
+def get_chat(request_id: str, request: Request):
+    c = signed_in(request)
+    if c is not None and owners.get(request_id) != c.user_id:
+        raise HTTPException(404, "no such request")     # only the person who asked may read the answer
     if request_id not in responses:
         return {"status": "pending"}
     return {"status": "done", **responses[request_id]}
 
 
 @app.get("/approvals")
-def list_approvals():
+def list_approvals(request: Request):
     """Proposed changes, newest first. IDs and masked text only."""
+    signed_in(request)
     return sorted(approvals.approvals.values(), key=lambda a: a["created_at"], reverse=True)[:50]
 
 
 @app.get("/approvals/{approval_id}")
-def get_approval(approval_id: str):
+def get_approval(approval_id: str, request: Request):
+    signed_in(request)
     a = approvals.approvals.get(approval_id)
     if a is None:
         raise HTTPException(404, "no such approval request")
@@ -265,18 +335,20 @@ def get_approval(approval_id: str):
 
 
 @app.post("/approvals/{approval_id}/decision")
-def decide_approval(approval_id: str, d: Decision):
+def decide_approval(approval_id: str, d: Decision, request: Request):
     """Record a person's decision. Whether the change is then made is decided by the
     executor agent and OPA (approver role, not the person who asked, not expired),
-    not here."""
+    not here. With sign-in on, the approver and their role come from their token, so
+    "not the person who asked" compares two signed-in people."""
+    c = who(request, d.user_id, d.role)
     a = approvals.approvals.get(approval_id)
     if a is None:
         raise HTTPException(404, "no such approval request")
     if a["status"] != "pending":
         raise HTTPException(409, f"already {a['status']}")
     producer.produce(actions.DECIDED, key=approval_id, value=json.dumps({
-        "approval_id": approval_id, "request_id": a["request_id"], "decision": d.decision, "approver": d.user_id,
-        "approver_role": d.role, "note": d.note, "decided_at": datetime.now().isoformat(timespec="seconds"),
+        "approval_id": approval_id, "request_id": a["request_id"], "decision": d.decision, "approver": c.user_id,
+        "approver_role": c.role, "note": d.note, "decided_at": datetime.now().isoformat(timespec="seconds"),
     }))
     producer.flush()
     return {"approval_id": approval_id, "decision": d.decision, "status": "recorded"}

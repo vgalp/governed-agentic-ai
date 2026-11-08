@@ -232,6 +232,7 @@
   </div>
 </div>
 
+<script src="/auth.js"></script>
 <script>
 const STAGES = [
   ["received", "Request received"],
@@ -754,7 +755,7 @@ function showNote(text) {
 }
 
 function connect() {
-  const es = new EventSource("/events");
+  const es = GovAuth.eventSource("/events");
   es.onopen = () => { $("conn").classList.add("live"); $("connText").textContent = "Live"; };
   es.onerror = () => { $("conn").classList.remove("live"); $("connText").textContent = "Reconnecting…"; };
   es.onmessage = m => { addEvent(JSON.parse(m.data)); render(); };

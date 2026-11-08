@@ -182,7 +182,7 @@
 <div class="main">
   <div class="left">
     <div class="card section">
-      <div class="whorow" id="whoRow">
+      <div class="whorow demo-role" id="whoRow">
         <label for="roleSel">You are</label>
         <select id="roleSel"></select>
         <span class="rolenote" id="rolenote">Your role decides what you may see. In a real deployment it comes from your sign-in.</span>
@@ -216,6 +216,7 @@
   </div>
 </div>
 
+<script src="/auth.js"></script>
 <script>
 // Guided situations per profile. A profile not listed here uses its own example questions.
 const SCENARIOS = {
@@ -380,7 +381,7 @@ function track(id) {
   return requests.get(id);
 }
 function connect() {
-  const es = new EventSource("/events");
+  const es = GovAuth.eventSource("/events");
   es.onmessage = m => {
     const ev = JSON.parse(m.data);
     const id = ev.data && ev.data.request_id;

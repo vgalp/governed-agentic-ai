@@ -74,9 +74,11 @@ class ClassifierConfig:
     categories: tuple[ClassifierCategory, ...]   # priority order
     default_category: str
     # What checks the QUESTION: Llama Guard with the policy above (llamaguard), or the fine-tuned
-    # guard classifier (guard_model: models/<guard_model>, reading guard_policy). Answers are always
-    # checked by Llama Guard: the guard classifier is trained on questions only.
+    # guard classifier (guard_model: models/<guard_model>, reading guard_policy).
     input_engine: str = "llamaguard"
+    # What checks the ANSWER: Llama Guard (the default, tested) or the guard classifier on the answer
+    # text (guard_model). Experimental: the guard classifier was trained on questions only.
+    output_engine: str = "llamaguard"
     guard_model: str | None = None
     guard_policy: str | None = None
     decision_category: str | None = None       # reply category for the guard's "decision" label
@@ -185,6 +187,7 @@ class Profile:
     outside: OutsideConfig | None = None        # governed MCP endpoint for outside assistants (outside.yaml)
     fhir_map: FhirMap | None = None             # how a FHIR server's resources become records (ADR 013)
     faithfulness: dict | None = None            # a second model judges answers from listed tools (ADR 022)
+    sign_in: dict | None = None                 # how people sign in to the chat API (ADR 028)
 
     def response(self, category: str, role: str | None = None) -> str:
         """The fixed reply for a category, worded for the role if the role has its own."""
@@ -256,21 +259,23 @@ INPUT_ENGINES = ("llamaguard", "guard_model")
 
 
 def _guard_settings(c: dict, name: str, where: str) -> dict:
-    """The input_engine settings of a profile's classifier block. With guard_model, the policy
-    paragraph is the profile's own guard_policy, or its entry (or guard_policy_of's) in classifier/policies.yaml."""
+    """The input_engine and output_engine settings of a profile's classifier block. With guard_model
+    for either, the policy paragraph is the profile's own guard_policy, or its entry (or
+    guard_policy_of's) in classifier/policies.yaml."""
     engine = c.get("input_engine", "llamaguard")
-    if engine not in INPUT_ENGINES:
-        raise ProfileError(f"{where}: classifier input_engine must be one of {', '.join(INPUT_ENGINES)}")
-    if engine == "llamaguard":
+    out_engine = c.get("output_engine", "llamaguard")
+    if engine not in INPUT_ENGINES or out_engine not in INPUT_ENGINES:
+        raise ProfileError(f"{where}: classifier input_engine and output_engine must be one of {', '.join(INPUT_ENGINES)}")
+    if engine == "llamaguard" and out_engine == "llamaguard":
         return {"input_engine": engine}
     policy = c.get("guard_policy")
     if not policy and GUARD_POLICIES.exists():
         # guard_policy_of: use another profile's paragraph (the same organization, another setup).
         policy = (yaml.safe_load(GUARD_POLICIES.read_text(encoding="utf-8")) or {}).get(c.get("guard_policy_of", name))
     if not policy:
-        raise ProfileError(f"{where}: classifier input_engine guard_model needs a guard_policy paragraph "
+        raise ProfileError(f"{where}: classifier engine guard_model needs a guard_policy paragraph "
                            f"(in the classifier block, or under '{name}' in classifier/policies.yaml)")
-    return {"input_engine": engine,
+    return {"input_engine": engine, "output_engine": out_engine,
             "guard_model": _require(c, "guard_model", f"{where}: classifier"),
             "guard_policy": str(policy).strip(),
             "decision_category": _require(c, "decision_category", f"{where}: classifier")}
@@ -932,6 +937,7 @@ def load_profile_from(path: Path) -> Profile:
         unknown = sorted(set(local_sees) - set(privacy.get("entities", [])))
         if unknown:
             raise ProfileError(f"{where}: privacy.local_model_sees names {', '.join(unknown)}, not in privacy.entities")
+    sign_in = _sign_in(p.get("sign_in"), roles, where)
     return Profile(
         name=name,
         title=p.get("title", name),
@@ -963,7 +969,29 @@ def load_profile_from(path: Path) -> Profile:
         fhir_map=fhir_map,
         outside=outside,
         faithfulness=faithfulness or None,
+        sign_in=sign_in,
     )
+
+
+def _sign_in(raw, roles: dict, where: str) -> dict | None:
+    """sign_in (ADR 028): every mapped role must be one of the profile's roles, so a group can never
+    grant a role the profile does not define."""
+    if not raw:
+        return None
+    s = dict(raw)
+    if not roles and (s.get("roles") or s.get("dashboard_roles")):
+        raise ProfileError(f"{where}: sign_in maps groups to roles, but the profile has no roles.yaml")
+    for group, role in (s.get("roles") or {}).items():
+        if role not in roles:
+            raise ProfileError(f"{where}: sign_in.roles maps group '{group}' to '{role}', not a role in roles.yaml")
+    for role in s.get("dashboard_roles") or []:
+        if role not in roles:
+            raise ProfileError(f"{where}: sign_in.dashboard_roles names '{role}', not a role in roles.yaml")
+    if s.get("mode") == "oidc":
+        missing = [k for k in ("issuer", "audience", "client_id") if not s.get(k)]
+        if missing:
+            raise ProfileError(f"{where}: sign_in.mode is oidc but {', '.join(missing)} is not set")
+    return s
 
 
 @lru_cache(maxsize=None)

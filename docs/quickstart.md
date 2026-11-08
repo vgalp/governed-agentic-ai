@@ -54,6 +54,25 @@ Other profiles: `PROFILE=clinic-assistant ./scripts/quickstart.sh` or `PROFILE=c
 A new office adapts the pipeline by writing a profile (a folder of YAML and text), not code:
 see [`profiles/`](../profiles/).
 
+## Sign in with an identity provider (optional)
+
+By default the chat page has a role menu: anyone on the machine can pick any role. To make people
+sign in instead, with their group deciding the role ([ADR 028](decisions/028-sign-in.md)), start a
+local Keycloak with test users, then the pipeline with sign-in on:
+
+```bash
+./scripts/keycloak_setup.sh            # Keycloak on http://127.0.0.1:8180, prints the test users
+GOVERNED_SIGN_IN=oidc PROFILE=clinic-assistant ./scripts/dev.sh restart
+```
+
+Open http://127.0.0.1:8000 and sign in as `nurse.kim` or `dr.lee` (passwords printed by the
+script; `./scripts/keycloak_setup.sh users` prints them again). The page shows who you are and
+your role; the role menu is gone. To see the two-person rule, ask for a change as one person and
+approve it as another in a second browser or a private window.
+
+An organization uses its own provider instead: put its issuer, audience, client and group names in
+the profile's `sign_in` block. Stop Keycloak with `docker compose --profile auth down`.
+
 ## Stop
 
 ```bash

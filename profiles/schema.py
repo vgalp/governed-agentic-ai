@@ -67,6 +67,9 @@ class Classifier(Strict):
     default_category: str
     decision_category: str | None = None
     input_engine: Literal["llamaguard", "guard_model"] = "llamaguard"
+    # What checks the ANSWER. guard_model: the guard classifier on the answer text. Experimental: it was
+    # trained and evaluated on questions only; the default (Llama Guard) is the tested answer check.
+    output_engine: Literal["llamaguard", "guard_model"] = "llamaguard"
     guard_model: str | None = None
     guard_policy: str | None = None
     guard_policy_of: str | None = None  # another profile's guard policy, by name
@@ -110,6 +113,23 @@ class Outside(Strict):
     mask_results: Literal["external", "always", "never"] = "external"
 
 
+class SignIn(Strict):
+    """How people sign in to the chat API (ADR 028). demo: the request says who and which role (one
+    machine only). oidc: an access token from the organization's identity provider; the environment
+    variable GOVERNED_SIGN_IN overrides the mode."""
+
+    mode: Literal["demo", "oidc"] = "demo"
+    issuer: str | None = None              # e.g. http://127.0.0.1:8180/realms/governed-demo
+    audience: str | None = None            # the token's aud (or azp) this service accepts
+    client_id: str | None = None           # the public client the browser pages sign in with (PKCE)
+    scope: str = "openid profile"
+    user_claim: str = "preferred_username"  # which claim names the person (falls back to sub)
+    groups_claim: str = "groups"           # a dotted path also works, e.g. realm_access.roles
+    roles: dict[str, str] = {}             # identity-provider group -> this profile's role; first match wins
+    dashboard_roles: list[str] = []        # roles that may watch the live dashboard; empty: everyone signed in
+    leeway_seconds: int = Field(default=30, ge=0, le=300)
+
+
 class ProfileFile(Strict):
     """profile.yaml"""
 
@@ -137,6 +157,7 @@ class ProfileFile(Strict):
     source_id_pattern: str | None = None
     faithfulness: Faithfulness | None = None
     examples: list[str] = []
+    sign_in: SignIn | None = None
 
 
 # --- tools.yaml ---------------------------------------------------------------------------------

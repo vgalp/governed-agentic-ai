@@ -62,5 +62,23 @@ services:
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: broker:29092
       KAFKA_CLUSTERS_0_SCHEMAREGISTRY: http://schema-registry:8081
 
+  # A local identity provider for sign-in (ADR 028), only when asked for: scripts/keycloak_setup.sh
+  # starts it (docker compose --profile auth) and creates the test realm, client, groups and users.
+  # Development mode, on this machine only. An organization uses its own provider instead.
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.4.0
+    container_name: keycloak
+    profiles: ["auth"]
+    command: ["start-dev"]
+    ports:
+      - "127.0.0.1:8180:8080"
+    environment:
+      KC_HOSTNAME: http://127.0.0.1:8180      # the issuer in every token; must match sign_in.issuer
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-}   # set by scripts/keycloak_setup.sh
+    volumes:
+      - keycloak-data:/opt/keycloak/data
+
 volumes:
+  keycloak-data:
   kafka-data:

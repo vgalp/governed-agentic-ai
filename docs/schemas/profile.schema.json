@@ -126,6 +126,15 @@
           "title": "Model",
           "type": "string"
         },
+        "output_engine": {
+          "default": "llamaguard",
+          "enum": [
+            "llamaguard",
+            "guard_model"
+          ],
+          "title": "Output Engine",
+          "type": "string"
+        },
         "policy": {
           "title": "Policy",
           "type": "string"
@@ -409,6 +418,97 @@
       ],
       "title": "Routing",
       "type": "object"
+    },
+    "SignIn": {
+      "additionalProperties": false,
+      "description": "How people sign in to the chat API (ADR 028). demo: the request says who and which role (one\nmachine only). oidc: an access token from the organization's identity provider; the environment\nvariable GOVERNED_SIGN_IN overrides the mode.",
+      "properties": {
+        "audience": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Audience"
+        },
+        "client_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Client Id"
+        },
+        "dashboard_roles": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Dashboard Roles",
+          "type": "array"
+        },
+        "groups_claim": {
+          "default": "groups",
+          "title": "Groups Claim",
+          "type": "string"
+        },
+        "issuer": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Issuer"
+        },
+        "leeway_seconds": {
+          "default": 30,
+          "maximum": 300,
+          "minimum": 0,
+          "title": "Leeway Seconds",
+          "type": "integer"
+        },
+        "mode": {
+          "default": "demo",
+          "enum": [
+            "demo",
+            "oidc"
+          ],
+          "title": "Mode",
+          "type": "string"
+        },
+        "roles": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "default": {},
+          "title": "Roles",
+          "type": "object"
+        },
+        "scope": {
+          "default": "openid profile",
+          "title": "Scope",
+          "type": "string"
+        },
+        "user_claim": {
+          "default": "preferred_username",
+          "title": "User Claim",
+          "type": "string"
+        }
+      },
+      "title": "SignIn",
+      "type": "object"
     }
   },
   "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -572,6 +672,17 @@
     "rules": {
       "title": "Rules",
       "type": "string"
+    },
+    "sign_in": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/SignIn"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
     },
     "source_id_pattern": {
       "anyOf": [

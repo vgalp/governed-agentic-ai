@@ -119,3 +119,19 @@ faithfulness:
   strict: true
   mode: warn                # a fact the pages contradict withholds the answer; one they do not mention
                             # is sent with a warning (withhold held back too many plain answers in testing)
+
+# Who is asking, and in which role (ADR 028). demo: the chat page's role menu, for a demonstration
+# on one machine (anyone can pick any role). oidc: people sign in with the organization's identity
+# provider; their group decides the role, and the role menu is ignored. GOVERNED_SIGN_IN=oidc turns
+# it on without editing this file. The values below are the local Keycloak of
+# scripts/keycloak_setup.sh; an organization puts its own provider here (Entra ID, Okta, Google ...).
+sign_in:
+  mode: demo
+  issuer: http://127.0.0.1:8180/realms/governed-demo
+  audience: governed-api
+  client_id: governed-ui
+  roles:                    # identity-provider group -> role (roles.yaml); the first match wins
+    clinicians: clinician
+    nurses: nurse
+    front-desk: front_desk
+    compliance: compliance
