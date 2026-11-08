@@ -103,7 +103,12 @@ GIDS=""   # "group=id " pairs (no associative arrays: macOS ships bash 3.2)
 for g in clinicians nurses front-desk compliance; do
   GIDS="$GIDS$g=$("${KC[@]}" create groups -r "$REALM" -i -s name="$g") "
 done
-gid() { for pair in $GIDS; do [ "${pair%%=*}" = "$1" ] && echo "${pair#*=}"; done; }
+gid() {  # the id of a group just created (returns 0: under set -e a false test would end the script)
+  for pair in $GIDS; do
+    if [ "${pair%%=*}" = "$1" ]; then echo "${pair#*=}"; fi
+  done
+  return 0
+}
 ok "Groups: clinicians, nurses, front-desk, compliance"
 
 for u in "${USERS[@]}"; do
@@ -113,6 +118,7 @@ for u in "${USERS[@]}"; do
     -s firstName="$first" -s lastName="$last" -s email="$name@example.test" -s emailVerified=true)
   "${KC[@]}" set-password -r "$REALM" --userid "$UID_" --new-password "${!v}" >/dev/null
   G="$(gid "$group")"
+  [ -n "$G" ] || fail "No id for group $group"
   "${KC[@]}" update "users/$UID_/groups/$G" -r "$REALM" -s realm="$REALM" -s userId="$UID_" -s groupId="$G" -n >/dev/null
 done
 ok "Users: ${#USERS[@]}"
