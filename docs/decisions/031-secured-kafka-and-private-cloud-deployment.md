@@ -33,7 +33,19 @@ no part of it is reachable from the internet.
   not committed), adds the users and ACLs, and `check` proves that a wrong password, plaintext and a
   forbidden write are refused. `dev.sh` gives each service only its own password. Kafka UI signs in
   read-only. Off by default until it has run on more machines, like mutual TLS (ADR 030).
-- **Terraform for Azure and AWS** (`deploy/terraform/azure`, `deploy/terraform/aws`), private only:
+- **Terraform modules and Terragrunt environments** (`deploy/`), private only:
+  - *Modules* (`deploy/modules/<cloud>/<concern>`): one per concern (network, identities, kafka,
+    secrets, registry, storage, ollama, apps; KMS on AWS), with typed inputs and outputs and no
+    environment in them. No module has a provider block or reads a file outside `deploy/modules`.
+  - *Terragrunt* (`deploy/live/<cloud>`): `root.hcl` sets the remote state (one state per unit:
+    Azure Storage with Entra ID, S3 with native locking), generates the provider (an Azure
+    subscription per environment; on AWS `allowed_account_ids`, so dev settings cannot touch the
+    prod account), names and tags, and reads `ops/kafka_access.yaml` once. `_common/<unit>.hcl`
+    describes each unit once: its module, its dependencies and how outputs become inputs. An
+    environment is a folder with an `env.hcl` (subscription or account, region, network range,
+    sizes, image tag) and the same units; `dev` and `prod` are provided, a new one is a copy.
+    Dependencies carry placeholder outputs, so `validate` and a first `plan` work before anything
+    exists; the services unit is applied after the image is pushed.
   - *Azure*: a VNet with Event Hubs Premium (Kafka endpoint; public access and shared keys off;
     Entra ID only), Key Vault, a Premium container registry and storage, each behind a private
     endpoint with private DNS; an internal Container Apps environment; a GPU VM for Ollama without
@@ -41,7 +53,7 @@ no part of it is reachable from the internet.
   - *AWS*: a VPC with private subnets and endpoints for ECR, logs, Secrets Manager, KMS, STS, SSM
     and S3; MSK with TLS and IAM sign-in only; ECS Fargate behind an internal load balancer; a GPU
     instance for Ollama administered through Session Manager (no SSH key, IMDSv2 only); one KMS key
-    for everything stored; VPC flow logs.
+    per environment for everything stored; VPC flow logs.
   - On both: the API, the planner and the executor each run as their **own identity** with their
     own Kafka rights. The tool servers and OPA run beside the planner and the executor in the same
     task or app, so they share 127.0.0.1 as on one machine and the profiles do not change; OPA keeps
@@ -60,8 +72,11 @@ no part of it is reachable from the internet.
 ## Consequences
 - Tested here: the settings for every protocol and sign-in (mocked Entra ID and MSK tokens), the
   access list against the code, the compose override's listeners, the deployment's promises
-  (no public address, Entra ID or IAM only), and `tofu validate` of both configurations (OpenTofu
-  1.10, azurerm 4.40, aws 6.10). Not run here (no Docker or cloud account in this environment): the
+  (no public address, Entra ID or IAM only), every module on its own with `tofu validate`, and all
+  four environments (Azure and AWS, dev and prod: 32 units) with `terragrunt run --all validate`
+  (Terragrunt 0.93, OpenTofu 1.10, azurerm 4.40, aws 6.10). `tests/test_deploy.py` checks the wiring
+  the placeholder outputs could hide: every input is a variable of its module, every required
+  variable is given, and every dependency output used exists in that module. Not run here (no Docker or cloud account in this environment): the
   secured broker itself, and an apply; `./scripts/kafka_secure.sh check` and deploy/README.md are
   how to verify them.
 - Event Hubs keeps events at most 90 days (Premium). The audit topics are also archived by Event

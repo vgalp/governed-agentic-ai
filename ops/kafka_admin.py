@@ -4,7 +4,7 @@
                                              local broker (scripts/kafka_secure.sh runs them inside it)
   python -m ops.kafka_admin create-topics    create the topics (retention from the access file) on the
                                              broker that KAFKA_* points to, as KAFKA_USERNAME_ADMIN or
-                                             an admin IAM role (the AWS setup task, deploy/terraform/aws)
+                                             an admin IAM role (the AWS setup task, deploy/modules/aws/apps)
   python -m ops.kafka_admin apply-acls       write the same ACLs through the Kafka admin API (any
                                              SASL/SCRAM cluster where this process is a super user)
   python -m ops.kafka_admin selfcheck        against the secured broker: a wrong password, plaintext and a

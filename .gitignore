@@ -23,8 +23,9 @@ eval/external/raw/openai_samples-1680.jsonl.gz
 .kafka.env
 # Local CA and keys for mutual TLS (scripts/certs.sh): never committed
 certs/
-# Terraform: local state, provider downloads and variable files (they may hold addresses and keys)
-deploy/terraform/**/.terraform/
-deploy/terraform/**/*.tfstate*
-deploy/terraform/**/*.tfvars
-!deploy/terraform/**/*.tfvars.example
+# Terraform and Terragrunt: local state, caches and provider downloads (lock files are committed)
+deploy/**/.terraform/
+deploy/**/.terragrunt-cache/
+deploy/**/.local-state/
+deploy/**/*.tfstate*
+deploy/**/*.tfvars

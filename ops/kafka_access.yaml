@@ -2,8 +2,8 @@
 #
 # One list for every place the pipeline runs, so the rules cannot drift apart:
 #   - the secured local broker: SCRAM users and ACLs (scripts/kafka_secure.sh, ops/kafka_admin.py)
-#   - Amazon MSK: one IAM policy per service's task role (deploy/terraform/aws)
-#   - Azure Event Hubs: Data Sender / Data Receiver role assignments per hub (deploy/terraform/azure)
+#   - Amazon MSK: one IAM policy per service's task role (deploy/modules/aws/kafka)
+#   - Azure Event Hubs: Data Sender / Data Receiver role assignments per hub (deploy/modules/azure/kafka)
 # tests/test_kafka_access.py checks it against the topics the code actually uses.
 #
 # Consumer groups ending in "-" are prefixes (each API process makes its own api-responses-<uuid>).

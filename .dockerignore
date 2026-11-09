@@ -16,6 +16,4 @@ release/
 *.safetensors
 eval/external/raw/
 eval/datasets/crisis_benchmark_v2.jsonl
-deploy/terraform/**/.terraform/
-deploy/terraform/**/*.tfstate*
-deploy/terraform/**/*.tfvars
+deploy/

@@ -1,6 +1,6 @@
 # One image for every service of a cloud deployment (ADR 031): the API, the planner, the executor,
 # the tool servers (python -m ops.run_all) and OPA (as a sidecar, from the same image). What each
-# container runs is chosen by its command; see deploy/terraform.
+# container runs is chosen by its command; see deploy/modules/<cloud>/apps.
 #
 #   docker build -t governed-agentic-ai:<version> .
 #

@@ -96,35 +96,138 @@ def test_the_image_never_contains_secrets_or_local_state():
     assert "sample_csv" in docker                    # synthetic data only
 
 
-# --- Terraform: private only ----------------------------------------------------------------------
+# --- Terraform modules and Terragrunt units ------------------------------------------------------
 
-@pytest.mark.parametrize("cloud", ["azure", "aws"])
-def test_both_clouds_take_kafka_access_from_the_one_access_file(cloud):
-    assert 'yamldecode(file("${path.module}/../../../ops/kafka_access.yaml"))' in _tf(cloud)
+DEPLOY = ROOT / "deploy"
+MODULES = DEPLOY / "modules"
+LIVE = DEPLOY / "live"
+CLOUDS = ["azure", "aws"]
+
+
+def _tf(path: Path) -> str:
+    """Terraform text with runs of spaces collapsed (tofu fmt aligns the equals signs)."""
+    return re.sub(r"[ \t]+", " ", "\n".join(f.read_text() for f in sorted(path.glob("*.tf"))))
+
+
+def _blocks(text: str, kind: str) -> dict[str, str]:
+    """Top-level `kind "name" { ... }` blocks by name (variable, output)."""
+    out, pattern = {}, re.compile(rf'^{kind} "([^"]+)" \{{', re.M)
+    for m in pattern.finditer(text):
+        depth, i = 0, m.end() - 1
+        for j in range(i, len(text)):
+            depth += {"{": 1, "}": -1}.get(text[j], 0)
+            if depth == 0:
+                out[m.group(1)] = text[i:j + 1]
+                break
+    return out
+
+
+def _variables(module: Path) -> dict[str, bool]:
+    """Variable name -> required (no default)."""
+    return {n: "default" not in body for n, body in _blocks(_tf(module), "variable").items()}
+
+
+def _outputs(module: Path) -> set[str]:
+    return set(_blocks(_tf(module), "output"))
+
+
+def _inputs(hcl: str) -> set[str]:
+    m = re.search(r"^inputs = \{(.*?)^\}", hcl, re.M | re.S)
+    return set(re.findall(r"^  ([a-z_]+)\s*=", m.group(1), re.M)) if m else set()
+
+
+def _units(cloud: str) -> list[str]:
+    return sorted(f.stem for f in (LIVE / cloud / "_common").glob("*.hcl") if f.stem != "mocks")
+
+
+@pytest.mark.parametrize("cloud", CLOUDS)
+def test_every_unit_has_a_module_and_every_environment_has_every_unit(cloud):
+    units = _units(cloud)
+    for u in units:
+        assert (MODULES / cloud / u / "main.tf").is_file(), u
+    envs = sorted(d.name for d in (LIVE / cloud).iterdir() if (d / "env.hcl").is_file())
+    assert {"dev", "prod"} <= set(envs)
+    for e in envs:
+        assert sorted(d.name for d in (LIVE / cloud / e).iterdir() if d.is_dir()) == units, e
+        for u in units:
+            unit = (LIVE / cloud / e / u / "terragrunt.hcl").read_text()
+            assert 'find_in_parent_folders("root.hcl")' in unit and "_common/" in unit, (e, u)
+
+
+@pytest.mark.parametrize("cloud", CLOUDS)
+def test_every_input_is_a_module_variable_and_every_required_variable_is_given(cloud):
+    root = (LIVE / cloud / "root.hcl").read_text()
+    shared = _inputs(root)
+    for u in _units(cloud):
+        variables = _variables(MODULES / cloud / u)
+        given = _inputs((LIVE / cloud / "_common" / f"{u}.hcl").read_text())
+        assert given <= set(variables), (u, sorted(given - set(variables)))     # a misspelled input
+        missing = {v for v, required in variables.items() if required} - given - shared
+        assert not missing, (u, sorted(missing))
+
+
+@pytest.mark.parametrize("cloud", CLOUDS)
+def test_every_dependency_output_used_exists_in_the_module_and_in_the_mocks(cloud):
+    mocks = (LIVE / cloud / "_common" / "mocks.hcl").read_text()
+    for u in _units(cloud):
+        hcl = (LIVE / cloud / "_common" / f"{u}.hcl").read_text()
+        for dep, out in set(re.findall(r"dependency\.([a-z]+)\.outputs\.([a-z_]+)", hcl)):
+            assert out in _outputs(MODULES / cloud / dep), (u, dep, out)
+            block = re.search(rf"^  {dep} = \{{(.*?)^  \}}|^  {dep}\s*= \{{([^\n]*)\}}", mocks, re.M | re.S)
+            assert block and re.search(rf"\b{out}\b", block.group(0)), (u, dep, out, "mock")
+
+
+@pytest.mark.parametrize("cloud", CLOUDS)
+def test_the_kafka_access_list_reaches_the_modules_from_the_one_file(cloud):
+    root = (LIVE / cloud / "root.hcl").read_text()
+    assert 'yamldecode(file("${get_parent_terragrunt_dir()}/../../../ops/kafka_access.yaml"))' in root
+    assert re.search(r"^\s*kafka_access\s*=\s*local\.kafka_access$", root, re.M)
+    assert "kafka_access" in _variables(MODULES / cloud / "kafka")
+
+
+def test_environments_are_kept_apart():
+    for cloud, key in (("azure", "address_space"), ("aws", "vpc_cidr")):
+        ranges = [re.search(rf'{key}\s*=\s*"([^"]+)"', (LIVE / cloud / e / "env.hcl").read_text()).group(1)
+                  for e in ("dev", "prod")]
+        assert len(set(ranges)) == 2, cloud                                  # so they can be peered later
+    aws_root = (LIVE / "aws" / "root.hcl").read_text()
+    assert "allowed_account_ids" in aws_root                               # dev never applied to prod
+    for cloud in CLOUDS:
+        root = (LIVE / cloud / "root.hcl").read_text()
+        assert "path_relative_to_include()}/terraform.tfstate" in root       # one state per unit
+        assert 'GOVERNED_TG_LOCAL_STATE", "") == "1"' in root                 # local state only on request
+
+
+def test_modules_have_no_provider_blocks_or_paths_outside_deploy_modules():
+    for f in MODULES.rglob("*.tf"):
+        text = f.read_text()
+        assert not re.search(r'^provider "', text, re.M), f                  # providers come from root.hcl
+        for ref in re.findall(r'"\$\{path\.module\}/([^"]+)"', text) + re.findall(r'source\s*=\s*"(\.\./[^"]+)"', text):
+            assert (f.parent / ref).resolve().is_relative_to(MODULES.resolve()), (f, ref)
 
 
 def test_azure_has_no_public_endpoint():
-    tf = _tf("azure")
-    assert "local_authentication_enabled = false" in tf            # Event Hubs: Entra ID only, no keys
-    assert tf.count("public_network_access_enabled = false") >= 3   # Event Hubs and both storage accounts
-    assert "internal_load_balancer_enabled = true" in tf        # the apps have a private address only
-    assert "azurerm_public_ip" in tf and 'count = var.internet_egress ? 1 : 0' in tf  # NAT only
-    assert "public_ip_address_id" not in re.sub(r"azurerm_nat_gateway_public_ip_association[\s\S]*?\n}", "", tf)
+    tf = "\n".join(_tf(d) for d in (MODULES / "azure").iterdir() if d.is_dir())
+    assert "local_authentication_enabled = false" in tf                    # Event Hubs: Entra ID only
+    assert tf.count("public_network_access_enabled = false") >= 3          # Event Hubs and both storage accounts
+    assert "internal_load_balancer_enabled = true" in tf                   # the apps have a private address only
     assert tf.count("default_outbound_access_enabled = false") == 3
+    assert "public_ip_address_id" not in re.sub(r"azurerm_nat_gateway_public_ip_association[\s\S]*?\n}", "", tf)
     assert 'KAFKA_OAUTH_PROVIDER = "azure"' in tf
 
 
 def test_aws_has_no_public_endpoint():
-    tf = _tf("aws")
+    tf = "\n".join(_tf(d) for d in (MODULES / "aws").iterdir() if d.is_dir())
     assert "unauthenticated = false" in tf and "iam = true" in tf and 'client_broker = "TLS"' in tf
-    assert 'type = "DISABLED"' in tf                                # MSK public access
-    assert "internal = true" in tf                # the load balancer
+    assert 'type = "DISABLED"' in tf                                       # MSK public access
+    assert "internal = true" in tf                                         # the load balancer
     assert tf.count("assign_public_ip = false") == 1 and "associate_public_ip_address = false" in tf
-    assert 'http_tokens = "required"' in tf
-    assert "map_public_ip_on_launch" not in tf
+    assert 'http_tokens = "required"' in tf and "map_public_ip_on_launch" not in tf
     assert 'KAFKA_OAUTH_PROVIDER = "aws-msk-iam"' in tf
 
 
-def test_terraform_state_and_variables_are_never_committed():
+def test_terraform_state_caches_and_variables_are_never_committed_or_in_the_image():
     ignore = (ROOT / ".gitignore").read_text()
-    assert "deploy/terraform/**/*.tfstate*" in ignore and "deploy/terraform/**/*.tfvars" in ignore
+    for item in ("deploy/**/.terragrunt-cache/", "deploy/**/.local-state/", "deploy/**/*.tfstate*", "deploy/**/*.tfvars"):
+        assert item in ignore, item
+    assert "deploy/" in (ROOT / ".dockerignore").read_text().split()

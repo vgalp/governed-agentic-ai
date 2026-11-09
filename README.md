@@ -242,7 +242,7 @@ audit/           Hash-chained, signed audit events and the verifier
 ui/              Chat page and live dashboard
 scripts/         dev.sh: start, stop and check every component
 ops/             Kafka connection and access list, delivery, health, supervision
-deploy/          Private deployments on Azure and AWS (Terraform), and the Dockerfile's guide
+deploy/          Private deployments: Terraform modules and Terragrunt environments (dev, prod) for Azure and AWS
 eval/            Test sets, evaluation scripts, results and review notes
 tests/           Unit tests
 docs/            Architecture notes and decision records
@@ -266,7 +266,7 @@ docs/            Architecture notes and decision records
 - [x] Changes from configuration (generic change tool): the county profile releases held payments with no code
 - [x] Cost and quality metrics on the dashboard: cost per task, iteration cost, task success, toxicity (ADR 018)
 - [x] Signed audit checkpoints (truncation detection), confirmed Kafka delivery, supervision and health checks, a rate limit per person, OPA token authentication and mutual TLS to the tool servers (ADR 030)
-- [x] Kafka with TLS, a sign-in per service and least-privilege access from one list; private deployments on Azure and AWS with Terraform (ADR 031, [deploy/](deploy/README.md))
+- [x] Kafka with TLS, a sign-in per service and least-privilege access from one list; private deployments on Azure and AWS: Terraform modules and Terragrunt environments (ADR 031, [deploy/](deploy/README.md))
 - [ ] Deployment on GCP
 - [ ] Fine-tuned safety classifier and grounding check (layer 3)
 - [ ] Clinician-reviewed knowledge base and fixed responses
