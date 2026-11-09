@@ -54,11 +54,12 @@ apply() {
   for u in $USERS; do
     t="$(tag "$u")"
     pw_var="KAFKA_PASSWORD_$t"
-    # The password goes through a file inside the container, never a command line.
-    printf 'SCRAM-SHA-512=[iterations=8192,password=%s]\n' "${!pw_var}" |
-      docker exec -i broker sh -c 'umask 077; cat > /tmp/scram.properties'
+    # The password goes into a file inside the container (never on a command line on this machine);
+    # kafka-configs reads it there. (--add-config-file does not accept SCRAM credentials.)
+    printf 'SCRAM-SHA-512=[iterations=8192,password=%s]' "${!pw_var}" |
+      docker exec -i broker sh -c 'umask 077; cat > /tmp/scram.cred'
     docker exec broker sh -c "kafka-configs --bootstrap-server $ADMIN --alter --entity-type users --entity-name $u \
-      --add-config-file /tmp/scram.properties >/dev/null; rc=\$?; rm -f /tmp/scram.properties; exit \$rc"
+      --add-config \"\$(cat /tmp/scram.cred)\" >/dev/null; rc=\$?; rm -f /tmp/scram.cred; exit \$rc"
   done
   n=0
   set -f                         # "--topic *" means every topic, not the files in this folder
