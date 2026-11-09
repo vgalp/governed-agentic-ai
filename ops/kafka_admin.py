@@ -125,36 +125,49 @@ def apply_acls(access: dict) -> int:  # pragma: no cover - needs a broker
 
 
 def selfcheck() -> int:  # pragma: no cover - needs the secured broker (scripts/kafka_secure.sh check)
-    """Against the secured broker: what must work works, and what must be refused is refused."""
+    """Against the secured broker: what must work works, and what must be refused is refused.
+    Each result is printed as soon as it is known; the client's own error lines are hidden, since
+    three of the four tests are meant to fail."""
+    import logging
+
     from confluent_kafka import KafkaException, Producer
 
     from ops.kafka import kafka_config
-    results = []
+    quiet = logging.getLogger("kafka-selfcheck")
+    quiet.addHandler(logging.NullHandler())
+    quiet.propagate = False
+
+    def client(conf: dict) -> Producer:
+        return Producer({**conf, "logger": quiet, "message.timeout.ms": 10000})
 
     def connects(conf: dict) -> bool:
         """Signed in and allowed to see the audit topics (an ACL), not just a TCP connection."""
         try:
-            topics = Producer(conf).list_topics(timeout=8).topics
+            return "audit.tool_calls" in client(conf).list_topics(timeout=8).topics
         except KafkaException:
             return False
-        return "audit.tool_calls" in topics
 
-    results.append(("audit-verify signs in over TLS", connects(kafka_config("audit-verify"))))
-    wrong = {**kafka_config("audit-verify"), "sasl.password": "wrong-password"}
-    results.append(("a wrong password is refused", not connects(wrong)))
+    results = []
+
+    def report(what: str, ok: bool) -> None:
+        results.append(ok)
+        print(f"  {'ok  ' if ok else 'FAIL'} {what}", flush=True)
+
+    print("Checking the secured Kafka (about 30 seconds)...", flush=True)
+    report("audit-verify signs in over TLS", connects(kafka_config("audit-verify")))
+    report("a wrong password is refused",
+           not connects({**kafka_config("audit-verify"), "sasl.password": "wrong-password"}))
     plain = kafka_config("audit-verify", env={"KAFKA_BOOTSTRAP_SERVERS": os.environ.get("KAFKA_BOOTSTRAP_SERVERS",
                                                                                          "127.0.0.1:9092")})
-    results.append(("plaintext is refused", not connects(plain)))
+    report("plaintext is refused", not connects(plain))
     outcome = {}
-    p = Producer(kafka_config("audit-verify"))       # the verifier may read the audit chain, never write it
+    p = client(kafka_config("audit-verify"))          # the verifier may read the audit chain, never write it
     p.produce("audit.tool_calls", value=b"{}", on_delivery=lambda err, msg: outcome.setdefault("err", err))
-    p.flush(15)
+    p.flush(20)
     err = outcome.get("err")
-    results.append(("audit-verify cannot write to the audit chain",
-                    err is not None and "AUTHORIZATION" in str(err.name() if hasattr(err, "name") else err).upper()))
-    for what, ok in results:
-        print(f"  {'ok  ' if ok else 'FAIL'} {what}")
-    return 0 if all(ok for _, ok in results) else 1
+    report("audit-verify cannot write to the audit chain",
+           err is not None and "AUTHORIZATION" in str(err.name() if hasattr(err, "name") else err).upper())
+    return 0 if all(results) else 1
 
 
 def main(argv: list[str]) -> int:
