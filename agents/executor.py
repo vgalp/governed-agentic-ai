@@ -36,10 +36,10 @@ from gateway.gateway import ToolCallDenied, call_tool
 from gateway.opa import decide
 from ops.delivery import Producer
 from ops.health import Heartbeat
+from ops.kafka import describe, kafka_config
 from profiles.loader import load_profile
 
 AGENT_NAME = "executor"
-BOOTSTRAP = "127.0.0.1:9092"
 
 # Set by main() (or by a test).
 PROFILE = None
@@ -225,16 +225,16 @@ def on_event(topic: str, raw) -> None:
 def main() -> None:
     global PROFILE, producer, audit
     PROFILE = load_profile()
-    producer = Producer({"bootstrap.servers": BOOTSTRAP})   # delivery confirmed per message (ADR 030)
+    producer = Producer(service=AGENT_NAME)   # delivery confirmed (ADR 030); TLS and SASL (ADR 031)
     audit = get_audit_chain(AGENT_NAME)
-    consumer = Consumer({
-        "bootstrap.servers": BOOTSTRAP,
+    consumer = Consumer(kafka_config(AGENT_NAME, {
         "group.id": f"executor-{uuid.uuid4()}",     # reads from the start every time; state comes from Kafka
         "auto.offset.reset": "earliest",
         "enable.auto.commit": False,
-    })
+    }))
     catch_up(consumer)
     finished = finish_interrupted()
+    print(describe(kafka_config(AGENT_NAME)), flush=True)
     print(f"Executor agent listening on approvals (profile {PROFILE.name}, actions {list(PROFILE.actions)}, "
           f"{len(state.pending())} pending, {finished} interrupted approval(s) finished)...", flush=True)
 

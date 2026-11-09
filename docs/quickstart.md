@@ -103,4 +103,12 @@ issuer, audience, client and group names in the profile's `sign_in` block, and i
 To lock the tool servers so only the gateway can call them, start with `GOVERNED_MTLS=on ./scripts/dev.sh start`:
 it makes a local CA and certificates in `certs/` (not committed) and runs the tool servers over mutual TLS.
 
+To secure Kafka (TLS, a sign-in per service, and access rules from `ops/kafka_access.yaml`), start with
+`GOVERNED_KAFKA_SECURE=on ./scripts/dev.sh start`, then prove it with `./scripts/kafka_secure.sh check`
+([ADR 031](decisions/031-secured-kafka-and-private-cloud-deployment.md)). Both switches can be combined.
+The passwords are in `.kafka.env` (not committed). The first switch recreates the broker container; if it
+does not start, `docker compose logs broker`. Without the switch, the next start is plaintext on 127.0.0.1 again.
+
+To deploy to Azure or AWS with no public endpoint, see [deploy/README.md](../deploy/README.md).
+
 This is a research prototype, not production software and not a medical device.

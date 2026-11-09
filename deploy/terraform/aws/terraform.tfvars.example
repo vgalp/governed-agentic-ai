@@ -1,0 +1,23 @@
+# Copy to terraform.tfvars (not committed) and edit.
+
+name    = "governed"
+region  = "us-east-1"
+profile = "clinic-assistant"
+
+# First apply: false. After pushing the image: true, then run `terraform output setup_command`.
+deploy_apps = false
+image_tag   = "0.1.0"
+
+# Networks that may open the web app (default: the VPC). Add your VPN or Direct Connect ranges.
+client_cidrs = []
+
+# HTTPS on the internal load balancer (an ACM certificate). Sign-in needs it.
+certificate_arn = ""
+
+# Outbound internet through NAT (Ollama install and models, web research, FDA labels).
+internet_egress = true
+
+ollama_models = ["llama-guard3:8b", "mistral"]
+
+# Sign-in and other settings for every service (no secrets here).
+app_env = {}

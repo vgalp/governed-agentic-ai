@@ -38,10 +38,10 @@ from guardrails import toxicity
 from guardrails.classifier import input_engine_name, load_guard
 from ops.delivery import Producer
 from ops.health import Heartbeat
+from ops.kafka import describe, kafka_config
 from profiles.loader import load_profile
 
 AGENT_NAME = "planner"
-BOOTSTRAP = "127.0.0.1:9092"
 
 
 def main() -> None:
@@ -54,12 +54,13 @@ def main() -> None:
                              "Install it with: uv sync --group train, train it, or set the profile's "
                              "classifier input_engine to llamaguard.") from e
     toxicity.load()                   # now, so the first answer is not slowed by loading it
-    consumer = Consumer({"bootstrap.servers": BOOTSTRAP, "group.id": "planner-agent",
+    consumer = Consumer(kafka_config(AGENT_NAME, {"group.id": "planner-agent",
                          "auto.offset.reset": "earliest", "enable.auto.commit": False,
                          # one request can take minutes on a laptop (several model calls); without this the
                          # broker evicts the planner after 5 minutes and the commit fails (audit OC-1)
-                         "max.poll.interval.ms": 900_000})
-    producer = Producer({"bootstrap.servers": BOOTSTRAP})   # delivery confirmed per message (ADR 030)
+                         "max.poll.interval.ms": 900_000}))
+    producer = Producer(service=AGENT_NAME)   # delivery confirmed (ADR 030); TLS and SASL (ADR 031)
+    print(describe(kafka_config(AGENT_NAME)), flush=True)
     consumer.subscribe(["chat.requests"])
     rt = build(profile, producer, get_audit_chain(AGENT_NAME), AGENT_NAME)
     ext = (" -> ".join(f"{profile.models[k]['provider']}/{profile.models[k]['name']}"

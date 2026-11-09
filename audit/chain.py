@@ -296,7 +296,7 @@ def get_audit_chain(source: str) -> AuditChain:
     with _default_lock:
         if _default_chain is None:
             from ops.delivery import Producer  # delivery confirmed per event (ADR 030)
-            producer = Producer()
+            producer = Producer(service=source)
             key = key_from_env()
             if key is None:
                 print("Audit: AUDIT_HMAC_KEY not set, using plain SHA-256 (detects changes, not deliberate forgery).")

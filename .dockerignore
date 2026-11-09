@@ -1,0 +1,21 @@
+# Never in an image: secrets, keys, local state and anything large or private.
+.env
+.kafka.env
+.keycloak.env
+certs/
+logs/
+audit.jsonl
+*.db
+.venv/
+**/__pycache__/
+.pytest_cache/
+.git/
+models/
+release/
+*.gguf
+*.safetensors
+eval/external/raw/
+eval/datasets/crisis_benchmark_v2.jsonl
+deploy/terraform/**/.terraform/
+deploy/terraform/**/*.tfstate*
+deploy/terraform/**/*.tfvars

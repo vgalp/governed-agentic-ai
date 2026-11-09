@@ -24,13 +24,13 @@ from auth.sign_in import Caller, SignIn, SignInRequired
 from ops import health as liveness
 from ops.delivery import DELIVERY, Producer
 from ops.health import tick
+from ops.kafka import describe, kafka_config
 from ops.ratelimit import RateLimiter
 from profiles.loader import load_profile
 
-BOOTSTRAP = "127.0.0.1:9092"
 UI_DIR = Path(__file__).resolve().parent.parent / "ui"
 
-producer = Producer({"bootstrap.servers": BOOTSTRAP})   # every message confirmed by the broker (ADR 030)
+producer = Producer(service="api")   # every message confirmed (ADR 030); TLS and SASL from the environment (ADR 031)
 READERS: dict[str, threading.Thread] = {}               # the Kafka reader threads, checked by /health
 PROFILE = load_profile()        # same PROFILE as the agents (set by scripts/dev.sh)
 responses: dict[str, dict] = {}  # in-memory for now; replaced later
@@ -71,14 +71,13 @@ def signed_in(request: Request) -> Caller | None:
 
 
 def consume_responses():
-    consumer = Consumer({
-        "bootstrap.servers": BOOTSTRAP,
+    consumer = Consumer(kafka_config("api", {
         # A new group on every start, reading from the beginning without committing,
         # so the in-memory store is rebuilt after a restart.
         "group.id": f"api-responses-{uuid.uuid4()}",
         "auto.offset.reset": "earliest",
         "enable.auto.commit": False,
-    })
+    }))
     consumer.subscribe(["chat.responses"])
     while True:
         tick("responses")
@@ -94,12 +93,11 @@ def consume_responses():
 
 
 def consume_approvals():
-    consumer = Consumer({
-        "bootstrap.servers": BOOTSTRAP,
+    consumer = Consumer(kafka_config("api", {
         "group.id": f"api-approvals-{uuid.uuid4()}",
         "auto.offset.reset": "earliest",
         "enable.auto.commit": False,
-    })
+    }))
     consumer.subscribe(actions.APPROVAL_TOPICS)
     while True:
         tick("approvals")
@@ -112,9 +110,10 @@ def consume_approvals():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     for name, target, args in (("responses", consume_responses, ()), ("approvals", consume_approvals, ()),
-                               ("events", consume_events, (BOOTSTRAP,))):
+                               ("events", consume_events, ())):
         READERS[name] = threading.Thread(target=target, args=args, daemon=True, name=f"reader-{name}")
         READERS[name].start()
+    log.warning("%s", describe(kafka_config("api")))
     if SIGN_IN.on:
         log.warning("Sign-in: oidc, issuer %s. Requests without a valid access token are refused.",
                     SIGN_IN.verifier.issuer)

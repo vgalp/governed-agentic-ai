@@ -1,6 +1,7 @@
-# Every port is published on 127.0.0.1 only: Kafka (plaintext, no sign-in), OPA (its REST API can
-# replace policies) and Kafka UI must never be reachable from the office network. A deployment beyond
-# one machine needs Kafka SASL/TLS with ACLs and OPA authentication (docs/audit-2026-11.md, B2).
+# Every port is published on 127.0.0.1 only: Kafka (here plaintext, no sign-in), OPA (its REST API can
+# replace policies) and Kafka UI must never be reachable from the office network.
+# Kafka with TLS, a sign-in per service and ACLs: docker-compose.kafka-secure.yml, switched on with
+# GOVERNED_KAFKA_SECURE=on ./scripts/dev.sh start (ADR 031). Cloud deployments: deploy/terraform.
 # Clients use 127.0.0.1, not "localhost": on a Mac "localhost" tries IPv6 (::1) first, where nothing
 # listens now, and the Kafka client logs a "Connection refused" line for every attempt.
 services:

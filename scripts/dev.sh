@@ -11,6 +11,8 @@
 #
 #   PROFILE=<name> ./scripts/dev.sh start   run another profile (default: adhd-assistant)
 #   GOVERNED_MTLS=on ./scripts/dev.sh start  tool servers over mutual TLS (scripts/certs.sh, ADR 030)
+#   GOVERNED_KAFKA_SECURE=on ./scripts/dev.sh start   Kafka with TLS, a sign-in per service and ACLs
+#                                            (docker-compose.kafka-secure.yml, scripts/kafka_secure.sh, ADR 031)
 #
 # Demo: http://localhost:8000   Engineer view: /dashboard   Kafka UI: http://localhost:8080
 
@@ -25,6 +27,16 @@ if [ -f .keycloak.env ]; then
 fi
 
 LOG_DIR="logs"
+# The secured local Kafka (audit SC-3, ADR 031) is a compose override; administration then happens
+# only on the broker container's own loopback listener.
+if [ "${GOVERNED_KAFKA_SECURE:-off}" = "on" ]; then
+  COMPOSE_FILES=(-f docker-compose.yml -f docker-compose.kafka-secure.yml)
+  KADMIN="localhost:29094"
+else
+  COMPOSE_FILES=(-f docker-compose.yml)
+  KADMIN="broker:29092"
+fi
+compose() { docker compose "${COMPOSE_FILES[@]}" "$@"; }
 PY=".venv/bin/python"
 TOPICS="chat.requests chat.responses audit.model_inputs audit.tool_calls audit.guardrails audit.routing audit.approvals audit.input_agent agent.trace approvals.requested approvals.decided actions.executed"
 # Kept for good: the audit log and the approval history (the executor rebuilds its state from them).
@@ -106,25 +118,34 @@ ensure_secrets() {  # a token for OPA's API (audit SC-5, ADR 030), made once and
   else
     unset GOVERNED_MTLS_DIR
   fi
+  if [ "${GOVERNED_KAFKA_SECURE:-off}" = "on" ]; then
+    ./scripts/kafka_secure.sh prepare
+    set -a; . ./.kafka.env; set +a
+    export KAFKA_CA_FILE="$PWD/certs/ca.crt"
+    ok "Kafka secured: TLS, a SCRAM sign-in per service, ACLs from ops/kafka_access.yaml"
+  fi
 }
 
 start_infra() {
   say "Starting infrastructure"
   ensure_secrets
-  docker compose up -d >/dev/null
+  compose up -d >/dev/null
   for _ in $(seq 60); do
-    docker exec broker kafka-topics --bootstrap-server broker:29092 --list >/dev/null 2>&1 && break
+    docker exec broker kafka-topics --bootstrap-server $KADMIN --list >/dev/null 2>&1 && break
     sleep 1
   done
-  docker exec broker kafka-topics --bootstrap-server broker:29092 --list >/dev/null 2>&1 || fail "Kafka did not start"
+  docker exec broker kafka-topics --bootstrap-server $KADMIN --list >/dev/null 2>&1 || fail "Kafka did not start"
   for t in $TOPICS; do
-    docker exec broker kafka-topics --bootstrap-server broker:29092 --create --if-not-exists --topic "$t" >/dev/null
+    docker exec broker kafka-topics --bootstrap-server $KADMIN --create --if-not-exists --topic "$t" >/dev/null
   done
   for t in $KEEP_FOREVER; do   # also fixes topics created before this setting existed
-    docker exec broker kafka-configs --bootstrap-server broker:29092 --alter --entity-type topics \
+    docker exec broker kafka-configs --bootstrap-server $KADMIN --alter --entity-type topics \
       --entity-name "$t" --add-config retention.ms=-1 >/dev/null || fail "Could not set retention on $t"
   done
   ok "Kafka, topics"
+  if [ "${GOVERNED_KAFKA_SECURE:-off}" = "on" ]; then
+    ./scripts/kafka_secure.sh apply | sed 's/^/  /' || fail "Could not add the Kafka users and ACLs"
+  fi
   wait_for_port 8181 30 && ok "OPA" || fail "OPA did not start"
 }
 
@@ -158,8 +179,15 @@ start_services() {
     IFS='|' read -r name _ args port <<< "$s"
     # Under the supervisor: restarted if it stops, given up (and reported by /health) if it keeps
     # crashing (ops/supervise.py, ADR 030).
+    # With the secured Kafka, each service sees only its own Kafka password (ADR 031).
+    hide=()
+    if [ "${GOVERNED_KAFKA_SECURE:-off}" = "on" ]; then
+      for u in API PLANNER EXECUTOR ENDPOINT AUDIT_VERIFY KAFKA_UI; do
+        [ "$u" = "$(echo "$name" | tr 'a-z-' 'A-Z_')" ] || hide+=(-u "KAFKA_PASSWORD_$u")
+      done
+    fi
     # shellcheck disable=SC2086  # args are split on purpose
-    nohup "$PY" -m ops.supervise "$name" -- $args > "$LOG_DIR/$name.log" 2>&1 &
+    nohup env ${hide[@]+"${hide[@]}"} "$PY" -m ops.supervise "$name" -- $args > "$LOG_DIR/$name.log" 2>&1 &
     if [ -n "$port" ]; then
       wait_for_port "$port" 60 || { tail -20 "$LOG_DIR/$name.log"; fail "$name did not start"; }
     else
@@ -184,7 +212,7 @@ status() {
     fi
   done
   say "Containers"
-  docker compose ps --format '  {{.Service}}: {{.State}}' 2>/dev/null || warn "Docker not running"
+  compose ps --format '  {{.Service}}: {{.State}}' 2>/dev/null || warn "Docker not running"
 }
 
 case "${1:-}" in
@@ -193,7 +221,7 @@ case "${1:-}" in
     say "Ready.  Demo: http://localhost:8000   Engineer view: http://localhost:8000/dashboard   Kafka UI: http://localhost:8080"
     ;;
   stop)    stop_services ;;
-  down)    stop_services; say "Stopping containers"; docker compose stop >/dev/null; ok "containers stopped" ;;
+  down)    stop_services; say "Stopping containers"; compose stop >/dev/null; ok "containers stopped" ;;
   restart) stop_services; check_prereqs; start_infra; start_services
            say "Ready.  Demo: http://localhost:8000   Engineer view: http://localhost:8000/dashboard" ;;
   status)  status ;;

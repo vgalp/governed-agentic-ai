@@ -12,13 +12,16 @@ The wrapper keeps confluent_kafka's produce / flush / poll / list_topics interfa
 tests that use a fake producer are unchanged.
 """
 
+import os
 import threading
 import time
 from collections import deque
 
 from audit.chain import AUDIT_TOPICS
 
-BOOTSTRAP = "127.0.0.1:9092"
+# No duplicates when a send is retried. KAFKA_IDEMPOTENCE=0 only for a broker without support for it.
+IDEMPOTENT = os.environ.get("KAFKA_IDEMPOTENCE", "1") != "0"
+
 RECENT_SECONDS = 300          # a failure this recent makes /health report "degraded"
 
 
@@ -67,11 +70,12 @@ DELIVERY = Delivery()          # one per process: every producer in it reports h
 class Producer:
     """confluent_kafka.Producer with delivery callbacks on every message."""
 
-    def __init__(self, conf: dict | None = None, delivery: Delivery = DELIVERY, raw=None):
+    def __init__(self, conf: dict | None = None, delivery: Delivery = DELIVERY, raw=None, service: str = "api"):
         if raw is None:
             from confluent_kafka import Producer as KafkaProducer
-            raw = KafkaProducer({"bootstrap.servers": BOOTSTRAP, "enable.idempotence": True, "acks": "all",
-                                 **(conf or {})})
+
+            from ops.kafka import kafka_config  # TLS and SASL from the environment (ADR 031)
+            raw = KafkaProducer(kafka_config(service, {"enable.idempotence": IDEMPOTENT, "acks": "all", **(conf or {})}))
         self._p, self.delivery = raw, delivery
 
     def produce(self, topic, key=None, value=None, on_delivery=None, **kw):

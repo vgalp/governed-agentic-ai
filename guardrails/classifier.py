@@ -24,9 +24,10 @@ import requests
 
 from guardrails.rules import GuardrailDecision
 from llm import usage
+from llm.providers import OLLAMA_HOST
 from profiles.loader import Profile, load_profile
 
-OLLAMA_GENERATE_URL = "http://localhost:11434/api/generate"
+OLLAMA_GENERATE_URL = f"{OLLAMA_HOST}/api/generate"   # OLLAMA_HOST: see llm/providers.py
 
 # Llama Guard 3 prompt format. {role} is "User" (check the question) or
 # "Agent" (check the model's answer in the context of the question).

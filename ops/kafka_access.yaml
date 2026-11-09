@@ -1,0 +1,50 @@
+# Who may read and write which Kafka topic (audit SC-3, ADR 031).
+#
+# One list for every place the pipeline runs, so the rules cannot drift apart:
+#   - the secured local broker: SCRAM users and ACLs (scripts/kafka_secure.sh, ops/kafka_admin.py)
+#   - Amazon MSK: one IAM policy per service's task role (deploy/terraform/aws)
+#   - Azure Event Hubs: Data Sender / Data Receiver role assignments per hub (deploy/terraform/azure)
+# tests/test_kafka_access.py checks it against the topics the code actually uses.
+#
+# Consumer groups ending in "-" are prefixes (each API process makes its own api-responses-<uuid>).
+# Event Hubs has no permissions on consumer groups; Kafka and MSK do.
+
+topics:
+  chat.requests:       {keep: default}     # message text: Kafka's default retention, never longer
+  chat.responses:      {keep: default}
+  agent.trace:         {keep: default}
+  audit.guardrails:    {keep: forever}     # the audit chain, verified end to end (ADR 002, 030)
+  audit.model_inputs:  {keep: forever}
+  audit.tool_calls:    {keep: forever}
+  audit.routing:       {keep: forever}
+  audit.approvals:     {keep: forever}
+  audit.input_agent:   {keep: forever}
+  approvals.requested: {keep: forever}     # the executor rebuilds its state from these
+  approvals.decided:   {keep: forever}
+  actions.executed:    {keep: forever}
+
+audit_topics: &audit [audit.guardrails, audit.model_inputs, audit.tool_calls, audit.routing, audit.approvals,
+                      audit.input_agent]
+
+services:
+  api:                      # the web app and its engineer dashboard
+    write: [chat.requests, approvals.decided]
+    read: [chat.requests, chat.responses, agent.trace, approvals.requested, approvals.decided, actions.executed,
+           *audit]
+    groups: [api-, dashboard-]
+  planner:                  # answers chat.requests; its gateway and router write to the same audit chain
+    write: [chat.responses, agent.trace, approvals.requested, *audit]
+    read: [chat.requests]
+    groups: [planner-agent]
+  executor:                 # carries out approved changes
+    write: [approvals.decided, actions.executed, agent.trace, *audit]
+    read: [approvals.requested, approvals.decided, actions.executed]
+    groups: [executor-]
+  endpoint:                 # the governed endpoint for outside AI clients (ADR 020)
+    write: [chat.responses, agent.trace, approvals.requested, *audit]
+    read: []
+    groups: []
+  audit-verify:             # python -m audit.verify: reads the audit chain, writes nothing
+    write: []
+    read: *audit
+    groups: [audit-verify-]

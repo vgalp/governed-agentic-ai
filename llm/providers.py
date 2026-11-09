@@ -24,7 +24,11 @@ import requests
 
 from llm import usage
 
-OLLAMA_URL = "http://localhost:11434/v1/chat/completions"
+# Ollama on this machine, or OLLAMA_HOST (the name Ollama itself uses) for a GPU host in a deployment.
+OLLAMA_HOST = (os.environ.get("OLLAMA_HOST") or "http://localhost:11434").rstrip("/")
+if "://" not in OLLAMA_HOST:
+    OLLAMA_HOST = f"http://{OLLAMA_HOST}"
+OLLAMA_URL = f"{OLLAMA_HOST}/v1/chat/completions"
 TIMEOUT = 120
 
 # Default addresses of the hosted providers. A profile may override base_url,

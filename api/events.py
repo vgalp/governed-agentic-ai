@@ -86,14 +86,15 @@ class EventBuffer:
 buffer = EventBuffer()
 
 
-def consume_events(bootstrap: str) -> None:
+def consume_events() -> None:
     from confluent_kafka import Consumer
-    consumer = Consumer({
-        "bootstrap.servers": bootstrap,
+
+    from ops.kafka import kafka_config  # TLS and SASL from the environment (ADR 031)
+    consumer = Consumer(kafka_config("api", {
         "group.id": f"dashboard-{uuid.uuid4()}",
         "auto.offset.reset": "earliest",
         "enable.auto.commit": False,
-    })
+    }))
     consumer.subscribe(EVENT_TOPICS)
     from ops.health import tick
     while True:

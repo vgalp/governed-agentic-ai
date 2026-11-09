@@ -19,5 +19,12 @@ eval/external/raw/allenai__wildguardmix/
 eval/external/raw/bench-llm__or-bench/
 eval/external/raw/openai_samples-1680.jsonl.gz
 .keycloak.env
+# Passwords of the secured local Kafka (scripts/kafka_secure.sh): never committed
+.kafka.env
 # Local CA and keys for mutual TLS (scripts/certs.sh): never committed
 certs/
+# Terraform: local state, provider downloads and variable files (they may hold addresses and keys)
+deploy/terraform/**/.terraform/
+deploy/terraform/**/*.tfstate*
+deploy/terraform/**/*.tfvars
+!deploy/terraform/**/*.tfvars.example
