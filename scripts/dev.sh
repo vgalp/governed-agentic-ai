@@ -15,6 +15,12 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 [ -f .env ] && set -a && . ./.env && set +a   # load local secrets such as AUDIT_HMAC_KEY
+# The local Keycloak's directory secret, for the access page (scripts/keycloak_setup.sh, ADR 029).
+# Only that one value: the admin and test-user passwords stay out of the services' environment.
+if [ -f .keycloak.env ]; then
+  KEYCLOAK_DIRECTORY_SECRET="$(sed -n 's/^KEYCLOAK_DIRECTORY_SECRET=//p' .keycloak.env)"
+  export KEYCLOAK_DIRECTORY_SECRET
+fi
 
 LOG_DIR="logs"
 PY=".venv/bin/python"

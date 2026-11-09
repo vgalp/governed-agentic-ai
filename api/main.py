@@ -18,6 +18,7 @@ from agents import actions
 from api import openai_compat as compat
 from api.events import buffer, consume_events, event_stream
 from audit.chain import chains_of_profile, key_from_env, unkeyed_chains, verify_chain
+from auth.directory import CachedDirectory, access_report
 from auth.sign_in import Caller, SignIn, SignInRequired
 from profiles.loader import load_profile
 
@@ -36,6 +37,7 @@ log = logging.getLogger("api")
 # body only in demo mode. owners: which signed-in person asked each request (only they may read it).
 SIGN_IN = SignIn.for_profile(PROFILE)
 owners: dict[str, str] = {}
+DIRECTORY = CachedDirectory((PROFILE.sign_in or {}).get("directory"))   # read-only, for /access (ADR 029)
 
 
 def who(request: Request, demo_user: str | None = None, demo_role: str | None = None) -> Caller:
@@ -173,6 +175,36 @@ def auth_me(request: Request):
     return {"mode": "oidc", "user": c.user_id, "name": c.name, "role": c.role,
             "role_title": PROFILE.roles[c.role].title if c.role in PROFILE.roles else None,
             "may_watch": SIGN_IN.may_watch(c)}
+
+
+@app.get("/access", include_in_schema=False)
+def access_page():
+    """Who gets which role: the identity provider's groups, this profile's roles, and what each role may do."""
+    return FileResponse(UI_DIR / "access.html")
+
+
+@app.get("/access/data")
+def access_data(request: Request):
+    """The access report (ADR 029). Everyone signed in sees the mapping and what each role may do;
+    the names of people in each group only the profile's admin_roles (any viewer in demo mode)."""
+    c = signed_in(request)
+    s = PROFILE.sign_in or {}
+    titles = {k: r.title for k, r in PROFILE.roles.items()}
+    may_see = SIGN_IN.may_see_people(c)
+    groups, error = DIRECTORY.groups() if may_see else (None, None)
+    report = access_report(groups, dict(s.get("roles") or {}), titles)
+    approves = {k: [a.title for a in PROFILE.actions.values() if k in a.approve_roles] for k in PROFILE.roles}
+    return {
+        "profile": PROFILE.title, "mode": SIGN_IN.mode,
+        "provider": (s.get("directory") or {}).get("provider"),
+        "issuer": s.get("issuer"),
+        "roles": [{"key": k, "title": r.title, "tools": list(r.tools),
+                   "data": [PROFILE.data_classes.get(d, d) for d in r.data_classes], "approves": approves[k]}
+                  for k, r in PROFILE.roles.items()],
+        "may_see_people": may_see and bool(s.get("directory")),
+        "directory_error": error,
+        **report,
+    }
 
 
 @app.get("/events", include_in_schema=False)

@@ -135,3 +135,16 @@ sign_in:
     nurses: nurse
     front-desk: front_desk
     compliance: compliance
+  admin_roles: [compliance] # may see on the access page who is in which group (others see the mapping only)
+  # The access page (/access) reads the directory to show who gets which role (ADR 029). Read-only.
+  directory:
+    provider: keycloak
+    url: http://127.0.0.1:8180
+    realm: governed-demo
+    client_id: governed-directory           # created by scripts/keycloak_setup.sh
+    secret_env: KEYCLOAK_DIRECTORY_SECRET   # in .keycloak.env
+  # An organization on Microsoft Entra ID instead (app registration with GroupMember.Read.All and
+  # User.ReadBasic.All; tokens carry group IDs, so sign_in.roles keys are group object IDs):
+  #   directory: {provider: entra, tenant_id: <tenant ID>, client_id: <app ID>, secret_env: ENTRA_DIRECTORY_SECRET}
+  # On Okta (a read-only API token):
+  #   directory: {provider: okta, org_url: https://<org>.okta.com, token_env: OKTA_API_TOKEN}

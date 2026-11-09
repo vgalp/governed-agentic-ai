@@ -984,9 +984,21 @@ def _sign_in(raw, roles: dict, where: str) -> dict | None:
     for group, role in (s.get("roles") or {}).items():
         if role not in roles:
             raise ProfileError(f"{where}: sign_in.roles maps group '{group}' to '{role}', not a role in roles.yaml")
-    for role in s.get("dashboard_roles") or []:
-        if role not in roles:
-            raise ProfileError(f"{where}: sign_in.dashboard_roles names '{role}', not a role in roles.yaml")
+    for key in ("dashboard_roles", "admin_roles"):
+        for role in s.get(key) or []:
+            if role not in roles:
+                raise ProfileError(f"{where}: sign_in.{key} names '{role}', not a role in roles.yaml")
+    d = s.get("directory")
+    if d:
+        need = {"keycloak": ("url", "realm", "client_id", "secret_env"),
+                "entra": ("tenant_id", "client_id", "secret_env"), "okta": ("org_url", "token_env")}[d["provider"]]
+        missing = [k for k in need if not d.get(k)]
+        if missing:
+            raise ProfileError(f"{where}: sign_in.directory ({d['provider']}) needs {', '.join(missing)}")
+        for k in ("secret_env", "token_env"):
+            if d.get(k) and not re.fullmatch(r"[A-Z_][A-Z0-9_]*", str(d[k])):
+                raise ProfileError(f"{where}: sign_in.directory.{k} is the NAME of an environment variable "
+                                   "(e.g. ENTRA_DIRECTORY_SECRET), never the secret itself")
     if s.get("mode") == "oidc":
         missing = [k for k in ("issuer", "audience", "client_id") if not s.get(k)]
         if missing:

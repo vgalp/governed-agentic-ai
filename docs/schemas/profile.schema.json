@@ -149,6 +149,118 @@
       "title": "Classifier",
       "type": "object"
     },
+    "Directory": {
+      "additionalProperties": false,
+      "description": "Where the access page reads groups and members (ADR 029). Read-only; secrets by the NAME of an\nenvironment variable, never the value.",
+      "properties": {
+        "client_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Client Id"
+        },
+        "groups": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Groups",
+          "type": "array"
+        },
+        "org_url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Org Url"
+        },
+        "provider": {
+          "enum": [
+            "keycloak",
+            "entra",
+            "okta"
+          ],
+          "title": "Provider",
+          "type": "string"
+        },
+        "realm": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Realm"
+        },
+        "secret_env": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Secret Env"
+        },
+        "tenant_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Tenant Id"
+        },
+        "token_env": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Token Env"
+        },
+        "url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Url"
+        }
+      },
+      "required": [
+        "provider"
+      ],
+      "title": "Directory",
+      "type": "object"
+    },
     "Faithfulness": {
       "additionalProperties": false,
       "properties": {
@@ -423,6 +535,14 @@
       "additionalProperties": false,
       "description": "How people sign in to the chat API (ADR 028). demo: the request says who and which role (one\nmachine only). oidc: an access token from the organization's identity provider; the environment\nvariable GOVERNED_SIGN_IN overrides the mode.",
       "properties": {
+        "admin_roles": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Admin Roles",
+          "type": "array"
+        },
         "audience": {
           "anyOf": [
             {
@@ -454,6 +574,17 @@
           },
           "title": "Dashboard Roles",
           "type": "array"
+        },
+        "directory": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Directory"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         },
         "groups_claim": {
           "default": "groups",

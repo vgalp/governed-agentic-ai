@@ -2,12 +2,18 @@
 # A local identity provider for trying sign-in (ADR 028): Keycloak on http://127.0.0.1:8180 with
 #   realm   governed-demo
 #   client  governed-ui     public, authorization code with PKCE, for the pages on port 8000
+#   client  governed-directory   read-only service account for the access page (ADR 029)
 #   groups  clinicians, nurses, front-desk, compliance   (mapped to roles by the profile's sign_in.roles)
 #   users   dr.lee, nurse.kim, desk.ortiz, audit.chen    one per group
 #
 #   ./scripts/keycloak_setup.sh          start Keycloak and set it up (once; later runs only start it)
 #   ./scripts/keycloak_setup.sh users    print the test users and their passwords again
+#   ./scripts/keycloak_setup.sh list     who is in which group, and the role each person gets here
+#   ./scripts/keycloak_setup.sh add <username> <group> [First Last]   add a test user to a group
 #   ./scripts/keycloak_setup.sh reset    delete the realm and set it up again
+#
+# Users and groups can also be managed in Keycloak's own admin screen: http://127.0.0.1:8180/admin
+# (user admin, password KEYCLOAK_ADMIN_PASSWORD in .keycloak.env), realm governed-demo.
 #
 # The admin password and the test users' passwords are made here, at random, and kept in
 # .keycloak.env (not committed). They are test accounts for this machine only.
@@ -42,6 +48,7 @@ if [ ! -f "$SECRETS" ]; then
     for u in "${USERS[@]}"; do echo "$(var "${u%%|*}")=$(pw)"; done
   } > "$SECRETS"
 fi
+grep -q '^KEYCLOAK_DIRECTORY_SECRET=' "$SECRETS" || echo "KEYCLOAK_DIRECTORY_SECRET=$(pw)$(pw)" >> "$SECRETS"
 set -a; . "./$SECRETS"; set +a
 
 print_users() {
@@ -68,6 +75,47 @@ KC=(docker compose exec -T keycloak /opt/keycloak/bin/kcadm.sh)
 "${KC[@]}" config credentials --server http://localhost:8080 --realm master --user admin \
   --password "$KEYCLOAK_ADMIN_PASSWORD" >/dev/null || fail "Admin sign-in failed. If Keycloak was set up before $SECRETS existed, run: docker compose --profile auth down -v"
 
+ensure_directory_client() {  # read-only service account for the access page (ADR 029)
+  if [ -n "$("${KC[@]}" get clients -r "$REALM" -q clientId=governed-directory --fields id --format csv --noquotes)" ]; then
+    return 0
+  fi
+  "${KC[@]}" create clients -r "$REALM" -s clientId=governed-directory -s name="Access page (read-only)" \
+    -s publicClient=false -s serviceAccountsEnabled=true -s standardFlowEnabled=false \
+    -s directAccessGrantsEnabled=false -s clientAuthenticatorType=client-secret \
+    -s secret="$KEYCLOAK_DIRECTORY_SECRET" >/dev/null
+  "${KC[@]}" add-roles -r "$REALM" --uusername service-account-governed-directory \
+    --cclientid realm-management --rolename view-users --rolename query-groups >/dev/null
+  ok "Client governed-directory (read-only: view users, query groups)"
+}
+
+group_id() {  # exact group name -> id (search alone matches parts of names)
+  "${KC[@]}" get groups -r "$REALM" --fields id,name --format csv --noquotes |
+    awk -F, -v g="$1" '$2 == g { print $1 }'
+}
+
+case "${1:-}" in
+  list)
+    "${KC[@]}" get "realms/$REALM" >/dev/null 2>&1 || fail "Realm $REALM is not set up yet: run ./scripts/keycloak_setup.sh"
+    ensure_directory_client
+    PY=".venv/bin/python"; [ -x "$PY" ] || PY="python3"
+    PROFILE="${PROFILE:-clinic-assistant}" "$PY" -m auth.directory
+    exit $? ;;
+  add)
+    [ $# -ge 3 ] || fail "Usage: ./scripts/keycloak_setup.sh add <username> <group> [First Last]"
+    name="$2"; group="$3"; first="${4:-$2}"; last="${5:-Test}"
+    G="$(group_id "$group")"
+    [ -n "$G" ] || fail "No group '$group'. Groups: $("${KC[@]}" get groups -r "$REALM" --fields name --format csv --noquotes | tr '\n' ' ')"
+    PASS="$(pw)"
+    UID_=$("${KC[@]}" create users -r "$REALM" -i -s username="$name" -s enabled=true \
+      -s firstName="$first" -s lastName="$last" -s email="$name@example.test" -s emailVerified=true) ||
+      fail "Could not create $name (does it exist already?)"
+    "${KC[@]}" set-password -r "$REALM" --userid "$UID_" --new-password "$PASS" >/dev/null
+    "${KC[@]}" update "users/$UID_/groups/$G" -r "$REALM" -s realm="$REALM" -s userId="$UID_" -s groupId="$G" -n >/dev/null
+    echo "$(var "$name")=$PASS" >> "$SECRETS"
+    ok "Added $name to $group. Password: $PASS (also in $SECRETS)"
+    exit 0 ;;
+esac
+
 if [ "${1:-}" = "reset" ]; then
   "${KC[@]}" delete "realms/$REALM" >/dev/null 2>&1 || true
   ok "Deleted realm $REALM"
@@ -75,6 +123,7 @@ fi
 
 if "${KC[@]}" get "realms/$REALM" >/dev/null 2>&1; then
   ok "Realm $REALM is already set up"
+  ensure_directory_client
   print_users
   exit 0
 fi
@@ -98,6 +147,7 @@ CID=$("${KC[@]}" create clients -r "$REALM" -i \
   -s name=audience -s protocol=openid-connect -s protocolMapper=oidc-audience-mapper \
   -s 'config."included.custom.audience"=governed-api' -s 'config."access.token.claim"=true' >/dev/null
 ok "Client governed-ui (public, PKCE), with the groups claim and audience governed-api"
+ensure_directory_client
 
 GIDS=""   # "group=id " pairs (no associative arrays: macOS ships bash 3.2)
 for g in clinicians nurses front-desk compliance; do

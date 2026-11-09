@@ -70,8 +70,16 @@ script; `./scripts/keycloak_setup.sh users` prints them again). The page shows w
 your role; the role menu is gone. To see the two-person rule, ask for a change as one person and
 approve it as another in a second browser or a private window.
 
-An organization uses its own provider instead: put its issuer, audience, client and group names in
-the profile's `sign_in` block. Stop Keycloak with `docker compose --profile auth down`.
+To see who gets which role, open http://127.0.0.1:8000/access (or **Roles and access** on the
+dashboard), or run `./scripts/keycloak_setup.sh list` in the terminal. It shows each group, the
+role it gives, what that role may see and do, and, for the compliance role, who is in each group
+([ADR 029](decisions/029-directory-and-access-page.md)). Add a test person with
+`./scripts/keycloak_setup.sh add maria.santos nurses`, or use Keycloak's own admin screen at
+http://127.0.0.1:8180/admin.
+
+An organization uses its own provider instead (Microsoft Entra ID, Okta or its own Keycloak): put its
+issuer, audience, client and group names in the profile's `sign_in` block, and its directory in
+`sign_in.directory` for the access page. Stop Keycloak with `docker compose --profile auth down`.
 
 ## Stop
 

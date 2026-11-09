@@ -268,6 +268,7 @@ docs/            Architecture notes and decision records
 - [ ] Clinician-reviewed knowledge base and fixed responses
 - [ ] Tracing, failure recovery (Saga pattern) and chaos tests
 - [x] Sign-in with the organization's identity provider (OIDC): the role comes from the person's groups, tested with a local Keycloak (ADR 028)
+- [x] Access page: groups, roles and who gets which role, read from Entra ID, Okta or Keycloak (ADR 029)
 - [ ] Redesigned chat page and dashboard
 - [ ] Technical report
 

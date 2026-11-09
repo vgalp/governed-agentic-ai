@@ -170,6 +170,7 @@ class SignIn:
         self.user_claim = s.get("user_claim") or "preferred_username"
         self.groups_claim = s.get("groups_claim") or "groups"
         self.dashboard_roles = tuple(s.get("dashboard_roles") or ())
+        self.admin_roles = tuple(s.get("admin_roles") or ())
         self.verifier = None
         if mode == OIDC:
             missing = [k for k in ("issuer", "audience", "client_id") if not s.get(k)]
@@ -215,6 +216,14 @@ class SignIn:
         """The live dashboard shows every request (masked): every signed-in person, unless the profile
         names the roles that may watch it."""
         return not self.dashboard_roles or caller.role in self.dashboard_roles
+
+
+    def may_see_people(self, caller: Caller | None) -> bool:
+        """Who is in which group (names) is shown to the profile's admin_roles only. In demo mode,
+        on one machine, it is shown to whoever runs the demo."""
+        if not self.on:
+            return True
+        return caller is not None and caller.role in self.admin_roles
 
 
 def bearer(authorization: str | None) -> str | None:

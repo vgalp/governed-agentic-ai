@@ -113,6 +113,21 @@ class Outside(Strict):
     mask_results: Literal["external", "always", "never"] = "external"
 
 
+class Directory(Strict):
+    """Where the access page reads groups and members (ADR 029). Read-only; secrets by the NAME of an
+    environment variable, never the value."""
+
+    provider: Literal["keycloak", "entra", "okta"]
+    url: str | None = None          # keycloak: http://127.0.0.1:8180
+    realm: str | None = None        # keycloak
+    client_id: str | None = None    # keycloak, entra: the service client / app registration
+    secret_env: str | None = None   # keycloak, entra: the variable holding the client secret
+    tenant_id: str | None = None    # entra
+    groups: list[str] = []          # entra: only these group IDs (optional; large tenants)
+    org_url: str | None = None      # okta: https://example.okta.com
+    token_env: str | None = None    # okta: the variable holding a read-only API token
+
+
 class SignIn(Strict):
     """How people sign in to the chat API (ADR 028). demo: the request says who and which role (one
     machine only). oidc: an access token from the organization's identity provider; the environment
@@ -127,6 +142,8 @@ class SignIn(Strict):
     groups_claim: str = "groups"           # a dotted path also works, e.g. realm_access.roles
     roles: dict[str, str] = {}             # identity-provider group -> this profile's role; first match wins
     dashboard_roles: list[str] = []        # roles that may watch the live dashboard; empty: everyone signed in
+    admin_roles: list[str] = []            # roles that may see who is in which group on the access page
+    directory: Directory | None = None     # read the directory for the access page (ADR 029)
     leeway_seconds: int = Field(default=30, ge=0, le=300)
 
 
