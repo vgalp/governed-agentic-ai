@@ -15,7 +15,6 @@
 #
 # Listener names avoid "SSL" and "SASL" on purpose: the Confluent image's start script then does not
 # demand Java keystores, and the broker reads the PEM file directly.
-# Needs Docker Compose 2.24 or later (the !override tags).
 services:
   broker:
     environment:
@@ -46,9 +45,9 @@ services:
     profiles: ["schema-registry"]
 
   kafka-ui:
-    depends_on: !override
-      - broker
-    environment: !override
+    # No "!override" tags, so any Docker Compose version merges this the same way. The Schema
+    # Registry address from docker-compose.yml stays; Kafka UI shows it as offline.
+    environment:
       KAFKA_CLUSTERS_0_NAME: local (secured)
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: broker:29092
       KAFKA_CLUSTERS_0_PROPERTIES_SECURITY_PROTOCOL: SASL_SSL
