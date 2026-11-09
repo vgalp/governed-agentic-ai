@@ -9,7 +9,7 @@ resource "azurerm_key_vault" "main" {
   resource_group_name           = var.resource_group_name
   tenant_id                     = data.azurerm_client_config.current.tenant_id
   sku_name                      = "standard"
-  enable_rbac_authorization     = true
+  rbac_authorization_enabled    = true
   purge_protection_enabled      = true # a deleted audit key would make the whole audit chain unverifiable
   soft_delete_retention_days    = 90
   public_network_access_enabled = length(var.operator_cidrs) > 0
