@@ -58,11 +58,11 @@ import anyio
 import requests
 from mcp import types
 from mcp.client.session import ClientSession
-from mcp.client.streamable_http import streamablehttp_client
 from mcp.server.lowlevel import Server
 from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
 
 from gateway import gateway
+from gateway.transport import open_mcp
 from guardrails.check import check_text
 from profiles.loader import Profile, load_profile
 
@@ -177,7 +177,7 @@ async def upstream_catalogue(profile: Profile) -> dict[str, types.Tool]:
     wanted = set(profile.agents[profile.outside.agent])
     found: dict[str, types.Tool] = {}
     for server in sorted({profile.tools[t].server for t in wanted}):
-        async with streamablehttp_client(server) as (read, write, _):
+        async with open_mcp(server) as (read, write, _):
             async with ClientSession(read, write) as session:
                 await session.initialize()
                 for t in (await session.list_tools()).tools:

@@ -30,6 +30,7 @@ import yaml
 from mcp.server.fastmcp import FastMCP
 
 from mcp_servers.common.patients import NotFound, Patient, Source
+from mcp_servers.common.serve import serve
 from profiles.loader import Profile, load_profile
 
 DAILYMED = "https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid={set_id}"
@@ -366,4 +367,4 @@ if __name__ == "__main__":
         print(f"Medication review for profile {PROFILE.name}: {n} FDA labels"
               + (f", downloaded {CONFIG.labels.get('downloaded')}" if n else
                  " (none yet: run scripts/fetch_drug_labels.py)"))
-    mcp.run(transport="streamable-http")
+    serve(mcp)   # plain HTTP, or mutual TLS (ADR 030)

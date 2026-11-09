@@ -54,8 +54,10 @@ platform := {"platform": {
 	"roles": {"finance_analyst": {"tools": ["finance_summary", "policy_search"]}},
 }}
 
-outside_call(tool, tenant) := {"profile": "platform", "agent": "outside", "role": "finance_analyst",
-	"tool": tool, "tenant": tenant}
+outside_call(tool, tenant) := {
+	"profile": "platform", "agent": "outside", "role": "finance_analyst",
+	"tool": tool, "tenant": tenant,
+}
 
 test_tenant_scoped_tool_allowed_with_a_tenant if {
 	authz.allow with input as outside_call("finance_summary", "agency-a") with data.profiles as platform

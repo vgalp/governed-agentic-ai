@@ -188,6 +188,7 @@ class Profile:
     fhir_map: FhirMap | None = None             # how a FHIR server's resources become records (ADR 013)
     faithfulness: dict | None = None            # a second model judges answers from listed tools (ADR 022)
     sign_in: dict | None = None                 # how people sign in to the chat API (ADR 028)
+    rate_limit: dict | None = None              # chat messages per person (ADR 030)
 
     def response(self, category: str, role: str | None = None) -> str:
         """The fixed reply for a category, worded for the role if the role has its own."""
@@ -970,6 +971,7 @@ def load_profile_from(path: Path) -> Profile:
         outside=outside,
         faithfulness=faithfulness or None,
         sign_in=sign_in,
+        rate_limit=dict(p["rate_limit"]) if p.get("rate_limit") else None,
     )
 
 

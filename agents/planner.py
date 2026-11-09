@@ -29,13 +29,15 @@ It cannot make the change; only the executor agent can, after approval."""
 
 import json
 
-from confluent_kafka import Consumer, Producer
+from confluent_kafka import Consumer
 
 from agents.pipeline import build, handle
 from agents.pipeline.stages import fail
 from audit.chain import get_audit_chain
 from guardrails import toxicity
 from guardrails.classifier import input_engine_name, load_guard
+from ops.delivery import Producer
+from ops.health import Heartbeat
 from profiles.loader import load_profile
 
 AGENT_NAME = "planner"
@@ -57,7 +59,7 @@ def main() -> None:
                          # one request can take minutes on a laptop (several model calls); without this the
                          # broker evicts the planner after 5 minutes and the commit fails (audit OC-1)
                          "max.poll.interval.ms": 900_000})
-    producer = Producer({"bootstrap.servers": BOOTSTRAP, "enable.idempotence": True})
+    producer = Producer({"bootstrap.servers": BOOTSTRAP})   # delivery confirmed per message (ADR 030)
     consumer.subscribe(["chat.requests"])
     rt = build(profile, producer, get_audit_chain(AGENT_NAME), AGENT_NAME)
     ext = (" -> ".join(f"{profile.models[k]['provider']}/{profile.models[k]['name']}"
@@ -67,13 +69,16 @@ def main() -> None:
           f"local model {profile.local_model['name']}, external model {ext}, "
           f"question guard {input_engine_name(profile)}, answer guard {profile.classifier.model}, "
           f"input agent {rt.guards['input_agent'] or 'off'}, toxicity {toxicity.status()})...", flush=True)
+    hb = Heartbeat(AGENT_NAME)
     while True:
+        hb.beat()
         msg = consumer.poll(1.0)
         if msg is None:
             continue
         if msg.error():
             print("Kafka error:", msg.error(), flush=True)
             continue
+        hb.working("a chat request")        # a long request is not a dead planner (ops/health.py)
         process(rt, msg.value())
         try:
             consumer.commit(message=msg)

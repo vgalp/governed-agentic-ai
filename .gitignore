@@ -19,3 +19,5 @@ eval/external/raw/allenai__wildguardmix/
 eval/external/raw/bench-llm__or-bench/
 eval/external/raw/openai_samples-1680.jsonl.gz
 .keycloak.env
+# Local CA and keys for mutual TLS (scripts/certs.sh): never committed
+certs/

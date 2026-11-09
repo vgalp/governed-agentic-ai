@@ -13,7 +13,7 @@ import sys
 import time
 import uuid
 
-from audit.chain import AUDIT_TOPICS, key_from_env, unkeyed_chains, verify_chain
+from audit.chain import AUDIT_TOPICS, key_from_env, read_checkpoints, unkeyed_chains, verify_chain, verify_checkpoints
 
 
 def read_from_kafka(idle_seconds: float = 5.0) -> list[dict]:
@@ -43,6 +43,8 @@ def main() -> int:
     parser.add_argument("--allow-unkeyed", action="store_true",
                         help="accept chains written without AUDIT_HMAC_KEY even though a key is set "
                              "(only for chains written before the key existed)")
+    parser.add_argument("--checkpoints", help="checkpoint directory (default AUDIT_CHECKPOINT_DIR or "
+                                              "logs/audit-checkpoints); 'none' to skip")
     args = parser.parse_args()
 
     if args.file:
@@ -58,6 +60,11 @@ def main() -> int:
     chained = [r for r in records if "audit" in r]
     legacy = len(records) - len(chained)
     problems = verify_chain(chained, key_from_env(), allow_unkeyed=args.allow_unkeyed)
+    if args.checkpoints != "none":
+        cp_problems, cp = verify_checkpoints(chained, read_checkpoints(args.checkpoints), key_from_env())
+        problems += cp_problems
+        print(f"Checkpoints: {cp['checkpoint_files']} file(s), {cp['chains_checked']} chain(s) checked, "
+              f"{cp['chains_without_checkpoint']} chain(s) written before checkpoints existed")
     chains = {r["audit"]["chain_id"] for r in chained}
 
     print(f"Events read: {len(records)} ({len(chained)} chained in {len(chains)} chain(s), {legacy} written before chaining)")

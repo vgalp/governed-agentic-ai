@@ -6,9 +6,11 @@
 #   ./scripts/dev.sh down      stop the Python services and the Docker containers
 #   ./scripts/dev.sh restart   stop, then start
 #   ./scripts/dev.sh status    show what is running, and warn about duplicate processes
+#   ./scripts/dev.sh health    ask the API how the pipeline is doing (broker, readers, workers, delivery)
 #   ./scripts/dev.sh logs [knowledge-base|records|changes|medication-review|fhir-records|api|planner|executor]   follow logs
 #
 #   PROFILE=<name> ./scripts/dev.sh start   run another profile (default: adhd-assistant)
+#   GOVERNED_MTLS=on ./scripts/dev.sh start  tool servers over mutual TLS (scripts/certs.sh, ADR 030)
 #
 # Demo: http://localhost:8000   Engineer view: /dashboard   Kafka UI: http://localhost:8080
 
@@ -89,8 +91,26 @@ check_prereqs() {
   ok "Profile $PROFILE"
 }
 
+ensure_secrets() {  # a token for OPA's API (audit SC-5, ADR 030), made once and kept in .env
+  if ! grep -q '^OPA_TOKEN=' .env 2>/dev/null; then
+    umask 077
+    echo "OPA_TOKEN=$(openssl rand -hex 24)" >> .env
+    ok "Made OPA_TOKEN in .env (OPA now answers only callers that hold it)"
+  fi
+  set -a; . ./.env; set +a
+  # Mutual TLS between the gateway and the tool servers (audit SC-6, ADR 030): GOVERNED_MTLS=on
+  if [ "${GOVERNED_MTLS:-off}" = "on" ]; then
+    [ -f certs/ca.crt ] || ./scripts/certs.sh >/dev/null
+    export GOVERNED_MTLS_DIR="$PWD/certs"
+    ok "Mutual TLS on: tool servers accept only the gateway's certificate"
+  else
+    unset GOVERNED_MTLS_DIR
+  fi
+}
+
 start_infra() {
   say "Starting infrastructure"
+  ensure_secrets
   docker compose up -d >/dev/null
   for _ in $(seq 60); do
     docker exec broker kafka-topics --bootstrap-server broker:29092 --list >/dev/null 2>&1 && break
@@ -112,11 +132,14 @@ stop_services() {
   say "Stopping services"
   for s in "${SERVICES[@]}"; do
     IFS='|' read -r name pattern _ _ <<< "$s"
+    # The supervisor first, so it does not restart the service we are stopping (ADR 030).
+    pkill -f -- "ops\.supervise $name --" 2>/dev/null || true
     pkill -f -- "$pattern" 2>/dev/null || true
     for _ in $(seq 10); do
       [ "$(count_procs "$pattern")" -eq 0 ] && break
       sleep 1
     done
+    pkill -9 -f -- "ops\.supervise $name --" 2>/dev/null || true
     pkill -9 -f -- "$pattern" 2>/dev/null || true
     ok "$name stopped"
   done
@@ -133,8 +156,10 @@ start_services() {
   fi
   for s in "${SERVICES[@]}"; do
     IFS='|' read -r name _ args port <<< "$s"
+    # Under the supervisor: restarted if it stops, given up (and reported by /health) if it keeps
+    # crashing (ops/supervise.py, ADR 030).
     # shellcheck disable=SC2086  # args are split on purpose
-    nohup "$PY" -m $args > "$LOG_DIR/$name.log" 2>&1 &
+    nohup "$PY" -m ops.supervise "$name" -- $args > "$LOG_DIR/$name.log" 2>&1 &
     if [ -n "$port" ]; then
       wait_for_port "$port" 60 || { tail -20 "$LOG_DIR/$name.log"; fail "$name did not start"; }
     else
@@ -172,6 +197,7 @@ case "${1:-}" in
   restart) stop_services; check_prereqs; start_infra; start_services
            say "Ready.  Demo: http://localhost:8000   Engineer view: http://localhost:8000/dashboard" ;;
   status)  status ;;
+  health)  curl -s localhost:8000/health | "$PY" -m json.tool || warn "The API is not answering on port 8000" ;;
   logs)    if [ -n "${2:-}" ]; then tail -f "$LOG_DIR/$2.log"; else tail -f "$LOG_DIR"/*.log; fi ;;
-  *)       sed -n '2,13p' "$0" | sed 's/^# \{0,1\}//'; exit 1 ;;
+  *)       sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//'; exit 1 ;;
 esac

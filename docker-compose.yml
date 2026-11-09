@@ -9,7 +9,12 @@ services:
     container_name: opa
     ports:
       - "127.0.0.1:8181:8181"
-    command: ["run", "--server", "--addr", ":8181", "--watch", "/policies"]
+    # Every request needs OPA_TOKEN (policies/system/authz.rego, audit SC-5); scripts/dev.sh puts it
+    # in .env, which docker compose reads. Without it OPA is open, as before.
+    command: ["run", "--server", "--addr", ":8181", "--authentication=token", "--authorization=basic",
+              "--watch", "/policies"]
+    environment:
+      OPA_TOKEN: ${OPA_TOKEN:-}
     volumes:
       - ./policies:/policies
   broker:

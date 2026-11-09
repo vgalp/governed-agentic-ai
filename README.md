@@ -263,7 +263,7 @@ docs/            Architecture notes and decision records
 - [x] Tool registry and records mapping in the profile; a second use case (county benefits) from configuration only
 - [x] Changes from configuration (generic change tool): the county profile releases held payments with no code
 - [x] Cost and quality metrics on the dashboard: cost per task, iteration cost, task success, toxicity (ADR 018)
-- [ ] Signed audit checkpoints (truncation detection)
+- [x] Signed audit checkpoints (truncation detection), confirmed Kafka delivery, supervision and health checks, a rate limit per person, OPA token authentication and mutual TLS to the tool servers (ADR 030)
 - [ ] Fine-tuned safety classifier and grounding check (layer 3)
 - [ ] Clinician-reviewed knowledge base and fixed responses
 - [ ] Tracing, failure recovery (Saga pattern) and chaos tests

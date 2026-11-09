@@ -31,6 +31,7 @@ from pathlib import Path
 
 import yaml
 
+from mcp_servers.common.serve import serve
 from mcp_servers.medication_review import labels as fda
 from profiles.loader import Profile, load_profile
 
@@ -341,4 +342,4 @@ if __name__ == "__main__":
             f"Drug reference for profile {PROFILE.name}: {n} label(s) on file, fetch {CONFIG.fetch}, "
             f"{len(CONFIG.sections)} quotable section(s)"
         )
-    mcp.run(transport="streamable-http")
+    serve(mcp)   # plain HTTP, or mutual TLS (ADR 030)

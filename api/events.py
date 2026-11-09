@@ -95,7 +95,9 @@ def consume_events(bootstrap: str) -> None:
         "enable.auto.commit": False,
     })
     consumer.subscribe(EVENT_TOPICS)
+    from ops.health import tick
     while True:
+        tick("events")
         msg = consumer.poll(1.0)
         if msg is None or msg.error():
             continue

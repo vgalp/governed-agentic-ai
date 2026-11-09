@@ -25,6 +25,7 @@ from pathlib import Path
 
 from mcp.server.fastmcp import FastMCP
 
+from mcp_servers.common.serve import serve
 from profiles.loader import load_profile
 from profiles.records_map import RecordsMap, RecordType, render_template
 
@@ -152,4 +153,4 @@ if __name__ == "__main__":
             sys.exit(f"records.yaml does not match {db_path}:\n  " + "\n  ".join(problems))
         print(f"Records for profile {PROFILE.name}: {db_path} "
               f"({PROFILE.records_map.noun}s, {len(PROFILE.records_map.records)} record types)")
-    mcp.run(transport="streamable-http")
+    serve(mcp)   # plain HTTP, or mutual TLS (ADR 030)

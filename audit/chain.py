@@ -15,11 +15,16 @@ relabel it "sha256" and recompute plain hashes. Chains written before a key was
 configured are checked only when the caller says so (allow_unkeyed=True), and
 a chain that switches algorithm part way is always a problem.
 
-Known limit: deleting the most recent events (truncation) leaves a valid chain.
-Publishing the latest hash somewhere separate (a checkpoint) closes that gap;
-see docs/decisions/002-tamper-evident-audit.md.
+Truncation (deleting the most recent events) leaves a valid chain by itself, so each chain also
+writes signed checkpoints outside Kafka (ADR 030): every CHECKPOINT_EVERY events, at most a minute
+after its latest event, and when the process exits, it appends {seq, hash} of its newest event to
+its own file in AUDIT_CHECKPOINT_DIR (default logs/audit-checkpoints/). Each line is signed and
+links to the line before it. `verify_checkpoints` then finds a chain cut short, rewritten, or gone.
+A deployment points AUDIT_CHECKPOINT_DIR at storage the audit writers cannot rewrite (for example
+object storage with a retention lock); on one machine the files are evidence, not a guarantee.
 """
 
+import atexit
 import hashlib
 import hmac
 import json
@@ -27,6 +32,7 @@ import os
 import threading
 import time
 import uuid
+from pathlib import Path
 
 GENESIS = "0" * 64
 # Every topic an AuditChain writes to. A topic missing here is never read by the verifier or the
@@ -48,21 +54,103 @@ def compute_hash(record: dict, key: bytes | None) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
+CHECKPOINT_EVERY = 50          # events
+CHECKPOINT_SECONDS = 60        # at most this long after a chain's newest event
+SETTLE_SECONDS = 30            # the verifier ignores checkpoints younger than this (events still arriving)
+
+
+def checkpoint_dir() -> Path:
+    return Path(os.environ.get("AUDIT_CHECKPOINT_DIR") or Path(__file__).resolve().parent.parent / "logs" / "audit-checkpoints")
+
+
 def key_from_env() -> bytes | None:
     value = os.environ.get("AUDIT_HMAC_KEY")
     return value.encode() if value else None
 
 
+class Checkpoints:
+    """Signed, linked checkpoint lines, one append-only file per chain (ADR 030)."""
+
+    def __init__(self, directory: Path, key: bytes | None, clock=time.time):
+        self.dir, self.key, self.clock = Path(directory), key, clock
+        self._last: dict[str, tuple[int, str]] = {}          # chain -> (line number, signature)
+        self._lock = threading.Lock()
+
+    def write(self, chain_id: str, seq: int, head: str, profiles: set[str]) -> dict:
+        with self._lock:
+            n, prev = self._last.get(chain_id, (-1, GENESIS))
+            line = {"chain_id": chain_id, "n": n + 1, "seq": seq, "hash": head, "events": seq + 1,
+                    "profiles": sorted(profiles), "at": self.clock(), "prev": prev,
+                    "alg": "hmac-sha256" if self.key else "sha256"}
+            line["sig"] = compute_hash(line, self.key)
+            self.dir.mkdir(parents=True, exist_ok=True)
+            with open(self.dir / f"{chain_id}.jsonl", "a", encoding="utf-8") as f:
+                f.write(json.dumps(line) + "\n")
+                f.flush()
+                os.fsync(f.fileno())
+            self._last[chain_id] = (line["n"], line["sig"])
+            return line
+
+
+def read_checkpoints(directory: Path | None = None) -> dict[str, list[dict]]:
+    """Every checkpoint line, by chain. A line that is not JSON is kept as a problem marker."""
+    out: dict[str, list[dict]] = {}
+    d = Path(directory or checkpoint_dir())
+    if not d.is_dir():
+        return out
+    for f in sorted(d.glob("*.jsonl")):
+        lines = []
+        for raw in f.read_text(encoding="utf-8").splitlines():
+            if raw.strip():
+                try:
+                    lines.append(json.loads(raw))
+                except ValueError:
+                    lines.append({"unreadable": True})
+        out[f.stem] = lines
+    return out
+
+
 class AuditChain:
     """Writes chained audit events. One chain per running process."""
 
-    def __init__(self, producer, source: str, key: bytes | None = None):
+    def __init__(self, producer, source: str, key: bytes | None = None, checkpoints: Checkpoints | None = None,
+                 clock=time.time):
         self.producer = producer
         self.chain_id = f"{source}-{uuid.uuid4()}"
         self.key = key
         self.seq = 0
         self.prev_hash = GENESIS
         self._lock = threading.Lock()
+        self.checkpoints, self.clock = checkpoints, clock
+        self._profiles: set[str] = set()
+        self._since_checkpoint = 0
+        self._timer: threading.Timer | None = None
+        if checkpoints is not None:
+            atexit.register(self._checkpoint_at_exit)
+
+    def _checkpoint_at_exit(self) -> None:
+        try:
+            self.checkpoint()
+        except Exception as e:  # noqa: BLE001  exiting anyway; say why the last checkpoint is missing
+            print(f"Audit: could not write the final checkpoint ({type(e).__name__})", flush=True)
+
+    def checkpoint(self) -> dict | None:
+        """Record the newest event's seq and hash outside Kafka. Nothing new since the last: nothing."""
+        with self._lock:
+            if self.checkpoints is None or self.seq == 0 or self._since_checkpoint == 0:
+                return None
+            self._since_checkpoint = 0
+            return self.checkpoints.write(self.chain_id, self.seq - 1, self.prev_hash, set(self._profiles))
+
+    def _after_emit(self) -> None:
+        if self.checkpoints is None:
+            return
+        if self._since_checkpoint >= CHECKPOINT_EVERY:
+            self.checkpoint()
+        elif self._timer is None or not self._timer.is_alive():
+            self._timer = threading.Timer(CHECKPOINT_SECONDS, self.checkpoint)
+            self._timer.daemon = True
+            self._timer.start()
 
     def emit(self, topic: str, event: dict, flush: bool = False) -> dict:
         with self._lock:
@@ -81,8 +169,12 @@ class AuditChain:
             self.producer.produce(topic, key=event.get("request_id"), value=json.dumps(record))
             self.prev_hash = record["audit"]["hash"]
             self.seq += 1
+            self._since_checkpoint += 1
+            if isinstance(event.get("profile"), str):
+                self._profiles.add(event["profile"])
         if flush:
             self.producer.flush()
+        self._after_emit()
         return record
 
 
@@ -129,6 +221,59 @@ def verify_chain(records: list[dict], key: bytes | None, allow_unkeyed: bool = F
     return problems
 
 
+def verify_checkpoints(records: list[dict], checkpoints: dict[str, list[dict]], key: bytes | None,
+                       profile: str | None = None, now: float | None = None,
+                       settle: float = SETTLE_SECONDS) -> tuple[list[str], dict]:
+    """Compare the chains with their checkpoints. Finds a chain cut short (its newest checkpointed
+    event is missing), rewritten (that event has another hash), or gone entirely, and a changed
+    checkpoint file. `profile`: only chains that wrote for it. Returns (problems, summary)."""
+    now = time.time() if now is None else now
+    problems: list[str] = []
+    by_chain: dict[str, dict[int, dict]] = {}
+    for r in records:
+        a = r["audit"]
+        by_chain.setdefault(a["chain_id"], {})[a["seq"]] = r
+    checked = 0
+    for chain_id, lines in checkpoints.items():
+        prev, ok_file = GENESIS, True
+        for i, line in enumerate(lines):
+            if line.get("unreadable") or line.get("n") != i or line.get("prev") != prev or line.get("chain_id") != chain_id:
+                ok_file = False
+                break
+            alg = line.get("alg")
+            if alg == "sha256" and key is not None:
+                ok_file = False                       # anyone can sign a line without the key
+                break
+            unsigned = {k: v for k, v in line.items() if k != "sig"}
+            if compute_hash(unsigned, key if alg == "hmac-sha256" else None) != line.get("sig"):
+                ok_file = False
+                break
+            prev = line["sig"]
+        if not ok_file:
+            problems.append(f"{chain_id}: its checkpoint file was changed (line {i} does not verify)")
+            continue
+        settled = [x for x in lines if now - float(x["at"]) >= settle]
+        if not settled:
+            continue
+        cp = settled[-1]
+        if profile is not None and profile not in cp.get("profiles", []):
+            continue
+        checked += 1
+        events = by_chain.get(chain_id)
+        if not events:
+            problems.append(f"{chain_id}: all {cp['events']} checkpointed events are missing (the chain was deleted, "
+                            "or Kafka was reset; after a deliberate reset, archive the checkpoint directory)")
+        elif cp["seq"] not in events:
+            newest = max(events)
+            problems.append(f"{chain_id}: events up to seq {cp['seq']} were checkpointed, but the chain ends at "
+                            f"seq {newest} (its newest events were deleted)")
+        elif events[cp["seq"]]["audit"]["hash"] != cp["hash"]:
+            problems.append(f"{chain_id} seq {cp['seq']}: differs from its checkpoint (rewritten)")
+    unchecked = len({c for c in by_chain if c not in checkpoints})
+    return problems, {"chains_checked": checked, "chains_without_checkpoint": unchecked,
+                      "checkpoint_files": len(checkpoints)}
+
+
 def chains_of_profile(records: list[dict], profile: str) -> list[dict]:
     """Every record of each chain that wrote at least one event for this profile. Whole chains are
     kept, so a gap or a changed event inside them is still found."""
@@ -150,10 +295,10 @@ def get_audit_chain(source: str) -> AuditChain:
     global _default_chain
     with _default_lock:
         if _default_chain is None:
-            from confluent_kafka import Producer
-            producer = Producer({"bootstrap.servers": "127.0.0.1:9092", "enable.idempotence": True})
+            from ops.delivery import Producer  # delivery confirmed per event (ADR 030)
+            producer = Producer()
             key = key_from_env()
             if key is None:
                 print("Audit: AUDIT_HMAC_KEY not set, using plain SHA-256 (detects changes, not deliberate forgery).")
-            _default_chain = AuditChain(producer, source, key)
+            _default_chain = AuditChain(producer, source, key, Checkpoints(checkpoint_dir(), key))
         return _default_chain

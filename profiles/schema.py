@@ -147,6 +147,13 @@ class SignIn(Strict):
     leeway_seconds: int = Field(default=30, ge=0, le=300)
 
 
+class RateLimit(Strict):
+    """Chat messages one person may send (ADR 030): `burst` at once, then `per_minute` a minute."""
+
+    per_minute: int = Field(default=20, ge=1, le=10_000)
+    burst: int = Field(default=10, ge=1, le=10_000)
+
+
 class ProfileFile(Strict):
     """profile.yaml"""
 
@@ -175,6 +182,7 @@ class ProfileFile(Strict):
     faithfulness: Faithfulness | None = None
     examples: list[str] = []
     sign_in: SignIn | None = None
+    rate_limit: RateLimit | None = None
 
 
 # --- tools.yaml ---------------------------------------------------------------------------------

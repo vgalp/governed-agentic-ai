@@ -458,6 +458,28 @@
       "title": "Privacy",
       "type": "object"
     },
+    "RateLimit": {
+      "additionalProperties": false,
+      "description": "Chat messages one person may send (ADR 030): `burst` at once, then `per_minute` a minute.",
+      "properties": {
+        "burst": {
+          "default": 10,
+          "maximum": 10000,
+          "minimum": 1,
+          "title": "Burst",
+          "type": "integer"
+        },
+        "per_minute": {
+          "default": 20,
+          "maximum": 10000,
+          "minimum": 1,
+          "title": "Per Minute",
+          "type": "integer"
+        }
+      },
+      "title": "RateLimit",
+      "type": "object"
+    },
     "Routing": {
       "additionalProperties": false,
       "properties": {
@@ -756,6 +778,17 @@
     "prompt": {
       "title": "Prompt",
       "type": "string"
+    },
+    "rate_limit": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/RateLimit"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
     },
     "records_db": {
       "anyOf": [

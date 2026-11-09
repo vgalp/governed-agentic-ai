@@ -16,6 +16,7 @@ import re
 from mcp.server.fastmcp import FastMCP
 
 from fhir.client import FhirClient, FhirError, client_from_settings
+from mcp_servers.common.serve import serve
 from profiles.fhir_map import FhirMap, RecordType, human_name, render
 from profiles.loader import load_profile
 
@@ -168,4 +169,4 @@ if __name__ == "__main__":
                 return {"results": [], "note": f"the record system is not set up: {e}"}
         return search(CLIENT, MAP, query, allowed_classes)
 
-    mcp.run(transport="streamable-http")
+    serve(mcp)   # plain HTTP, or mutual TLS (ADR 030)

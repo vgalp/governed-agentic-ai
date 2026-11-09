@@ -37,6 +37,7 @@ from html.parser import HTMLParser
 import requests
 import yaml
 
+from mcp_servers.common.serve import serve
 from profiles.loader import Profile, load_profile
 
 UA = "governed-agentic-ai/web-research (+https://github.com/vgalp/governed-agentic-ai)"
@@ -388,4 +389,4 @@ if __name__ == "__main__":
             f"{'any site' if not SETTINGS['allow'] else str(len(SETTINGS['allow'])) + ' allowed domain(s)'}, "
             f"{SETTINGS['max_pages']} page(s) per question"
         )
-    mcp.run(transport="streamable-http")
+    serve(mcp)   # plain HTTP, or mutual TLS (ADR 030)

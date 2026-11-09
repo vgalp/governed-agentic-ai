@@ -95,5 +95,12 @@ issuer, audience, client and group names in the profile's `sign_in` block, and i
 | Ollama is not running | open the Ollama app |
 | Guard classifier ... is not published yet | the default model is not on Hugging Face yet: train it (`classifier/train.py`) or use Llama Guard (set the profile's `classifier.input_engine` to `llamaguard`) |
 | No answer within 3 minutes | `./scripts/dev.sh logs planner`; the first answer is slow while the models load |
+| Something seems stuck | `./scripts/dev.sh health`: the broker, the API's readers, the planner and executor, and Kafka delivery, each with what is wrong. A service that keeps crashing is given up on after 5 tries and named there; read its log, fix it, `./scripts/dev.sh restart` |
+| "Too many messages" | a person may send 10 messages at once, then 20 a minute; change `rate_limit` in the profile |
+| The audit check says checkpointed events are missing after you reset Kafka on purpose | move `logs/audit-checkpoints/` aside: those chains no longer exist ([ADR 030](decisions/030-delivery-supervision-checkpoints-and-locked-services.md)) |
+| OPA answers 401 | the process calling it has no `OPA_TOKEN`: it is in `.env`, which `scripts/dev.sh` loads |
+
+To lock the tool servers so only the gateway can call them, start with `GOVERNED_MTLS=on ./scripts/dev.sh start`:
+it makes a local CA and certificates in `certs/` (not committed) and runs the tool servers over mutual TLS.
 
 This is a research prototype, not production software and not a medical device.

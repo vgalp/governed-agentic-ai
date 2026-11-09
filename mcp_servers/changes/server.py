@@ -23,6 +23,7 @@ from pathlib import Path
 
 from mcp.server.fastmcp import FastMCP
 
+from mcp_servers.common.serve import serve
 from profiles.loader import Action, Profile, load_profile
 from profiles.records_map import render
 
@@ -169,4 +170,4 @@ if __name__ == "__main__":
             # Stop at startup, not halfway through an approved change.
             sys.exit(f"actions.yaml does not match {db_path}:\n  " + "\n  ".join(problems))
     print(f"Changes for profile {PROFILE.name}: {names}")
-    mcp.run(transport="streamable-http")
+    serve(mcp)   # plain HTTP, or mutual TLS (ADR 030)

@@ -27,13 +27,15 @@ import uuid
 from datetime import datetime
 
 import requests
-from confluent_kafka import Consumer, Producer, TopicPartition
+from confluent_kafka import Consumer, TopicPartition
 
 from agents import actions
 from agents.trace import Trace
 from audit.chain import get_audit_chain
 from gateway.gateway import ToolCallDenied, call_tool
 from gateway.opa import decide
+from ops.delivery import Producer
+from ops.health import Heartbeat
 from profiles.loader import load_profile
 
 AGENT_NAME = "executor"
@@ -223,7 +225,7 @@ def on_event(topic: str, raw) -> None:
 def main() -> None:
     global PROFILE, producer, audit
     PROFILE = load_profile()
-    producer = Producer({"bootstrap.servers": BOOTSTRAP, "enable.idempotence": True})
+    producer = Producer({"bootstrap.servers": BOOTSTRAP})   # delivery confirmed per message (ADR 030)
     audit = get_audit_chain(AGENT_NAME)
     consumer = Consumer({
         "bootstrap.servers": BOOTSTRAP,
@@ -237,7 +239,9 @@ def main() -> None:
           f"{len(state.pending())} pending, {finished} interrupted approval(s) finished)...", flush=True)
 
     last_sweep = 0.0
+    hb = Heartbeat(AGENT_NAME)
     while True:
+        hb.beat()
         if time.time() - last_sweep > 5:
             expire_overdue()
             last_sweep = time.time()

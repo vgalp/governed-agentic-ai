@@ -3,13 +3,14 @@ import json
 import logging
 import os
 import threading
+import time
 import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
 from typing import Literal
 
-from confluent_kafka import Consumer, Producer
+from confluent_kafka import Consumer
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
@@ -17,15 +18,20 @@ from pydantic import BaseModel, Field
 from agents import actions
 from api import openai_compat as compat
 from api.events import buffer, consume_events, event_stream
-from audit.chain import chains_of_profile, key_from_env, unkeyed_chains, verify_chain
+from audit.chain import chains_of_profile, key_from_env, read_checkpoints, unkeyed_chains, verify_chain, verify_checkpoints
 from auth.directory import CachedDirectory, access_report
 from auth.sign_in import Caller, SignIn, SignInRequired
+from ops import health as liveness
+from ops.delivery import DELIVERY, Producer
+from ops.health import tick
+from ops.ratelimit import RateLimiter
 from profiles.loader import load_profile
 
 BOOTSTRAP = "127.0.0.1:9092"
 UI_DIR = Path(__file__).resolve().parent.parent / "ui"
 
-producer = Producer({"bootstrap.servers": BOOTSTRAP, "enable.idempotence": True})
+producer = Producer({"bootstrap.servers": BOOTSTRAP})   # every message confirmed by the broker (ADR 030)
+READERS: dict[str, threading.Thread] = {}               # the Kafka reader threads, checked by /health
 PROFILE = load_profile()        # same PROFILE as the agents (set by scripts/dev.sh)
 responses: dict[str, dict] = {}  # in-memory for now; replaced later
 approvals = actions.ApprovalState()   # rebuilt from Kafka at startup
@@ -37,6 +43,7 @@ log = logging.getLogger("api")
 # body only in demo mode. owners: which signed-in person asked each request (only they may read it).
 SIGN_IN = SignIn.for_profile(PROFILE)
 owners: dict[str, str] = {}
+LIMITER = RateLimiter.for_profile(PROFILE)   # chat messages per person (audit SC-10, ADR 030)
 DIRECTORY = CachedDirectory((PROFILE.sign_in or {}).get("directory"))   # read-only, for /access (ADR 029)
 
 
@@ -46,6 +53,16 @@ def who(request: Request, demo_user: str | None = None, demo_role: str | None = 
         return SIGN_IN.caller(request.headers.get("authorization"), demo_user, demo_role)
     except SignInRequired as e:
         raise HTTPException(401, str(e), headers={"WWW-Authenticate": 'Bearer realm="governed-api"'}) from None
+
+
+def limit(request: Request, c: Caller | None) -> None:
+    """429 when this person has sent too many messages. The person is the signed-in user; in demo
+    mode, where anyone can claim any name, the caller's address."""
+    key = f"user:{c.user_id}" if (SIGN_IN.on and c is not None) else f"addr:{request.client.host if request.client else '-'}"
+    allowed, wait = LIMITER.allow(key)
+    if not allowed:
+        raise HTTPException(429, f"Too many messages. Please wait {wait:.0f} seconds and try again.",
+                            headers={"Retry-After": str(max(1, round(wait)))})
 
 
 def signed_in(request: Request) -> Caller | None:
@@ -64,6 +81,7 @@ def consume_responses():
     })
     consumer.subscribe(["chat.responses"])
     while True:
+        tick("responses")
         msg = consumer.poll(1.0)
         if msg is None or msg.error():
             continue
@@ -84,6 +102,7 @@ def consume_approvals():
     })
     consumer.subscribe(actions.APPROVAL_TOPICS)
     while True:
+        tick("approvals")
         msg = consumer.poll(1.0)
         if msg is None or msg.error():
             continue
@@ -92,9 +111,10 @@ def consume_approvals():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    threading.Thread(target=consume_responses, daemon=True).start()
-    threading.Thread(target=consume_approvals, daemon=True).start()
-    threading.Thread(target=consume_events, args=(BOOTSTRAP,), daemon=True).start()
+    for name, target, args in (("responses", consume_responses, ()), ("approvals", consume_approvals, ()),
+                               ("events", consume_events, (BOOTSTRAP,))):
+        READERS[name] = threading.Thread(target=target, args=args, daemon=True, name=f"reader-{name}")
+        READERS[name].start()
     if SIGN_IN.on:
         log.warning("Sign-in: oidc, issuer %s. Requests without a valid access token are refused.",
                     SIGN_IN.verifier.issuer)
@@ -225,7 +245,12 @@ def audit_verify(scope: Literal["profile", "all"] = "profile"):
     if scope == "profile":
         records = chains_of_profile(records, PROFILE.name)
     problems = verify_chain(records, key_from_env())
+    # Checkpoints kept outside Kafka find newest events deleted, which the chain alone cannot (ADR 030).
+    cp_problems, cp = verify_checkpoints(list(buffer.audit_records), read_checkpoints(), key_from_env(),
+                                         PROFILE.name if scope == "profile" else None)
+    problems = problems + cp_problems
     return {
+        "checkpoints": cp,
         "scope": "all profiles" if scope == "all" else PROFILE.name,
         "events": len(records),
         "chains": len({r["audit"]["chain_id"] for r in records}),
@@ -265,9 +290,38 @@ def profile_info():
     }
 
 
+# Workers in other processes that /health expects to hear from (ops/health.py). A profile served only
+# through the governed endpoint runs no planner: set GOVERNED_HEALTH_REQUIRE= (empty) or to its own list.
+REQUIRED_WORKERS = [w for w in os.environ.get("GOVERNED_HEALTH_REQUIRE", "planner,executor").split(",") if w]
+_broker_check = {"at": -1e18, "ok": False, "error": None}
+
+
+def broker_reachable() -> tuple[bool, str | None]:
+    """Ask Kafka for its topics, at most every 10 seconds."""
+    if time.time() - _broker_check["at"] > 10:
+        try:
+            producer.list_topics(timeout=2)
+            _broker_check.update(ok=True, error=None)
+        except Exception as e:  # noqa: BLE001  any failure means: not reachable
+            _broker_check.update(ok=False, error=type(e).__name__)
+        _broker_check["at"] = time.time()
+    return _broker_check["ok"], _broker_check["error"]
+
+
+def health_report() -> tuple[dict, int]:
+    readers = {name: (t.is_alive(), liveness.tick_age(name)) for name, t in READERS.items()}
+    return liveness.assess(broker_reachable(), readers,
+                           {w: liveness.read(w) for w in REQUIRED_WORKERS},
+                           {w: liveness.read(f"{w}.supervisor") for w in REQUIRED_WORKERS},
+                           DELIVERY.stats())
+
+
 @app.get("/health")
 def health():
-    return {"status": "ok"}
+    """For a person or a monitor: the broker, this API's readers, the planner and executor, and
+    Kafka delivery (ADR 030)."""
+    body, code = health_report()
+    return JSONResponse(body, status_code=code)
 
 
 def submit(user_id: str, message: str, role: str | None, history: list[dict], web: bool | None = None) -> str:
@@ -277,14 +331,16 @@ def submit(user_id: str, message: str, role: str | None, history: list[dict], we
              "profile": PROFILE.name, "history": history}
     if web is not None:
         event["web"] = web
-    producer.produce("chat.requests", key=request_id, value=json.dumps(event))
-    producer.flush()
+    if not producer.send("chat.requests", key=request_id, value=json.dumps(event)):
+        # Never hand out a request ID that nothing will answer (audit OC-2).
+        raise HTTPException(503, "The pipeline did not confirm your message (Kafka unavailable). Please try again.")
     return request_id
 
 
 @app.post("/chat")
 def send_chat(req: ChatRequest, request: Request):
     c = who(request, req.user_id, req.role)
+    limit(request, c)
     request_id = submit(c.user_id, req.message, c.role, [t.model_dump() for t in req.history], req.web)
     if SIGN_IN.on:
         owners[request_id] = c.user_id
@@ -314,6 +370,10 @@ async def compat_chat(request: Request):
         return JSONResponse(compat.CompatError("Invalid API key.", 401, "invalid_api_key").body(), 401)
     else:
         caller = None
+    try:
+        limit(request, caller)
+    except HTTPException as e:
+        return JSONResponse(compat.CompatError(e.detail, 429, "rate_limit_exceeded").body(), 429, headers=e.headers)
     try:
         req = compat.to_request(await request.json())
     except ValueError:
@@ -378,9 +438,9 @@ def decide_approval(approval_id: str, d: Decision, request: Request):
         raise HTTPException(404, "no such approval request")
     if a["status"] != "pending":
         raise HTTPException(409, f"already {a['status']}")
-    producer.produce(actions.DECIDED, key=approval_id, value=json.dumps({
+    if not producer.send(actions.DECIDED, key=approval_id, value=json.dumps({
         "approval_id": approval_id, "request_id": a["request_id"], "decision": d.decision, "approver": c.user_id,
         "approver_role": c.role, "note": d.note, "decided_at": datetime.now().isoformat(timespec="seconds"),
-    }))
-    producer.flush()
+    })):
+        raise HTTPException(503, "The decision was not recorded (Kafka unavailable). Please try again.")
     return {"approval_id": approval_id, "decision": d.decision, "status": "recorded"}

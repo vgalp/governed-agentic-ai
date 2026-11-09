@@ -18,6 +18,6 @@ the record of what an AI system did has not been altered.
 - Changes, deletions, insertions and reordering are detected.
 - Without the key, someone who rewrites the whole log can recompute a valid SHA-256 chain; such
   chains are reported as "unkeyed".
-- **Truncation (deleting the newest events) is not detected.** Next step: periodically publish the
-  latest hash to a separate, append-only location (a checkpoint).
+- **Truncation (deleting the newest events) is not detected by the chain alone.** Since ADR 030,
+  each chain also writes signed checkpoints outside Kafka, and the verifier compares them.
 - One chain per process; a restarted process starts a new chain, which is expected.

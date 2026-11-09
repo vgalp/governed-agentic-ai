@@ -6,6 +6,7 @@ import re
 
 from mcp.server.fastmcp import FastMCP
 
+from mcp_servers.common.serve import serve
 from profiles.loader import load_profile
 
 PROFILE = load_profile()
@@ -44,4 +45,4 @@ def search_knowledge(query: str, limit: int = 3) -> dict:
 
 if __name__ == "__main__":
     print(f"Knowledge base for profile {PROFILE.name}: {len(ENTRIES)} entries")
-    mcp.run(transport="streamable-http")
+    serve(mcp)   # plain HTTP, or mutual TLS (ADR 030)

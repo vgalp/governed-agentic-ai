@@ -22,10 +22,10 @@ import json
 from datetime import timedelta
 
 from mcp import ClientSession
-from mcp.client.streamable_http import streamablehttp_client
 
 from audit.chain import get_audit_chain
 from gateway.opa import decide
+from gateway.transport import open_mcp
 from guardrails.injection import check_result
 from profiles.loader import Profile, load_profile
 
@@ -93,7 +93,7 @@ async def _call_once(server_url: str, tool: str, args: dict, on_progress, limit:
     async def logged(params) -> None:
         if on_progress is not None and params.level in ("info", "notice", "warning"):
             on_progress(str(params.data)[:300])
-    async with streamablehttp_client(server_url, timeout=min(limit, 30.0), sse_read_timeout=limit) as (read, write, _):
+    async with open_mcp(server_url, timeout=min(limit, 30.0), sse_read_timeout=limit) as (read, write, _):
         async with ClientSession(read, write, read_timeout_seconds=timedelta(seconds=limit),
                                  logging_callback=logged if on_progress else None) as session:
             await session.initialize()

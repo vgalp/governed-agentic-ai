@@ -30,6 +30,7 @@ from pathlib import Path
 import yaml
 
 from mcp_servers.common.patients import NotFound, Source
+from mcp_servers.common.serve import serve
 from profiles.loader import Profile, load_profile
 
 
@@ -393,4 +394,4 @@ if __name__ == "__main__":
             f"{len(CONFIG.medication_reason)} medication reasons, {len(CONFIG.problem_treatment)} problem treatments, "
             f"{len(CONFIG.vitals)} vital thresholds"
         )
-    mcp.run(transport="streamable-http")
+    serve(mcp)   # plain HTTP, or mutual TLS (ADR 030)
