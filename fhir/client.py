@@ -1,4 +1,4 @@
-"""A read-only FHIR R4 client, with SMART Backend Services sign-in (ADR 013).
+"""A read-only FHIR R4 client, with SMART sign-in (ADR 013, ADR 032).
 
 Read-only by construction: the only request this client makes to the FHIR server is an HTTP GET
 (`read`, `search`, `capability`). There is no code path that creates, updates or deletes. The one
@@ -8,9 +8,16 @@ short-lived access token.
 SMART Backend Services (used by Epic and others): the app proves who it is with a JSON Web Token
 signed by its private key (RS384), and gets an access token valid for a few minutes. The private
 key is read from a file named in the environment and never leaves this machine; the matching public
-key is published as a JWK Set, where the authorization server fetches it.
+key is published as a JWK Set, where the authorization server fetches it. Some servers (Oracle Health
+system accounts) also accept a client secret instead of a signed assertion.
+
+The sign-in is set by the mapping's `server.auth`:
+  none           an open server (Oracle Health's open sandbox); no token
+  smart_backend  the app signs in as itself (Epic, Oracle Health system accounts)
+  smart_user     a person signed in once in a browser (MEDITECH Greenfield): fhir/smart_user.py
 """
 
+import base64
 import os
 import re
 import time
@@ -34,8 +41,9 @@ class SmartBackendSettings:
     token_url: str
     client_id: str
     private_key_pem: bytes
-    key_id: str
+    key_id: str | None
     scope: str | None = None
+    client_secret: str | None = None     # instead of a key: HTTP Basic (client_secret_basic)
 
 
 class SmartBackendAuth:
@@ -51,18 +59,22 @@ class SmartBackendAuth:
         now = int(self.clock())
         claims = {"iss": self.s.client_id, "sub": self.s.client_id, "aud": self.s.token_url,
                   "jti": str(uuid.uuid4()), "iat": now, "nbf": now, "exp": now + self.ASSERTION_SECONDS}
-        return jwt.encode(claims, self.s.private_key_pem, algorithm="RS384",
-                          headers={"kid": self.s.key_id, "typ": "JWT"})
+        head = {"typ": "JWT", **({"kid": self.s.key_id} if self.s.key_id else {})}
+        return jwt.encode(claims, self.s.private_key_pem, algorithm="RS384", headers=head)
 
     def token(self) -> str:
         if self._token and self.clock() < self._expires - 30:
             return self._token
-        form = {"grant_type": "client_credentials",
-                "client_assertion_type": "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
-                "client_assertion": self.assertion()}
+        form, headers = {"grant_type": "client_credentials"}, {"Accept": "application/json"}
+        if self.s.private_key_pem:
+            form.update({"client_assertion_type": "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+                         "client_assertion": self.assertion()})
+        else:
+            pair = f"{self.s.client_id}:{self.s.client_secret}".encode()
+            headers["Authorization"] = "Basic " + base64.b64encode(pair).decode()
         if self.s.scope:
             form["scope"] = self.s.scope
-        r = self.session.post(self.s.token_url, data=form, headers={"Accept": "application/json"}, timeout=20)
+        r = _send(self.session.post, self.s.token_url, data=form, headers=headers, timeout=20)
         if r.status_code != 200:
             raise FhirError(f"token request refused ({r.status_code}): {_brief(r)}")
         body = r.json()
@@ -75,8 +87,8 @@ class SmartBackendAuth:
 class FhirClient:
     """GET-only access to one FHIR R4 server."""
 
-    def __init__(self, base_url: str, auth: SmartBackendAuth | None = None, session=None,
-                 timeout: float = 20, max_pages: int = 5):
+    def __init__(self, base_url: str, auth=None, session=None,
+                 timeout: float = 20, max_pages: int = 6):
         self.base = base_url.rstrip("/")
         self.auth, self.session = auth, session or requests.Session()
         self.timeout, self.max_pages = timeout, max_pages
@@ -94,7 +106,11 @@ class FhirClient:
         headers = {"Accept": FHIR_JSON}
         if self.auth:
             headers["Authorization"] = f"Bearer {self.auth.token()}"
-        r = self.session.get(url, params=params, headers=headers, timeout=self.timeout)
+        try:
+            r = _send(self.session.get, url, params=params, headers=headers, timeout=self.timeout, retry=1)
+        except FhirError as e:
+            raise FhirError(f"{e} after {self.timeout:g} s; a slow server can be given longer with "
+                            "server.timeout in fhir.yaml" if "Timeout" in str(e) else str(e)) from None
         if r.status_code != 200:
             # the path only: a paged 'next' link carries the search (patient ids) in its query string
             path = urllib.parse.urlsplit(url).path.removeprefix(urllib.parse.urlsplit(self.base).path)
@@ -107,11 +123,24 @@ class FhirClient:
     def read(self, resource_type: str, rid: str) -> dict:
         return self._get(f"{self.base}/{resource_type}/{rid}")
 
+    PAGE = 50                         # resources asked for per page; servers cap _count anyway
+
     def search(self, resource_type: str, params: dict, limit: int = 50) -> list[dict]:
         """Resources of the type matching the search, following 'next' links up to max_pages."""
+        return self.search_all(resource_type, params, limit)[0]
+
+    def search_all(self, resource_type: str, params: dict, limit: int = 50) -> tuple[list[dict], bool]:
+        """(resources, more): up to `limit` resources, following 'next' links up to max_pages, and
+        whether the server holds more than were read. A list cut off at a cap must say so: a partial
+        allergy list shown as the whole one is worse than none."""
         out, url, q = [], f"{self.base}/{resource_type}", dict(params)
+        if "_count" in q:
+            q["_count"] = min(int(q["_count"]), self.PAGE)
+        total, nxt = None, None
         for _ in range(self.max_pages):
             bundle = self._get(url, q)
+            if total is None and isinstance(bundle.get("total"), int):
+                total = bundle["total"]
             for e in bundle.get("entry") or []:
                 res = e.get("resource") or {}
                 if res.get("resourceType") == resource_type:
@@ -120,14 +149,32 @@ class FhirClient:
             if not nxt or len(out) >= limit:
                 break
             url, q = nxt, None
-        return out[:limit]
+        more = len(out) > limit or nxt is not None or (total is not None and total > min(len(out), limit))
+        return out[:limit], more
+
+
+def _send(method, url: str, retry: int = 0, **kw):
+    """One request; a server that cannot be reached is a FhirError like a refusal, not a crash.
+    A GET that timed out is tried again `retry` times (reading twice changes nothing)."""
+    for attempt in range(retry + 1):
+        try:
+            return method(url, **kw)
+        except requests.Timeout as e:
+            if attempt < retry:
+                continue
+            last = e
+        except requests.RequestException as e:
+            last = e
+            break
+    host = urllib.parse.urlsplit(url).hostname
+    raise FhirError(f"could not reach {host} ({type(last).__name__})") from None
 
 
 def _brief(r) -> str:
     why = (getattr(r, "headers", None) or {}).get("WWW-Authenticate", "")
     m = re.search(r'error="([^"]+)"', why)
     if m:                                      # e.g. insufficient_scope: the app lacks that API
-        return m.group(1) + (" (the app is not allowed this request: check its APIs at fhir.epic.com)"
+        return m.group(1) + (" (the app is not allowed this request: check the APIs or scopes it was granted)"
                              if m.group(1) == "insufficient_scope" else "")
     try:
         body = r.json()
@@ -139,17 +186,35 @@ def _brief(r) -> str:
     return str({k: body[k] for k in ("error", "error_description") if k in body})[:300]
 
 
+def _need(server: dict, environ, keys: tuple[str, ...], docs: str) -> None:
+    missing = [server[k] for k in keys if server.get(k) and not environ.get(server[k])]
+    if missing:
+        raise FhirError(f"set {' and '.join(missing)} in .env (see {docs})")
+
+
 def client_from_settings(server: dict, environ=os.environ, session=None) -> FhirClient:
     """The client for a mapping's `server:` block. Secrets come from the environment only."""
-    auth = None
-    if server.get("auth") == "smart_backend":
-        missing = [server[k] for k in ("client_id_env", "private_key_env") if not environ.get(server[k])]
-        if missing:
-            raise FhirError(f"set {' and '.join(missing)} in .env (see docs/epic/README.md)")
-        key = Path(environ[server["private_key_env"]]).expanduser()
-        if not key.exists():
-            raise FhirError(f"private key not found: {key}")
-        auth = SmartBackendAuth(SmartBackendSettings(server["token_url"], environ[server["client_id_env"]],
-                                                     key.read_bytes(), server["key_id"], server.get("scope")),
+    auth, kind = None, server.get("auth", "none")
+    docs = server.get("docs", "docs/epic/README.md")
+    if kind == "smart_backend":
+        _need(server, environ, ("client_id_env", "private_key_env", "client_secret_env"), docs)
+        pem, secret = b"", None
+        if server.get("private_key_env"):
+            key = Path(environ[server["private_key_env"]]).expanduser()
+            if not key.exists():
+                raise FhirError(f"private key not found: {key}")
+            pem = key.read_bytes()
+        else:
+            secret = environ[server["client_secret_env"]]
+        auth = SmartBackendAuth(SmartBackendSettings(server["token_url"], environ[server["client_id_env"]], pem,
+                                                     server.get("key_id"), server.get("scope"), secret),
                                 session=session)
-    return FhirClient(server["base_url"], auth, session=session)
+    elif kind == "smart_user":
+        from fhir.smart_user import SmartUserAuth, SmartUserSettings
+        _need(server, environ, ("client_id_env", "client_secret_env"), docs)
+        settings = SmartUserSettings(
+            server["token_url"], environ[server["client_id_env"]],
+            environ.get(server["client_secret_env"]) if server.get("client_secret_env") else None,
+            server["token_store"], **{k: server[k] for k in ("redirect_uri", "scope", "authorize_url") if server.get(k)})
+        auth = SmartUserAuth(settings, session=session, connect_hint=server.get("connect_hint", ""))
+    return FhirClient(server["base_url"], auth, session=session, timeout=float(server.get("timeout", 20)))

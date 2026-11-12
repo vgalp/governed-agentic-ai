@@ -49,6 +49,8 @@ class Source:
     db_path: Path | None = None
     client: object = None  # fhir.client.FhirClient
     unread: dict = field(default_factory=dict)  # record type -> error, for FHIR types the app may not read yet
+    cut: dict = field(default_factory=dict)  # record type -> how many were read, when the record has more
+    _fetched: dict = field(default_factory=dict, repr=False)  # (record type, patient id) -> resources, one request each
 
     # --- opening ----------------------------------------------------------------------------------
 
@@ -139,11 +141,34 @@ class Source:
         when the server refuses the type: not granted to the app yet)."""
         from fhir.client import FhirError
 
-        try:
-            return self.client.search(r.resource, {r.link: patient.id, **dict(r.search), "_count": r.limit}, r.limit)
-        except FhirError as e:
-            self.unread[r.name] = str(e)
-            return []
+        key = (r.name, patient.id)
+        if key not in self._fetched:          # the lines and the checks read the same resources: ask once
+            try:
+                params = {r.link: patient.id, **dict(r.search), "_count": r.limit}
+                if hasattr(self.client, "search_all"):
+                    found, more = self.client.search_all(r.resource, params, r.limit)
+                else:                              # a client that cannot tell (a test double)
+                    found, more = self.client.search(r.resource, params, r.limit), False
+                self._fetched[key] = found
+                if more:
+                    self.cut[r.name] = len(found)
+            except FhirError as e:
+                self.unread[r.name] = str(e)
+                self._fetched[key] = []
+        return self._fetched[key]
+
+    def prefetch(self, types, patient: Patient) -> None:
+        """FHIR: read several record types at once (each is one or more GETs; a slow server answers
+        them side by side instead of one after another). Read-only, so the order does not matter."""
+        if self.kind != "fhir":
+            return
+        from concurrent.futures import ThreadPoolExecutor
+
+        if getattr(self.client, "auth", None) is not None:
+            self.client.auth.token()          # sign in once, before the parallel reads
+        types = [r for r in types if (r.name, patient.id) not in self._fetched]
+        with ThreadPoolExecutor(max_workers=max(1, min(6, len(types)))) as pool:
+            list(pool.map(lambda r: self.resources(r, patient), types))
 
     def _fhir_records(self, r, patient: Patient, allowed: set[str]) -> list[dict]:
         from profiles.fhir_map import render

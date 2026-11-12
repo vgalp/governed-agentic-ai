@@ -1,0 +1,108 @@
+# Profile: the clinic staff assistant, with its patient records in MEDITECH Expanse (ADR 013, ADR 032).
+# The same assistant, roles, guardrails and medication review as clinic-epic; only the records server
+# differs: MEDITECH's FHIR R4 (US Core) API. Read-only.
+# For development: MEDITECH Greenfield, MEDITECH's developer sandbox. Greenfield signs in a person
+# (SMART authorization code), not the app by itself, and gives a token for one test patient. Sign in
+# once with scripts/fhir_connect.py --profile clinic-meditech. Not a real hospital, not real patients.
+# Needs MEDITECH_CLIENT_ID and MEDITECH_CLIENT_SECRET in .env (docs/meditech/README.md).
+# Select with PROFILE=clinic-meditech.
+
+name: clinic-meditech
+title: Clinic staff assistant (MEDITECH sandbox)
+description: >-
+  Helps clinic staff find information in patient records held in MEDITECH, and clinic policies,
+  with a source for every answer. Read-only. Not a clinical decision tool.
+version: 1
+
+models:
+  local:
+    provider: ollama
+    name: mistral
+    location: local
+    temperature: 0
+  openai:
+    provider: openai
+    name: gpt-4.1-mini
+    location: external
+    api_key_env: OPENAI_API_KEY
+  gemini:
+    provider: gemini
+    name: gemini-2.5-flash
+    location: external
+    api_key_env: GEMINI_API_KEY
+  claude:
+    provider: anthropic
+    name: claude-haiku-4-5-20251001
+    location: external
+    api_key_env: ANTHROPIC_API_KEY
+  judge:
+    provider: ollama
+    name: qwen2.5:7b            # judges answers written from web pages (ADR 022); a different model from the answering one.
+                                # Chosen over llama3.1:8b, which held back correct answers in testing (2026-11-04)
+    location: local
+    temperature: 0
+
+routing:
+  local_model: local
+  external_model: claude
+  fallback: [openai, gemini]
+  external_allowed: true
+  send_external_when: no_personal_info
+  never_external_entities: [PERSON, PHONE_NUMBER, EMAIL_ADDRESS, LOCATION, US_SSN, CREDIT_CARD]
+  never_external_labels: [patient_record]  # record data never leaves the clinic
+  local_input: original
+
+tools: tools.yaml
+fhir: fhir.yaml                            # records come from MEDITECH (FHIR R4), read-only
+roles: roles.yaml
+cite_sources: true
+# MEDITECH resource IDs: letters and digits are kept, the last 8 (fhir.yaml source_id); shorter IDs
+# are kept whole, so 4 to 8.
+source_id_pattern: '\b(kb-cl-\d{3}|pt-[A-Za-z0-9]{4,8}|med-[A-Za-z0-9]{4,8}|enc-[A-Za-z0-9]{4,8}|lbl-[0-9a-f]{8}|cond-[A-Za-z0-9]{4,8}|alg-[A-Za-z0-9]{4,8}|vit-[A-Za-z0-9]{4,8}|web-[0-9a-f]{8})\b'
+
+prompt: prompt.md
+responses: responses.yaml
+rules: rules.yaml
+
+classifier:
+  model: llama-guard3:8b
+  policy: classifier_policy.md
+  categories:
+    - {code: S1, name: patient safety risk, category: crisis}
+    - {code: S2, name: clinical decision, category: medical_advice}
+  default_category: medical_advice
+  input_engine: guard_model
+  guard_model: guard-modernbert-v6.1
+  guard_policy_of: clinic-assistant         # the same clinic: the same decisions and crisis rules
+  decision_category: medical_advice
+
+privacy:
+  entities: [PERSON, PHONE_NUMBER, EMAIL_ADDRESS, LOCATION, US_SSN, CREDIT_CARD, IP_ADDRESS]
+  allow_list: []
+  # Medication names are not people: without this, "apixaban" is masked as [PERSON_1] (ADR 024).
+  allow_list_files: [privacy/drug_names.txt]
+
+knowledge_base: data/knowledge_base.json
+
+agents:
+  planner:
+    tools: [search_knowledge, search_records, medication_review, medication_list, chart_brief, drug_reference, web_research]   # review before list
+
+# Greenfield gives each developer account its own test patient: put that patient's name and date of
+# birth here after signing in (scripts/fhir_check.py --profile clinic-meditech shows the name).
+# Shown as example buttons.
+examples:
+  - What is our cancellation policy?
+  - What medications is the test patient taking? Give the name and date of birth.
+  - When was the test patient last seen? Give the name and date of birth.
+  - How much insulin should we give the test patient?
+
+# A second model checks answers written from web pages against the pages (ADR 022). The judge must
+# not be an answering model. strict: an unreadable judge reply withholds the answer in mode withhold;
+# in mode warn it is sent with the warning note, since nothing was found contradicted.
+faithfulness:
+  judge: judge
+  for_tools: [web_research]
+  strict: true
+  mode: warn                # a fact the pages contradict withholds the answer; one they do not mention
+                            # is sent with a warning (withhold held back too many plain answers in testing)

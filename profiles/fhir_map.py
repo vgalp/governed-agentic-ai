@@ -19,7 +19,8 @@ PLACEHOLDER = re.compile(r"\{([^{}]+)\}")
 PATH = re.compile(r"^[A-Za-z][A-Za-z0-9]*(\[\d+\])?(\.[A-Za-z][A-Za-z0-9]*(\[\d+\])?)*$")
 FILTERS = {"date", "datetime"}
 RESOURCE = re.compile(r"^[A-Z][A-Za-z]+$")
-AUTHS = {"none", "smart_backend"}
+AUTHS = {"none", "smart_backend", "smart_user"}
+SECRETS = ("client_id", "private_key", "client_secret", "access_token", "refresh_token")
 
 
 class FhirMappingError(Exception):
@@ -196,13 +197,30 @@ def parse(raw: dict, where: str, known_classes: set[str]) -> FhirMap:
     auth = server.get("auth", "none")
     if auth not in AUTHS:
         raise FhirMappingError(f"{where}: server auth must be one of {sorted(AUTHS)}")
+    for k in SECRETS:
+        if k in server:
+            raise FhirMappingError(f"{where}: server: put {k} in .env and name the variable "
+                                   f"({k}_env), never the value in this file")
     if auth == "smart_backend":
-        for k in ("token_url", "client_id_env", "private_key_env", "key_id"):
+        for k in ("token_url", "client_id_env"):
             _req(server, k, f"{where}: server (smart_backend)")
-        for k in ("client_id", "private_key"):
-            if k in server:
-                raise FhirMappingError(f"{where}: server: put {k} in .env and name the variable "
-                                       f"({k}_env), never the value in this file")
+        if server.get("private_key_env"):
+            _req(server, "key_id", f"{where}: server (smart_backend)")
+        elif not server.get("client_secret_env"):
+            raise FhirMappingError(f"{where}: server (smart_backend) needs private_key_env (a signed assertion) "
+                                   "or client_secret_env")
+    if auth == "smart_user":
+        for k in ("token_url", "client_id_env", "token_store"):
+            _req(server, k, f"{where}: server (smart_user)")
+        if not str(server["token_store"]).startswith(("~", "/")):
+            raise FhirMappingError(f"{where}: server token_store must be a path outside the project, "
+                                   "e.g. ~/.config/governed-agentic-ai/<name>/token.json")
+    t = server.get("timeout", 20)
+    if not isinstance(t, (int, float)) or not 1 <= t <= 120:
+        raise FhirMappingError(f"{where}: server timeout must be a number of seconds from 1 to 120")
+    for k in ("token_url", "authorize_url"):
+        if server.get(k) and not re.match(r"^https://\S+$", server[k]):
+            raise FhirMappingError(f"{where}: server {k} must be an https URL")
 
     s = _req(raw, "subject", where)
     w = f"{where}: subject"
@@ -232,8 +250,8 @@ def parse(raw: dict, where: str, known_classes: set[str]) -> FhirMap:
             _, dtext = _text({"title": "x", **md}, f"{rw}: more_detail", {"subject"})
             detail = Detail(str(_req(md, "data_class", f"{rw}: more_detail")), dtext)
         limit = r.get("limit", 10)
-        if not isinstance(limit, int) or not 1 <= limit <= 50:
-            raise FhirMappingError(f"{rw}: limit must be a number from 1 to 50")
+        if not isinstance(limit, int) or not 1 <= limit <= 250:
+            raise FhirMappingError(f"{rw}: limit must be a number from 1 to 250 (read in pages of 50)")
         records.append(RecordType(name, res, str(_req(r, "link", rw)),
                                   tuple((str(k), str(v)) for k, v in (r.get("search") or {}).items()),
                                   str(_req(r, "data_class", rw)), title, text, _source_id(r.get("source_id"), rw),

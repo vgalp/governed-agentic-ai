@@ -8,8 +8,13 @@ it came from, followed by documentation checks:
   - a medication with no recorded reason, and nothing on the problem list that the office's list
     (chart_brief.yaml) gives as a usual reason for it;
   - a problem on the list with none of the medications the office's list expects for it;
-  - a vital sign outside the office's thresholds;
+  - a vital sign outside the office's thresholds, outside the range a measurement could be, or dated
+    in the future;
+  - the same medication in several current orders, and the same ingredient in several medications;
   - the medication review's count of FDA label mentions (ADR 017), if that is set up.
+
+Entries the record repeats (the same medication ordered many times) are shown once, with how many
+there are and the dates they span.
 
 No model writes a fact. The tool's text is the answer (tools.yaml answer: direct), so a model
 cannot turn a list into advice. The checks compare fields of the record with lists the office
@@ -25,6 +30,7 @@ the real question (receives_identifiers): it looks the patient up by name.
 import re
 import sys
 from dataclasses import dataclass, field
+from datetime import date
 from pathlib import Path
 
 import yaml
@@ -47,9 +53,12 @@ class Config:
     fields: dict[str, dict[str, str]]  # section name -> field -> column or FHIR path
     medication_reason: dict[str, list[str]]  # ingredient/class word -> problem terms
     problem_treatment: dict[str, list[str]]  # problem term -> medication terms
-    vitals: dict[str, dict]  # vital sign -> {min, max, units}
+    vitals: dict[str, dict]  # vital sign -> {min, max, units, names, plausible}
     interactions: bool
     data_classes: tuple[str, ...] = field(default=())
+    problem_not: dict[str, list[str]] = field(default_factory=dict)  # problem term -> words that make it another problem
+    duplicates: bool = True  # report repeated orders and an ingredient in several medications
+    complete: tuple[str, ...] = ()  # sections that must be whole: a cut-off list is said so, in place and as a check
 
 
 def load_config(profile: Profile) -> Config | None:
@@ -88,6 +97,9 @@ def load_config(profile: Profile) -> Config | None:
         {str(k).lower(): dict(v) for k, v in (checks.get("vitals") or {}).items()},
         bool(checks.get("interactions", False)),
         tuple(dict.fromkeys(s.record.data_class for s in sections)),
+        low(checks.get("problem_not")),
+        bool(checks.get("duplicates", True)),
+        tuple(raw.get("complete", [s.record.name for s in sections])),
     )
 
 
@@ -102,6 +114,7 @@ def read(src: Source, cfg: Config, query: str, allowed: set[str]) -> dict:
         return {"error": found.reply}
     patient = {"id": found.cited_id, "text": found.text} if src.subject_class in allowed else None
     records, rows = {}, {}
+    src.prefetch([sec.record for sec in cfg.sections if sec.record.data_class in allowed], found)
     for sec in cfg.sections:
         r = sec.record
         if r.data_class not in allowed:
@@ -111,7 +124,8 @@ def read(src: Source, cfg: Config, query: str, allowed: set[str]) -> dict:
         rows[r.name] = src.rows(r, found, spec) if spec else []
         if src.kind == "fhir" and r.name == "vitals" and spec:
             rows[r.name] = split_components(rows[r.name], spec)
-    return {"patient": patient, "name": found.name, "records": records, "rows": rows, "unread": dict(src.unread)}
+    return {"patient": patient, "name": found.name, "records": records, "rows": rows, "unread": dict(src.unread),
+            "cut": dict(src.cut)}
 
 
 def split_components(rows: list[dict], spec: dict) -> list[dict]:
@@ -143,6 +157,18 @@ def _has(text: str | None, terms: list[str]) -> str | None:
     return next((term for term in terms if term in t), None)
 
 
+def _names(problem: str | None, terms: list[str], cfg: Config) -> bool:
+    """The problem is one of the terms, and not a different problem that shares the word
+    (problem_not: chronic venous hypertension is not hypertension)."""
+    term = _has(problem, terms)
+    return term is not None and not _has(problem, cfg.problem_not.get(term, []))
+
+
+def _cap(text: str | None) -> str:
+    t = text or ""
+    return t[:1].upper() + t[1:]
+
+
 def check_medication_reasons(meds: list[dict], problems: list[dict], cfg: Config) -> list[str]:
     out = []
     names = [p.get("name") or "" for p in problems]
@@ -150,14 +176,15 @@ def check_medication_reasons(meds: list[dict], problems: list[dict], cfg: Config
         if (m.get("reason") or "").strip():
             continue
         key = _has(m.get("name"), list(cfg.medication_reason))
+        orders = f" in any of its {m['_count']} orders" if m.get("_count", 1) > 1 else ""
         if key is None:
-            out.append(f"No reason recorded for {m['name']} [{m['_id']}].")
+            out.append(f"No reason recorded for {_cap(m['name'])}{orders} [{m['_id']}].")
             continue
-        documented = next((n for n in names if _has(n, cfg.medication_reason[key])), None)
+        documented = next((n for n in names if _names(n, cfg.medication_reason[key], cfg)), None)
         if documented:
             continue  # the problem list documents it, even though the field is empty
         out.append(
-            f"No reason recorded for {m['name']} [{m['_id']}], and the problem list has none of the usual "
+            f"No reason recorded for {_cap(m['name'])}{orders} [{m['_id']}], and the problem list has none of the usual "
             f"reasons the office lists for {key} ({', '.join(cfg.medication_reason[key])})."
         )
     return out
@@ -169,6 +196,8 @@ def check_problem_treatment(problems: list[dict], meds: list[dict], cfg: Config)
     for p in problems:
         key = _has(p.get("name"), list(cfg.problem_treatment))
         if key is None:
+            continue
+        if _has(p.get("name"), cfg.problem_not.get(key, [])):   # venous hypertension is not hypertension
             continue
         if any(term in med_names for term in cfg.problem_treatment[key]):
             continue
@@ -195,27 +224,154 @@ def _key(v: dict) -> tuple[str, str]:
     return v["_id"], (v.get("kind") or "").lower()  # blood pressure: two kinds in one FHIR resource
 
 
-def check_vitals(latest: list[dict], cfg: Config) -> tuple[list[str], dict[tuple[str, str], str]]:
-    """(check lines, {(record id, kind): short flag for the line in the vitals section})."""
+UNITS = {"cel": "C", "degc": "C", "°c": "C", "c": "C", "[degf]": "F", "degf": "F", "°f": "F", "f": "F",
+         "/min": "/min", "bpm": "/min", "beats/min": "/min", "{beats}/min": "/min", "breaths/min": "/min",
+         "%": "%", "mmhg": "mmHg", "mm[hg]": "mmHg"}
+
+
+def _units(u) -> str | None:
+    u = str(u or "").strip().lower()
+    return UNITS.get(u, u) or None
+
+
+def threshold_for(kind: str | None, cfg: Config) -> dict | None:
+    """The office's entry for a vital sign: by its name, else by one of the entry's `names` (words
+    the record may use instead, e.g. Oracle Health's "Temperature Oral"), longest word first."""
+    k = (kind or "").lower()
+    if k in cfg.vitals:
+        return cfg.vitals[k]
+    pairs = [(w.lower(), th) for th in cfg.vitals.values() for w in th.get("names", [])]
+    return next((th for w, th in sorted(pairs, key=lambda x: -len(x[0])) if w in k), None)
+
+
+def check_vitals(latest: list[dict], cfg: Config, today: str | None = None) -> tuple[list[str], dict[tuple[str, str], str]]:
+    """(check lines, {(record id, kind): short flag for the line in the vitals section}).
+    A value is compared only when its units are the office's units (no conversion: 98.6 F is not
+    compared with a Celsius threshold). A value outside `plausible` is reported as one a measurement
+    could not be, and a date after today as a future date: both are worth checking in the record."""
+    today = today or date.today().isoformat()
     out, flags = [], {}
     for v in latest:
-        th = cfg.vitals.get((v.get("kind") or "").lower())
-        if not th or v.get("value") is None:
-            continue
+        notes = []
+        when = str(v.get("date") or "")
+        if when and when[:10] > today:
+            notes.append(f"dated in the future ({when[:10]})")
+        th = threshold_for(v.get("kind"), cfg)
+        x = None
         try:
-            x = float(v["value"])
+            x = float(v["value"]) if v.get("value") is not None else None
         except (TypeError, ValueError):
+            pass
+        if th and x is not None:
+            same = not th.get("units") or not v.get("units") or _units(th["units"]) == _units(v["units"])
+            pl = th.get("plausible") or {}
+            if not same:
+                pass
+            elif ("min" in pl and x < float(pl["min"])) or ("max" in pl and x > float(pl["max"])):
+                notes.append(f"outside the range a measurement could be ({pl.get('min', '')}–{pl.get('max', '')}); "
+                             "check the record")
+            elif "max" in th and x > float(th["max"]):
+                notes.append(f"above the office threshold ({th['max']})")
+            elif "min" in th and x < float(th["min"]):
+                notes.append(f"below the office threshold ({th['min']})")
+        if not notes:
             continue
-        if "max" in th and x > float(th["max"]):
-            flags[_key(v)] = f"above the office threshold ({th['max']})"
-        elif "min" in th and x < float(th["min"]):
-            flags[_key(v)] = f"below the office threshold ({th['min']})"
-        else:
-            continue
-        out.append(
-            f"{v['kind']} {x:g} {v.get('units') or ''} on {v.get('date') or 'an unknown date'} [{v['_id']}], {flags[_key(v)]}."
-        )
+        flags[_key(v)] = "; ".join(notes)
+        shown = f"{x:g}" if x is not None else str(v.get("value"))
+        out.append(f"{v['kind']} {shown} {v.get('units') or ''} on {v.get('date') or 'an unknown date'} "
+                   f"[{v['_id']}], {flags[_key(v)]}.")
     return out, flags
+
+
+# --- repeated entries --------------------------------------------------------------------------------
+
+DATE = re.compile(r"\b\d{4}-\d{2}-\d{2}\b")
+
+
+def group_medications(meds: list[dict]) -> list[dict]:
+    """One row per medication name, in the record's order: the first row, with `_count` (how many
+    current orders name it) and `_ids` (all their cited ids)."""
+    out: dict[str, dict] = {}
+    for m in meds:
+        key = (m.get("name") or "").strip().lower()
+        if not key:
+            continue
+        if key in out:
+            out[key]["_count"] += 1
+            out[key]["_ids"].append(m["_id"])
+            if (m.get("reason") or "").strip() and not (out[key].get("reason") or "").strip():
+                out[key]["reason"] = m["reason"]
+        else:
+            out[key] = {**m, "_count": 1, "_ids": [m["_id"]]}
+    return list(out.values())
+
+
+def _ids(ids: list[str]) -> str:
+    return ids[0] if len(ids) == 1 else f"{ids[0]} … {ids[-1]}" if len(ids) > 3 else ", ".join(ids)
+
+
+def check_duplicates(meds: list[dict], ingredients_of=None) -> list[str]:
+    """The same medication in several current orders; the same ingredient in several medications
+    (acetaminophen in Tylenol and in Tylenol PM). Facts of the record, not a judgment of the doses."""
+    out = [f"{_cap(m['name'])} appears in {m['_count']} current orders [{_ids(m['_ids'])}]."
+           for m in meds if m.get("_count", 1) > 1]
+    if ingredients_of is None:
+        return out
+    by_ingredient: dict[str, list[dict]] = {}
+    for m in meds:
+        for i in dict.fromkeys(ingredients_of(m)):
+            by_ingredient.setdefault(i, []).append(m)
+    for i, ms in by_ingredient.items():
+        if len(ms) > 1:
+            out.append(f"{i[:1].upper() + i[1:]} is an ingredient of {len(ms)} current medications: "
+                       + "; ".join(f"{_cap(m['name'])} [{m['_id']}]" for m in ms) + ".")
+    return out
+
+
+def _ingredient_reader(profile: Profile):
+    """A function from a medication row to its ingredients, from the label file's RxNorm data
+    (medication_review.yaml); None when there is no label file."""
+    try:
+        from mcp_servers.medication_review import server as mr
+        cfg = mr.load_config(profile)
+    except Exception:  # noqa: BLE001
+        return None
+    if cfg is None or not cfg.labels:
+        return None
+
+    def read(m: dict) -> list[str]:
+        res = m.get("_resource") or {}
+        return mr.ingredients_of(m.get("name") or "", cfg.labels, mr._rxcui(res.get("medicationCodeableConcept")))
+    return read
+
+
+def tidy(text: str) -> str:
+    """Record text as a reader expects it: no doubled "Allergy to", no trailing "allergy" after it,
+    and a missing date said plainly."""
+    t = re.sub(r"(?i)\ballergy to allergy to\b", "Allergy to", text)
+    t = re.sub(r"(?i)^unknown visit\b", "Visit", t)                 # no visit type recorded
+    t = re.sub(r"(?i)^(allergy to .+?) allergy\b", r"\1", t)
+    return re.sub(r",? (?:on|since|ordered|measured) unknown\b", ", date not recorded", t)
+
+
+def group_lines(recs: list[dict], name: str) -> list[tuple[str, str]]:
+    """(line text, cited id) per entry, entries the record repeats (the same text but for its dates)
+    shown once: the latest, with how many there are and the dates they span."""
+    groups: dict[str, list[tuple[str, str]]] = {}
+    for rec in recs:
+        text = tidy(_strip_subject(rec["text"], name).rstrip("."))
+        text = text[:1].upper() + text[1:]
+        groups.setdefault(DATE.sub("", text).lower(), []).append((text, rec["id"]))
+    out = []
+    for entries in groups.values():
+        if len(entries) == 1:
+            out.append(entries[0])
+            continue
+        dates = sorted(d for t, _ in entries for d in DATE.findall(t))
+        latest = max(entries, key=lambda e: max(DATE.findall(e[0]) or [""]))
+        span = f", {dates[0]} to {dates[-1]}" if dates and dates[0] != dates[-1] else ""
+        out.append((f"{latest[0]} ({len(entries)} entries in the record{span})", latest[1]))
+    return out
 
 
 def interactions_summary(profile: Profile, query: str, allowed: list[str], db_path, client) -> tuple[str | None, list[dict]]:
@@ -270,6 +426,7 @@ def brief(
     if "error" in data:
         return {"results": [], "answer": data["error"]}
     name, records, rows, unread = data["name"], data["records"], data["rows"], data.get("unread") or {}
+    cut = {k: n for k, n in (data.get("cut") or {}).items() if k in cfg.complete}
     results = (
         [
             {
@@ -285,13 +442,19 @@ def brief(
     for sec in cfg.sections:
         results += records.get(sec.record.name, [])
 
-    meds, problems = rows.get("medications", []), rows.get("problems", [])
+    meds, problems = group_medications(rows.get("medications", [])), rows.get("problems", [])
     latest = latest_vitals(rows.get("vitals", []))
     vital_lines, vital_flags = check_vitals(latest, cfg) if "vitals" in rows else ([], {})
-    checks = []
+    checks = [
+        f"{sec.heading} is incomplete: {cut[sec.record.name]} entries were read and the record has more, so this "
+        "brief and its checks may miss some. Check the record directly."
+        for sec in cfg.sections if sec.record.name in cut and sec.record.data_class in allowed
+    ]
     if "medications" in rows and "problems" in rows:
         checks += check_medication_reasons(meds, problems, cfg)
         checks += check_problem_treatment(problems, meds, cfg)
+    if "medications" in rows and cfg.duplicates:
+        checks += check_duplicates(meds, _ingredient_reader(profile))
     checks += vital_lines
     inter_line = None
     if cfg.interactions and "medications" in rows:
@@ -338,9 +501,10 @@ def brief(
                     + (f" — {flag}" if flag else "")
                 )
             continue
-        for rec in recs:
-            text = _strip_subject(rec["text"], name).rstrip(".")
-            lines.append(_cite(text[:1].upper() + text[1:], rec["id"]))
+        for text, rid in group_lines(recs, name):
+            lines.append(_cite(text, rid))
+        if r.name in cut:
+            lines.append(f"- {cut[r.name]} shown; the record has more. Check it directly.")
     lines += ["", "Checks (what the record does or does not show):"]
     if checks:
         lines += [f"- {c}" for c in checks]
@@ -351,7 +515,8 @@ def brief(
     else:
         lines.append(
             "- Every current medication has a recorded reason or a matching problem; every listed problem "
-            "has a medication the office expects; the latest vitals are within the office's thresholds."
+            "has a medication the office expects; no medication or ingredient is listed twice; the latest "
+            "vitals are within the office's thresholds."
         )
     if inter_line:
         lines.append(f"- {inter_line}")

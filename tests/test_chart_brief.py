@@ -213,7 +213,7 @@ def test_the_brief_from_a_fhir_server_reads_only_allowed_resources_and_splits_bl
     assert "Diastolic blood pressure 94 mmHg, measured 2026-10-20 [vit-AAAA1111] — above the office threshold (90)" in a
     assert "Heart rate 76 /min, measured 2026-10-20 [vit-BBBB2222]" in a
     assert "Allergy to Penicillin G. Recorded reaction: Hives [alg-AAAA1111]" in a
-    assert "No reason recorded for omeprazole 20 mg capsule [med-BBBB2222]" in a
+    assert "No reason recorded for Omeprazole 20 mg capsule [med-BBBB2222]" in a
     assert "No reason recorded for warfarin" not in a  # reasonReference counts as a reason
     assert "Warfarin 5 mg tablet, ordered 2024-03-02. Reason recorded: Atrial fibrillation [med-AAAA1111]" in a
     assert "Essential hypertension [cond-BBBB2222] is on the problem list, and none of the medications" in a

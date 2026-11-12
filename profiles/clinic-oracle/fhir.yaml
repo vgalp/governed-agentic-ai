@@ -1,0 +1,97 @@
+# How Oracle Health's (Cerner Millennium) FHIR resources become records (ADR 013, ADR 032).
+# The same records as clinic-epic/fhir.yaml; only the server differs.
+# Paths are simple FHIR paths; {a,b} takes the first with a value; |date and |datetime format dates.
+# limit: how many of a record type are read, in pages of 50 (at most 250). When the record holds
+# more, the chart brief says the list is incomplete (chart_brief.yaml complete:).
+
+# Oracle Health's open sandbox: read-only, test patients only, no sign-in. Nothing to register.
+server:
+  base_url: https://fhir-open.cerner.com/r4/ec2458f2-1e24-41c8-b71b-0e701af7583d
+  auth: none
+  timeout: 45                               # the open sandbox can be slow on visits and problems
+  docs: docs/oracle-health/README.md
+
+# The secure sandbox, or a hospital's system account, signs the app in (SMART Backend Services).
+# Register a system account in Oracle Health's developer console, then use this block instead:
+# server:
+#   base_url: https://fhir-ehr-code.cerner.com/r4/ec2458f2-1e24-41c8-b71b-0e701af7583d
+#   auth: smart_backend
+#   token_url: https://authorization.cerner.com/tenants/ec2458f2-1e24-41c8-b71b-0e701af7583d/protocols/oauth2/profiles/smart-v1/token
+#   client_id_env: ORACLE_CLIENT_ID          # the system account ID, in .env
+#   private_key_env: ORACLE_PRIVATE_KEY_PATH # a signed assertion (key registered as a JWK Set) ...
+#   key_id: gaai-oracle-1
+#   # client_secret_env: ORACLE_CLIENT_SECRET  # ... or the account's secret instead of a key
+#   scope: system/Patient.read system/MedicationRequest.read system/Medication.read system/Encounter.read system/Condition.read system/AllergyIntolerance.read system/Observation.read
+#   docs: docs/oracle-health/README.md
+
+subject:
+  noun: patient
+  resource: Patient
+  # Found by name and date of birth: two identifiers, as patient-safety practice asks.
+  name_search: {given: given, family: family, birthdate: birthdate}
+  record:
+    data_class: patient_details
+    source_id: {prefix: pt-, keep_last: 8}
+    title: "Patient: {name}"
+    text: "{name}, born {birthDate}, sex {gender}, lives in {address.city}."
+
+records:
+  medications:
+    resource: MedicationRequest
+    link: patient
+    search: {status: active}
+    data_class: medications
+    source_id: {prefix: med-, keep_last: 8}
+    limit: 200
+    title: Current medication
+    text: "{subject}: {medicationCodeableConcept.text,medicationReference.display}, ordered {authoredOn|date}."
+    optional: {"reasonCode.text,reasonReference.display": " Reason recorded: {reasonCode.text,reasonReference.display}."}
+
+  visits:
+    resource: Encounter
+    link: patient
+    data_class: visit_dates
+    source_id: {prefix: enc-, keep_last: 8}
+    limit: 3
+    title: Past visit
+    text: "{subject}: {class.display,class.code} visit on {period.start|date}."
+    more_detail:
+      data_class: visit_clinical
+      text: "{subject}: {type.text,type.coding.display} visit on {period.start|date}."
+      optional: {reasonCode.text: " Reason recorded: {reasonCode.text}."}
+
+  # The chart (ADR 023). A system account must be granted these scopes too; the open sandbox
+  # answers them all.
+  problems:
+    resource: Condition
+    link: patient
+    search: {category: problem-list-item, clinical-status: active}
+    data_class: problems
+    source_id: {prefix: cond-, keep_last: 8}
+    limit: 100
+    title: Problem list
+    text: "{subject}: {code.text,code.coding.display}, on the problem list since {onsetDateTime,recordedDate|date}."
+
+  allergies:
+    resource: AllergyIntolerance
+    link: patient
+    search: {clinical-status: active}
+    data_class: allergies
+    source_id: {prefix: alg-, keep_last: 8}
+    limit: 200
+    title: Allergy
+    text: "{subject}: allergy to {code.text,code.coding.display}."
+    optional: {reaction.manifestation.text: " Recorded reaction: {reaction.manifestation.text}."}
+
+  vitals:
+    resource: Observation
+    link: patient
+    search: {category: vital-signs}
+    data_class: vitals
+    source_id: {prefix: vit-, keep_last: 8}
+    limit: 30
+    title: Vital sign
+    text: "{subject}: {code.text,code.coding.display} {valueQuantity.value,component.valueQuantity.value} {valueQuantity.unit,component.valueQuantity.unit}, measured {effectiveDateTime|date}."
+
+max_results: 60
+status: Oracle Health sandbox test record

@@ -1,0 +1,93 @@
+# Chart brief (ADR 023): one patient's problem list, current medications with their recorded
+# reasons, allergies, latest vitals and recent visits, assembled from the record's own fields and
+# cited line by line, followed by documentation checks. No model writes a fact: the tool's text is
+# the answer (tools.yaml answer: direct). The checks compare fields of the record with the lists
+# below, which the office writes; they are documentation checks, not clinical judgments, and every
+# one is worded as "the record does not show…", for a clinician to look at.
+
+source: fhir                      # the record system through fhir.yaml (ADR 013, 032); db for a records.yaml profile
+
+# Sections, in order. Each names a record type of records.yaml (or fhir.yaml) and the heading shown.
+sections:
+  - {record: problems,    heading: Problem list}
+  - {record: medications, heading: Current medications}
+  - {record: allergies,   heading: Allergies}
+  - {record: vitals,      heading: Latest vitals}
+  - {record: visits,      heading: Recent visits}
+
+# Sections that must be whole. A list read only in part (the record holds more than fhir.yaml's
+# limit) says so under its heading and as the first check, so a partial allergy or medication list
+# is never shown as the whole one. Vitals and visits are the latest only, so they are not listed.
+complete: [problems, medications, allergies]
+
+# The structured fields the checks read: FHIR paths (a,b takes the first with a value).
+# Vitals with components (blood pressure) are split into one row per component by the server.
+fields:
+  medications: {name: "medicationCodeableConcept.text,medicationReference.display", reason: "reasonCode.text,reasonReference.display"}
+  problems:    {name: "code.text,code.coding.display"}
+  vitals:      {kind: "code.text,code.coding.display", value: valueQuantity.value, units: valueQuantity.unit, date: "effectiveDateTime|date"}
+
+checks:
+  # Medication with no recorded reason: for a medication whose name contains the key (an ingredient
+  # or class word), the usual reasons an office would expect on the problem list. The check fires
+  # when the medication's reason field is empty AND none of these terms is on the problem list.
+  # A medication not in this list is reported only if its reason field is empty.
+  medication_reason:
+    warfarin:     [atrial fibrillation, deep vein thrombosis, pulmonary embolism, heart valve, thromboembolism]
+    apixaban:     [atrial fibrillation, deep vein thrombosis, pulmonary embolism]
+    rivaroxaban:  [atrial fibrillation, deep vein thrombosis, pulmonary embolism]
+    metformin:    [diabetes]
+    insulin:      [diabetes]
+    levothyroxine: [hypothyroidism, thyroid]
+    simvastatin:  [hyperlipidemia, cholesterol, coronary, atherosclerosis]
+    atorvastatin: [hyperlipidemia, cholesterol, coronary, atherosclerosis]
+    amiodarone:   [atrial fibrillation, arrhythmia, tachycardia]
+    omeprazole:   [reflux, gerd, ulcer, gastritis, esophagitis]
+    pantoprazole: [reflux, gerd, ulcer, gastritis, esophagitis]
+    lisinopril:   [hypertension, heart failure, nephropathy]
+    captopril:    [hypertension, heart failure, nephropathy]
+    amlodipine:   [hypertension, angina]
+    sertraline:   [depression, anxiety, panic, ptsd, ocd]
+    ibuprofen:    [pain, arthritis, osteoarthritis, inflammation]
+    ciprofloxacin: [infection, cystitis, pyelonephritis, prostatitis]
+    amoxicillin:  [infection, sinusitis, otitis, pharyngitis, pneumonia]
+
+  # Problem with no recorded treatment: for a problem whose name contains the key, medication name
+  # terms the office would expect to see on the current list. The check fires when the problem is on
+  # the list and no current medication contains any of these terms. An office that does not want a
+  # given check removes the line; an empty map turns the check off.
+  problem_treatment:
+    atrial fibrillation: [warfarin, apixaban, rivaroxaban, dabigatran, edoxaban, heparin]
+    hypertension:        [lisinopril, enalapril, ramipril, captopril, benazepril, quinapril, losartan, valsartan,
+                          irbesartan, olmesartan, telmisartan, candesartan, amlodipine, nifedipine,
+                          hydrochlorothiazide, chlorthalidone, metoprolol, atenolol, carvedilol, spironolactone]
+    hypothyroidism:      [levothyroxine, liothyronine]
+    type 2 diabetes:     [metformin, insulin, glipizide, sitagliptin, empagliflozin, dapagliflozin, semaglutide]
+    hyperlipidemia:      [atorvastatin, simvastatin, rosuvastatin, pravastatin, ezetimibe]
+    reflux:              [omeprazole, pantoprazole, esomeprazole, lansoprazole, famotidine]
+
+  # Words that make a listed problem a different one: "chronic venous hypertension" is a vein problem,
+  # not high blood pressure, so it is not checked against the blood pressure medications.
+  problem_not:
+    hypertension: [venous, pulmonary, portal, intracranial, ocular]
+
+  # The same medication in several current orders, and the same ingredient in several medications
+  # (acetaminophen in Tylenol and Tylenol PM), from the label file's RxNorm ingredients.
+  duplicates: true
+
+  # Vital signs outside the office's thresholds (the latest value of each kind only). Keys match the
+  # record's description of the vital sign, case-insensitively, or contain one of its `names` (records
+  # word them differently: Oracle Health's "Temperature Oral", "Pulse Sitting"). Units are not converted:
+  # a value in other units is not compared. `plausible`: outside it, a value a measurement could not
+  # be (11 degrees Celsius), reported for checking. A measurement dated after today is reported too.
+  vitals:
+    systolic blood pressure:  {min: 90,  max: 140, units: mmHg, names: [systolic], plausible: {min: 40, max: 300}}
+    diastolic blood pressure: {min: 60,  max: 90,  units: mmHg, names: [diastolic], plausible: {min: 20, max: 200}}
+    heart rate:               {min: 50,  max: 100, units: /min, names: [pulse, heart rate], plausible: {min: 20, max: 300}}
+    oxygen saturation:        {min: 92,            units: "%",  names: [spo2, oxygen saturation], plausible: {min: 50, max: 100}}
+    body temperature:         {min: 35.5, max: 38.0, units: Cel, names: [temperature], plausible: {min: 30, max: 45}}
+    respiratory rate:         {min: 10,  max: 24,  units: /min, names: [respiratory], plausible: {min: 4, max: 80}}
+
+  # Also run the medication review (ADR 017) and report how many FDA label mentions it found,
+  # pointing to the full review. Needs medication_review.yaml and the label file.
+  interactions: true

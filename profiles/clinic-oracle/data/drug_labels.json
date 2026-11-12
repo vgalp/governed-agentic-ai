@@ -1,0 +1,519 @@
+{
+ "downloaded": "2026-11-12",
+ "ingredients": {
+  "acetaminophen": {
+   "brand_names": [],
+   "classes": [],
+   "effective_time": "20260423",
+   "label_id": "5021de23-989f-852e-e063-6394a90ac8ce",
+   "sections": {
+    "contraindications": [
+     "4 CONTRAINDICATIONS Acetaminophen is contraindicated: in patients with known hypersensitivity to acetaminophen or to any of the excipients in the intravenous formulation. in patients with severe hepatic impairment or severe active liver disease [see Warnings and Precautions (5.1) ] . Acetaminophen is contraindicated: In patients with known hypersensitivity to acetaminophen or to any of the excipients in the IV formulation. (4) In patients with severe hepatic impairment or severe active liver disease. (4)"
+    ],
+    "drug_interactions": [
+     "7 DRUG INTERACTIONS Substances that induce or regulate hepatic cytochrome enzyme CYP2E1 may alter the metabolism of acetaminophen and increase its hepatotoxic potential. ( 7.1 ) Chronic oral acetaminophen use at a dose of 4000 mg/day has been shown to cause an increase in international normalized ratio (INR) in some patients who have been stabilized on sodium warfarin as an anticoagulant. ( 7.2 ) 7.1 Effects of Other Substances on Acetaminophen Substances that induce or regulate hepatic cytochrome enzyme CYP2E1 may alter the metabolism of acetaminophen and increase its hepatotoxic potential. The clinical consequences of these effects have not been established. Effects of ethanol are complex, because excessive alcohol usage can induce hepatic cytochromes, but ethanol also acts as a competitive inhibitor of the metabolism of acetaminophen. 7.2 Anticoagulants Chronic oral acetaminophen use at a dose of 4000 mg/day has been shown to cause an increase in international normalized ratio (INR) in some patients who have been stabilized on sodium warfarin as an anticoagulant. As no studies have been performed evaluating the short-term use of acetaminophen in patients on oral anticoagulants, more frequent assessment of INR may be appropriate in such circumstances."
+    ]
+   },
+   "set_id": "1c8fef8f-2ff5-4bea-bccb-90c2c8544c21",
+   "title": "Acetaminophen"
+  },
+  "azithromycin": {
+   "brand_names": [],
+   "classes": [],
+   "effective_time": "20261026",
+   "label_id": "898bf838-bd40-4282-aa7b-2b6c4879c313",
+   "sections": {
+    "contraindications": [
+     "4 CONTRAINDICATIONS Patients with known hypersensitivity to azithromycin, erythromycin, any macrolide or ketolide drug. ( 4.1 ) Patients with a history of cholestatic jaundice/hepatic dysfunction associated with prior use of azithromycin. ( 4.2 ) 4.1 Hypersensitivity Azithromycin tablets are contraindicated in patients with known hypersensitivity to azithromycin, erythromycin, any macrolide or ketolide drug. 4.2 Hepatic Dysfunction Azithromycin tablets are contraindicated in patients with a history of cholestatic jaundice/hepatic dysfunction associated with prior use of azithromycin."
+    ],
+    "drug_interactions": [
+     "7 DRUG INTERACTIONS Nelfinavir: Close monitoring for known adverse reactions of azithromycin, such as liver enzyme abnormalities and hearing impairment, is warranted. ( 7.1 ) Warfarin: Use with azithromycin may increase coagulation times; monitor prothrombin time. ( 7.2 ) 7.1 Nelfinavir Co-administration of nelfinavir at steady-state with a single oral dose of azithromycin resulted in increased azithromycin serum concentrations. Although a dose adjustment of azithromycin is not recommended when administered in combination with nelfinavir, close monitoring for known adverse reactions of azithromycin, such as liver enzyme abnormalities and hearing impairment, is warranted. [see Adverse Reactions (6) ] 7.2 Warfarin Spontaneous postmarketing reports suggest that concomitant administration of azithromycin may potentiate the effects of oral anticoagulants such as warfarin, although the prothrombin time was not affected in the dedicated drug interaction study with azithromycin and warfarin. Prothrombin times should be carefully monitored while patients are receiving azithromycin and oral anticoagulants concomitantly. 7.3 Potential Drug-Drug Interaction with Macrolides Interactions with digoxin, colchicine or phenytoin have not been reported in clinical trials with azithromycin. No specific drug interaction studies have been performed to evaluate potential drug-drug interaction. However, drug interactions have been observed with other macrolide products. Until further data are developed regarding drug interactions when digoxin, colchicine or phenytoin are used with azithromycin careful monitoring of patients is advised."
+    ]
+   },
+   "set_id": "3b7e16b1-9a3c-4e3a-8411-841a708afe45",
+   "title": "Azithromycin"
+  },
+  "caffeine": {
+   "brand_names": [
+    "Caffeine Citrate"
+   ],
+   "classes": [],
+   "effective_time": "20260801",
+   "label_id": "57f6d157-d242-b344-e063-6294a90a6b8c",
+   "sections": {
+    "contraindications": [
+     "CONTRAINDICATIONS Caffeine citrate injection is contraindicated in patients who have demonstrated hypersensitivity to any of its components."
+    ],
+    "drug_interactions": [
+     "Drug Interactions Cytochrome P450 1A2 (CYP1A2) is known to be the major enzyme involved in the metabolism of caffeine. Therefore, caffeine has the potential to interact with drugs that are substrates for CYP1A2, inhibit CYP1A2, or induce CYP1A2. Few data exist on drug interactions with caffeine in preterm neonates. Based on adult data, lower doses of caffeine may be needed following coadministration of drugs which are reported to decrease caffeine elimination (e.g., cimetidine and ketoconazole) and higher caffeine doses may be needed following coadministration of drugs that increase caffeine elimination (e.g., phenobarbital and phenytoin). Caffeine administered concurrently with ketoprofen reduced the urine volume in four healthy volunteers. The clinical significance of this interaction in preterm neonates is not known. Interconversion between caffeine and theophylline has been reported in preterm neonates. The concurrent use of these drugs is not recommended."
+    ]
+   },
+   "set_id": "279a43b8-9ff5-4792-ac19-441f3fa49269",
+   "title": "Caffeine Citrate"
+  },
+  "captopril": {
+   "brand_names": [],
+   "classes": [
+    "Angiotensin Converting Enzyme Inhibitor"
+   ],
+   "effective_time": "20260914",
+   "label_id": "25806eb6-45bd-4684-887c-5ae1705ec201",
+   "sections": {
+    "contraindications": [
+     "CONTRAINDICATIONS Captopril tablets are contraindicated in patients who are hypersensitive to this product or any other angiotensin- converting enzyme inhibitor (e.g., a patient who has experienced angioedema during therapy with any other ACE inhibitor). Do not co-administer aliskiren with captopril tablets in patients with diabetes (see PRECAUTIONS : Drug Interactions ). Captopril tablets are contraindicated in combination with a neprilysin inhibitor (e.g., sacubitril). Do not administer captopril tablets within 36 hours of switching to or from sacubitril/valsartan, a neprilysin inhibitor (see PRECAUTIONS : Drug Interactions )."
+    ],
+    "drug_interactions": [
+     "Drug Interactions Dual Blockade of the Renin-Angiotensin System (RAS) Dual blockade of the RAS with angiotensin receptor blockers, ACE inhibitors, or aliskiren is associated with increased risks of hypotension, hyperkalemia, and changes in renal function (including acute renal failure) compared to monotherapy. Most patients receiving the combination of two RAS inhibitors do not obtain any additional benefit compared to monotherapy. In general, avoid combined use of RAS inhibitors. Closely monitor blood pressure, renal function and electrolytes in patients on captopril tablets and other agents that block the RAS. Do not coadminister aliskiren with captopril tablets in patients with diabetes. Avoid use of aliskiren with captopril tablets in patients with renal impairment (GFR < 60 ml/min). Non-Steroidal Anti-Inflammatory Agents including Selective Cyclooxygenase-2 Inhibitors (COX-2 Inhibitors) In patients who are elderly, volume-depleted (including those on diuretic therapy), or with compromised renal function, coadministration of NSAIDs, including selective COX-2 inhibitors, with ACE inhibitors, including captopril, may result in deterioration of renal function, including possible acute renal failure. These effects are usually reversible. Monitor renal function periodically in patients receiving captopril and NSAID therapy. The antihypertensive effect of ACE inhibitors, including captopril, may be attenuated by NSAIDs. Hypotension\u2013Patients on Diuretic Therapy Patients on diuretics and especially those in whom diuretic therapy was recently instituted, as well as those on severe dietary salt restriction or dialysis, may occasionally experience a precipitous reduction of blood pressure usually within the first hour after receiving the initial dose of captopril. The possibility of hypotensive effects with captopril can be minimized by either discontinuing the diuretic or increasing the salt intake approximately one week prior to initiation of treatment with captopril tablets or initiating therapy with small doses (6.25 or 12.5 mg). Alternatively, provide medical supervision for at least one hour after the initial dose. If hypotension occurs, the patient should be placed in a supine position and, if necessary, receive an intravenous infusion of normal saline. This transient hypotensive response is not a contraindication to further doses which can be given without difficulty once the blood pressure has increased after volume expansion. Agents Having Vasodilator Activity Data on the effect of concomitant use of other vasodilators in patients receiving captopril tablets for heart failure are not available; therefore, nitroglycerin or other nitrates (as used for management of angina) or other drugs having vasodilator activity should, if possible, be discontinued before starting captopril tablets. If resumed during captopril tablets therapy, such agents should be administered cautiously, and perhaps at lower dosage. Agents Causing Renin Release Captopril\u2019s effect will be augmented by antihypertensive agents that cause renin release. For example, diuretics (e.g., thiazides) may activate the renin-angiotensin-aldosterone system. Agents Affecting Sympathetic Activity The sympathetic nervous system may be especially important in supporting blood pressure in patients receiving captopril alone or with diuretics. Therefore, agents affecting sympathetic activity (e.g., ganglionic blocking agents or adrenergic neuron blocking agents) should be used with caution. Beta-adrenergic blocking drugs add some further antihypertensive effect to captopril, but the overall response is less than additive. Agents Increasing Serum Potassium Since captopril decreases aldosterone production, elevation of serum potassium may occur. Potassium-sparing diuretics such as spironolactone, triamterene, or amiloride, or potassium supplements should be given only for documented hypokalemia, and then with caution, since they may lead to a significant increase of serum potassium. Salt substitutes containing potassium should also be used with caution. Lithium Increased serum lithium levels and symptoms of lithium toxicity have been reported in patients receiving concomitant lithium and ACE inhibitor therapy. These drugs should be coadministered with caution and frequent monitoring of serum lithium levels is recommended. If a diuretic is also used, it may increase the risk of lithium toxicity. Cardiac Glycosides In a study of young healthy male subjects no evidence of a direct pharmacokinetic captopril-digoxin interaction could be found. Loop Diuretics Furosemide administered concurrently with captopril does not alter the pharmacokinetics of captopril in renally impaired hypertensive patients. Allopurinol In a study of healthy male volunteers no significant pharmacokinetic interaction occurred when captopril and allopurinol were administered concomitantly for 6 days."
+    ]
+   },
+   "set_id": "1395ba5b-2fc9-41ff-9c43-e0740d781dee",
+   "title": "Captopril"
+  },
+  "crizotinib": {
+   "brand_names": [
+    "Xalkori"
+   ],
+   "classes": [
+    "Kinase Inhibitor"
+   ],
+   "downloaded": "2026-11-12",
+   "effective_time": "20261029",
+   "label_id": "1691e2f9-450c-4d47-9d31-2b73cc4af130",
+   "sections": {
+    "contraindications": [
+     "4 CONTRAINDICATIONS None. None. ( 4 )"
+    ],
+    "drug_interactions": [
+     "7 DRUG INTERACTIONS \u2022 Strong CYP3A Inhibitors: Avoid concomitant use. ( 2.9 , 7.1 ) \u2022 Strong CYP3A Inducers: Avoid concomitant use. ( 7.1 ) \u2022 CYP3A Substrates: Avoid concomitant use with CYP3A substrates, where minimal concentration changes may lead to serious adverse reactions. ( 7.2 ) 7.1 Effect of Other Drugs on XALKORI Strong or Moderate CYP3A Inhibitors Concomitant use of crizotinib with strong CYP3A inhibitors increases crizotinib plasma concentrations [see Clinical Pharmacology (12.3) ] , which may increase the risk of adverse reactions of XALKORI. Avoid concomitant use of strong CYP3A inhibitors. If concomitant use of strong CYP3A inhibitors is unavoidable, reduce the XALKORI dosage [see Dosage and Administration (2.9) ] . Avoid grapefruit or grapefruit juice which may also increase plasma concentrations of crizotinib. Use caution with concomitant use of moderate CYP3A inhibitors. Strong CYP3A Inducers Concomitant use of crizotinib with strong CYP3A inducers decreases crizotinib plasma concentrations [see Clinical Pharmacology (12.3) ] , which may decrease the efficacy of XALKORI. Avoid concomitant use of strong CYP3A inducers. 7.2 Effect of XALKORI on Other Drugs CYP3A Substrates Concomitant use of crizotinib increases plasma concentrations of CYP3A substrates [see Clinical Pharmacology (12.3) ] , which may increase the risk of adverse reactions of these substrates. Avoid concomitant use of XALKORI with CYP3A substrates where minimal concentration changes may lead to serious adverse reactions. If concomitant use of XALKORI is unavoidable, decrease the CYP3A substrate dosage in accordance with approved product labeling. 7.3 Drugs That Prolong the QT Interval XALKORI can prolong the QT/QTc interval. Avoid concomitant use of XALKORI with drugs that prolong the QT interval [see Warnings and Precautions (5.3) , Clinical Pharmacology (12.2) ] . 7.4 Drugs That Cause Bradycardia XALKORI can cause bradycardia. Avoid concomitant use of XALKORI with drugs that cause bradycardia (e.g., beta-blockers, non-dihydropyridine calcium channel blockers, clonidine, and digoxin) [see Warnings and Precautions (5.4) ] ."
+    ]
+   },
+   "set_id": "2a51b0de-47d6-455e-a94c-d2c737b04ff7",
+   "title": "Crizotinib"
+  },
+  "diphenhydramine": {
+   "brand_names": [],
+   "classes": [],
+   "effective_time": "20260928",
+   "label_id": "5c8a86ee-4da0-0b52-e063-6294a90a5962",
+   "sections": {
+    "contraindications": [
+     "CONTRAINDICATIONS Use in Neonates or Premature Infants This drug should not be used in neonates or premature infants. Use in Nursing Mothers Because of the higher risk of antihistamines for infants generally, and for neonates and prematures in particular, antihistamine therapy is contraindicated in nursing mothers. Use as a Local Anesthetic Because of the risk of local necrosis, this drug should not be used as a local anesthetic. Antihistamines are also contraindicated in the following conditions Hypersensitivity to diphenhydramine hydrochloride and other antihistamines of similar chemical structure."
+    ],
+    "drug_interactions": [
+     "Drug Interactions Diphenhydramine hydrochloride has additive effects with alcohol and other CNS depressants (hypnotics, sedatives, tranquilizers, etc). MAO inhibitors prolong and intensify the anticholinergic (drying) effects of antihistamines."
+    ]
+   },
+   "set_id": "b6f7426f-157a-43c9-a3d3-9501a65c61c5",
+   "title": "Diphenhydramine Hydrochloride"
+  },
+  "ethinyl estradiol": {
+   "brand_names": [
+    "Etonogestrel And Ethinyl Estradiol Vaginal"
+   ],
+   "classes": [
+    "Estrogen",
+    "Progestin"
+   ],
+   "effective_time": "20260909",
+   "label_id": "5b184d90-a1fd-bd56-e063-6294a90aa607",
+   "sections": {
+    "contraindications": [
+     "4 CONTRAINDICATIONS Etonogestrel and ethinyl estradiol vaginal ring is contraindicated in females who are known to have or develop the following conditions: A high risk of arterial or venous thrombotic diseases. Examples include women who are known to: Smoke, if over age 35 [see Boxed Warning and Warnings and Precautions ( 5.1 )] Have deep vein thrombosis or pulmonary embolism, now or in the past [see Warnings and Precautions ( 5.1 )] Have cerebrovascular disease [see Warnings and Precautions ( 5.1 )] Have coronary artery disease [see Warnings and Precautions ( 5.1 )] Have thrombogenic valvular or thrombogenic rhythm diseases of the heart (for example, subacute bacterial endocarditis with valvular disease, or atrial fibrillation) [see Warnings and Precautions ( 5.1 )] Have inherited or acquired hypercoagulopathies [see Warnings and Precautions ( 5.1 )] Have uncontrolled hypertension [see Warnings and Precautions ( 5.5 )] Have diabetes mellitus with vascular disease [see Warnings and Precautions ( 5.9 )] Have headaches with focal neurological symptoms or migraine headaches with aura [see Warnings and Precautions ( 5.10 )] Women over age 35 with any migraine headaches [see Warnings and Precautions ( 5.10 )] Liver tumors, benign or malignant, or liver disease [see Warnings and Precautions ( 5.3 )and Use in Specific Populations ( 8.6 )] Undiagnosed abnormal uterine bleeding [see Warnings and Precautions ( 5.11 )] Pregnancy, because there is no reason to use CHCs during pregnancy [see Use in Specific Populations ( 8.1 )] Current diagnosis of, or history of, breast cancer, which may be hormone-sensitive [see Warnings and Precautions ( 5.14 )] Hypersensitivity reactions, including anaphylaxis and angioedema, to any of the components of Etonogestrel and ethinyl estradiol vaginal ring [see Warnings and Precautions ( 5.6 ) and Adverse Reactions ( 6 )] Use of Hepatitis C drug combinations containing ombitasvir/paritaprevir/ritonavir, with or without dasabuvir, due to potential for ALT elevations [see Warnings and Precautions ( 5.4 ) and Drug Interactions (7) ]. A high risk of arterial or venous thrombotic diseases ( 4 ) Breast cancer ( 4 ) Liver tumors or liver disease ( 4 ) Undiagnosed abnormal uterine bleeding ( 4 ) Pregnancy ( 4 ) Hypersensitivity, including anaphylaxis and angioedema, to any of the components of Etonogestrel and ethinyl estradiol vaginal ring ( 4 ) Co-administration with Hepatitis C drug combinations containing ombitasvir/paritaprevir/ritonavir, with or without dasabuvir ( 4 )"
+    ],
+    "drug_interactions": [
+     "7 DRUG INTERACTIONS Consult the labeling of all concurrently-used drugs to obtain further information about interactions with hormonal contraceptives or the potential for enzyme alterations. Drugs or herbal products that induce certain enzymes, such as CYP3A4, may decrease the effectiveness of CHCs or increase breakthrough bleeding. Counsel patients to use a back-up or alternative method of contraception when enzyme inducers are used with CHCs. ( 7 ) 7.1 Effects of Other Drugs on CHCs Substances decreasing the plasma concentrations of CHCs and potentially diminishing the effectiveness of CHCs Drugs or herbal products that induce certain enzymes, including cytochrome P450 3A4 (CYP3A4), may decrease the plasma concentrations of CHCs and potentially diminish the effectiveness of CHCs or increase breakthrough bleeding. Some drugs or herbal products that may decrease the effectiveness of hormonal contraceptives include: phenytoin, barbiturates, carbamazepine, bosentan, felbamate, griseofulvin, oxcarbazepine, rifampicin, topiramate, rifabutin, rufinamide, aprepitant, and products containing St. John's wort. Interactions between CHCs and other drugs may lead to breakthrough bleeding and/or contraceptive failure. Counsel women to use an alternative non-hormonal method of contraception or a back-up method when enzyme inducers are used with Etonogestrel and ethinyl estradiol vaginal ring, and to continue back-up non-hormonal contraception for 28 days after discontinuing the enzyme inducer to ensure contraceptive reliability. Note: Etonogestrel and ethinyl estradiol vaginal ring may interfere with the correct placement and position of certain female barrier methods such as a diaphragm or female condom. These methods are not recommended as back-up methods with Etonogestrel and ethinyl estradiol vaginal ring use [see Dosage and Administration ( 2.5 )] . The serum concentrations of etonogestrel and ethinyl estradiol were not affected by concomitant administration of oral amoxicillin or doxycycline in standard dosages during 10 days of antibiotic treatment. The effects of other antibiotics on etonogestrel or ethinyl estradiol concentrations have not been evaluated. Substances increasing the plasma concentrations of CHCs Co-administration of atorvastatin and certain CHCs containing ethinyl estradiol increase AUC values for ethinyl estradiol by approximately 20-25%. Ascorbic acid and acetaminophen may increase plasma ethinyl estradiol concentrations, possibly by inhibition of conjugation. Concomitant administration of strong or moderate CYP3A4 inhibitors such as itraconazole, voriconazole, fluconazole, grapefruit juice, or ketoconazole may increase plasma estrogen and/or progestin concentrations. Co-administration of vaginal miconazole nitrate and Etonogestrel and ethinyl estradiol vaginal ring increases the serum concentrations of etonogestrel and ethinyl estradiol by up to 40% [see Clinical Pharmacology ( 12.3 )]. Human immunodeficiency virus (HIV) / Hepatitis C Virus (HCV) protease inhibitors and nonnucleoside reverse transcriptase inhibitors Significant changes in the plasma concentrations of the estrogen and /or progestin have been noted in some cases of co-administration with HIV protease inhibitors (decrease [e.g., nelfinavir, ritonavir, darunavir/ritonavir, (fos)amprenavir/ritonavir, lopinavir/ritonavir, and tipranavir/ritonavir] or increase [e.g., indinavir and atazanavir/ritonavir]) /HCV protease inhibitors (decrease [e.g., boceprevir and telaprevir]) or with non-nucleoside reverse transcriptase inhibitors (decrease [e.g., efavirenz, nevirapine] or increase [e.g., etravirine]). These changes may be clinically relevant in some cases. 7.2 Effects of CHCs on Other Drugs CHCs containing ethinyl estradiol may inhibit the metabolism of other compounds (e.g., cyclosporine, prednisolone, theophylline, tizanidine, and voriconazole) and increase their plasma concentrations. CHCs have been shown to decrease plasma concentrations of acetaminophen, clofibric acid, morphine, salicylic acid and temazepam. A significant decrease in the plasma concentrations of lamotrigine has been shown, likely due to induction of lamotrigine glucuronidation. This may reduce seizure control; therefore, dosage adjustments of lamotrigine may be necessary. Women on thyroid hormone replacement therapy may need increased doses of thyroid hormone because serum concentrations of thyroid-binding globulin increase with use of CHCs. 7.3 Concomitant Use with HCV Combination Therapy \u2013 Liver Enzyme Elevation Do not co-administer etonogestrel and ethinyl estradiol vaginal ring with HCV drug combinations containing ombitasvir/paritaprevir/ritonavir, with or without dasabuvir, due to potential for ALT elevations. Concomitant use with some other HCV antiviral medicinal products, such as those containing glecaprevir/pibrentasvir, may increase the risk of ALT elevations [see Warnings and Precautions (5.4)]. 7.4 Interference with Laboratory Tests The use of contraceptive steroids may influence the results of certain laboratory tests, such as coagulation factors, lipids, glucose tolerance, and binding proteins."
+    ]
+   },
+   "set_id": "05e172aa-e18a-427b-e063-6294a90ae22f",
+   "title": "Etonogestrel And Ethinyl Estradiol Vaginal"
+  },
+  "hyoscyamine": {
+   "brand_names": [
+    "Oscimin"
+   ],
+   "classes": [],
+   "downloaded": "2026-11-12",
+   "effective_time": "20261102",
+   "label_id": "5f506fd4-2278-f660-e063-6394a90a0a16",
+   "sections": {
+    "contraindications": [
+     "CONTRAINDICATIONS Glaucoma, obstructive uropathy, obstructive diseases of the gastrointestinal tract, paralytic ileum, intestinal atony of elderly or debilitated patients, unstable cardiovascular status, severe ulcerative colitis, toxic megacolon, myasthenia gravis, and myocardial ischemia. This product is not recommended for use in children under twelve years of age."
+    ],
+    "drug_interactions": [
+     "Drug Interactions: Absorption of other oral medications may be decreased during concurrent use with anticholinergics due to decreased gastrointestinal motility and delayed gastric emptying. Drug interactions may occur when anticholinergics are used with the following medications: antacids, antidiarrheals (adsorbent), other anticholinergics, antimyasthenics, cyclopropane, haloperidol, ketoconazole, metoclopramide, opioid (narcotic) analgesics, and potassium chloride."
+    ]
+   },
+   "set_id": "2d5fa637-0696-40fe-9bc1-fcb6f07a50f6",
+   "title": "Hyoscyamine Sulfate"
+  },
+  "isosorbide dinitrate": {
+   "brand_names": [],
+   "classes": [
+    "Nitrate Vasodilator"
+   ],
+   "downloaded": "2026-11-12",
+   "effective_time": "20260731",
+   "label_id": "90d3efd1-9d17-4bee-967d-30d2d7ba597c",
+   "sections": {
+    "contraindications": [
+     "CONTRAINDICATIONS Isosorbide dinitrate is contraindicated in patients who are allergic to isosorbide dinitrate or any of its ingredients. Do not use isosorbide dinitrate in patients who are taking certain drugs for erectile dysfunction (phosphodiesterase inhibitors), such as sildenafil, tadalafil, or vardenafil. Concomitant use can cause severe hypotension, syncope, or myocardial ischemia. Do not use isosorbide dinitrate in patients who are taking the soluble guanylate cyclase stimulator riociguat. Concomitant use can cause hypotension."
+    ],
+    "drug_interactions": [
+     "Drug Interactions The vasodilating effects of isosorbide dinitrate may be additive with those of other vasodilators. Alcohol, in particular, has been found to exhibit additive effects of this variety. Concomitant use of isosorbide dinitrate with phosphodiesterase inhibitors in any form is contraindicated (see CONTRAINDICATIONS ). Concomitant use of isosorbide dinitrate with riociguat, a soluble guanylate cyclase stimulator, is contraindicated (see CONTRAINDICATIONS )."
+    ]
+   },
+   "set_id": "6df6a2fa-c56c-4eb6-a485-c16585420eb0",
+   "title": "Isosorbide Dinitrate"
+  },
+  "levodopa": {
+   "brand_names": [
+    "Inbrija"
+   ],
+   "classes": [
+    "Aromatic Amino Acid"
+   ],
+   "downloaded": "2026-11-12",
+   "effective_time": "20260720",
+   "label_id": "ec522c79-6f5a-41f8-b3b1-78159a36f3b6",
+   "sections": {
+    "contraindications": [
+     "4 CONTRAINDICATIONS INBRIJA is contraindicated in patients currently taking a nonselective monoamine oxidase (MAO) inhibitor (e.g., phenelzine and tranylcypromine) or who have recently (within 2 weeks) taken a nonselective MAO inhibitor. Hypertension can occur if these drugs are used concurrently [see Drug Interactions (7.1) ]. INBRIJA is contraindicated in patients currently taking a nonselective monoamine oxidase (MAO) inhibitor or who have recently (within 2 weeks) taken a nonselective MAO inhibitor ( 4 , 7.1 )"
+    ],
+    "drug_interactions": [
+     "7 DRUG INTERACTIONS Monitor patients on MAO-B inhibitors for orthostatic hypotension ( 7.1 ) Dopamine D2 antagonists, isoniazid, and iron salts: May reduce the effectiveness of INBRIJA ( 7.2 , 7.3 ) 7.1 Monoamine Oxidase (MAO) Inhibitors The use of nonselective MAO inhibitors with INBRIJA is contraindicated [see Contraindications (4) ] . Discontinue use of any nonselective MAO inhibitors at least two weeks prior to initiating INBRIJA. The use of selective MAO-B inhibitors with INBRIJA may be associated with orthostatic hypotension. Monitor patients who are taking these drugs concurrently. 7.2 Dopamine D2 Receptor Antagonists and Isoniazid Dopamine D2 receptor antagonists (e.g., phenothiazines, butyrophenones, risperidone, metoclopramide) and isoniazid may reduce the effectiveness of levodopa. Monitor patients for worsening Parkinson's symptoms. 7.3 Iron Salts Iron salts or multivitamins containing iron salts can form chelates with levodopa and consequently reduce the bioavailability of levodopa."
+    ]
+   },
+   "set_id": "077c0f39-a3a2-4b2b-a184-09131889dcfb",
+   "title": "Levodopa"
+  },
+  "medroxyprogesterone": {
+   "brand_names": [
+    "Medroxyprogesterone Acetate"
+   ],
+   "classes": [],
+   "downloaded": "2026-11-12",
+   "effective_time": "20260904",
+   "label_id": "5aaae560-10e7-6f49-e063-6294a90af12c",
+   "sections": {
+    "contraindications": [
+     "4 CONTRAINDICATIONS The use of medroxyprogesterone acetate injectable suspension is contraindicated in the following conditions: Active thrombophlebitis, or current or history of thromboembolic disorders, or cerebral vascular disease [see Warnings and Precautions (5.2) ] . Known or suspected malignancy of breast [see Warnings and Precautions (5.3) ] . Known hypersensitivity to medroxyprogesterone acetate injectable suspension (medroxyprogesterone acetate) or any of its other ingredients [see Warnings and Precautions ( 5.6 ) ] . Significant liver disease [see Warnings and Precautions ( 5.8 ) ] . Undiagnosed vaginal bleeding [see Warnings and Precautions ( 5.11 ) ] . Active thrombophlebitis, or current or past history of thromboembolic disorders, or cerebral vascular disease. (4) Known or suspected malignancy of breast. (4) Known hypersensitivity to medroxyprogesterone acetate injectable suspension (medroxyprogesterone acetate or any of its other ingredients). (4) Significant liver disease. (4) Undiagnosed vaginal bleeding. (4)"
+    ],
+    "drug_interactions": [
+     "7 DRUG INTERACTIONS Drugs or herbal products that induce certain enzymes, including CYP3A4, may decrease the effectiveness of contraceptive drug products. Counsel patients to use a back-up method or alternative method of contraception when enzyme inducers are used with medroxyprogesterone acetate. (7.1) 7.1 Changes in Contraceptive Effectiveness Associated with Co-Administration of Other Products If a woman on hormonal contraceptives takes a drug or herbal product that induces enzymes, including CYP3A4, that metabolize contraceptive hormones, counsel her to use additional contraception or a different method of contraception. Drugs or herbal products that induce such enzymes may decrease the plasma concentrations of contraceptive hormones, and may decrease the effectiveness of hormonal contraceptives. Some drugs or herbal products that may decrease the effectiveness of hormonal contraceptives include: barbiturates bosentan carbamazepine felbamate griseofulvin oxcarbazepine phenytoin rifampin St. John\u2019s wort topiramate HIV protease inhibitors and non-nucleoside reverse transcriptase inhibitors: Significant changes (increase or decrease) in the plasma levels of progestin have been noted in some cases of co-administration of HIV protease inhibitors. Significant changes (increase or decrease) in the plasma levels of the progestin have been noted in some cases of co-administration with non-nucleoside reverse transcriptase inhibitors. Antibiotics: There have been reports of pregnancy while taking hormonal contraceptives and antibiotics, but clinical pharmacokinetic studies have not shown consistent effects of antibiotics on plasma concentrations of synthetic steroids. Consult the labeling of all concurrently-used drugs to obtain further information about interactions with hormonal contraceptives or the potential for enzyme alterations. 7.2 Laboratory Test Interactions The pathologist should be advised of progestin therapy when relevant specimens are submitted. The following laboratory tests may be affected by progestins including medroxyprogesterone acetate: (a) Plasma and urinary steroid levels are decreased (e.g., progesterone, estradiol, pregnanediol, testosterone, cortisol). (b) Gonadotropin levels are decreased. (c) Sex-hormone-binding-globulin concentrations are decreased. (d) Protein-bound iodine and butanol extractable protein-bound iodine may increase. T 3 -uptake values may decrease. (e) Coagulation test values for prothrombin (Factor II), and Factors VII, VIII, IX, and X may increase. (f) Sulfobromophthalein and other liver function test values may be increased. (g) The effects of medroxyprogesterone acetate on lipid metabolism are inconsistent. Both increases and decreases in total cholesterol, triglycerides, low-density lipoprotein (LDL) cholesterol, and high-density lipoprotein (HDL) cholesterol have been observed in studies."
+    ]
+   },
+   "set_id": "a0a92717-c1cb-40eb-a95a-1c5dfd32cfc0",
+   "title": "Medroxyprogesterone Acetate"
+  },
+  "methenamine": {
+   "brand_names": [
+    "Methenamine Mandelate"
+   ],
+   "classes": [],
+   "downloaded": "2026-11-12",
+   "effective_time": "20260527",
+   "label_id": "2bc5602b-03a3-44da-b860-644dd203ebfc",
+   "sections": {
+    "contraindications": [
+     "CONTRAINDICATIONS Methenamine mandelate tablets are contraindicated in patients with renal insufficiency, severe hepatic disease, severe dehydration, and in patients who have exhibited hypersensitivity to any components of this product."
+    ],
+    "drug_interactions": [
+     "Drug Interactions Formaldehyde and sulfamethizole form an insoluble precipitate in acid urine; therefore, methenamine mandelate should not be administered concurrently with sulfamethizole or other sulfonamides. Concurrent use of salicylates may lead to increased serum salicylate levels since excretion of salicylates is reduced in acidified urine."
+    ]
+   },
+   "set_id": "23a57107-3709-4578-86e0-e5ca99435e7a",
+   "title": "Methenamine Mandelate"
+  },
+  "methylene blue": {
+   "brand_names": [],
+   "classes": [],
+   "downloaded": "2026-11-12",
+   "effective_time": "20260528",
+   "label_id": "6f2d5df4-60bb-8ab9-8665-421acce81382",
+   "sections": {
+    "contraindications": [
+     "4 CONTRAINDICATIONS Methylene blue is contraindicated in the following conditions: Severe hypersensitivity reactions to methylene blue or any other thiazine dye [see Warnings and Precautions (5.2) ]. Patients with glucose-6-phosphate dehydrogenase deficiency (G6PD) due to the risk of hemolytic anemia [see Warnings and Precautions (5.3, 5.4 )]. Methylene blue is contraindicated in the following conditions ( 4 ): Severe hypersensitivity to methylene blue Patients with glucose-6-phosphate dehydrogenase deficiency (G6PD) due to the risk of hemolytic anemia"
+    ],
+    "drug_interactions": [
+     "7 DRUG INTERACTIONS Clinically significant drug interactions with methylene blue are described below: The concomitant use of methylene blue with other drugs that affect the serotonergic neurotransmitter system has resulted in serotonin syndrome. Although the mechanism is not clearly understood, literature reports suggest methylene blue is a potent reversible inhibitor of monoamine oxidase. Avoid concomitant use of methylene blue with medicinal products that enhance serotonergic transmission including antidepressants like SSRIs (selective serotonin reuptake inhibitors), SNRIs (serotonin and norepinephrine reuptake inhibitors), MAOIs (monoamine oxidase inhibitors), bupropion, buspirone, clomipramine, mirtazapine, linezolid, opioids, and dextromethorphan because of the potential for serious CNS reactions, including potentially fatal serotonin syndrome. If the intravenous use of methylene blue cannot be avoided in patients treated with serotonergic medicinal products, choose the lowest possible dose and observe the patient closely for CNS effects for up to 4 hours after administration [see Warning and Precautions (5.1) and Clinical Pharmacology (12.3) ]."
+    ]
+   },
+   "set_id": "691a6872-bc2f-d492-11c6-c3eec25aa3d3",
+   "title": "Methylene Blue"
+  },
+  "palbociclib": {
+   "brand_names": [
+    "Ibrance"
+   ],
+   "classes": [
+    "Kinase Inhibitor"
+   ],
+   "downloaded": "2026-11-12",
+   "effective_time": "20260706",
+   "label_id": "342c459f-fe40-4422-bc31-88d16fbbd4df",
+   "sections": {
+    "contraindications": [
+     "4 CONTRAINDICATIONS None. None. ( 4 )"
+    ],
+    "drug_interactions": [
+     "7 DRUG INTERACTIONS Palbociclib is primarily metabolized by CYP3A and sulfotransferase (SULT) enzyme SULT2A1. In vivo, palbociclib is a time-dependent inhibitor of CYP3A. \u2022 CYP3A Inhibitors: Avoid concurrent use of IBRANCE with strong CYP3A inhibitors. If the strong inhibitor cannot be avoided, reduce the IBRANCE dose. ( 2.2 , 7.1 ) \u2022 CYP3A Inducers: Avoid concurrent use of IBRANCE with strong CYP3A inducers. ( 7.2 ) \u2022 CYP3A Substrates: The dose of sensitive CYP3A4 substrates with narrow therapeutic indices may need to be reduced when given concurrently with IBRANCE. ( 7.3 ) 7.1 Agents That May Increase Palbociclib Plasma Concentrations Effect of CYP3A Inhibitors Coadministration of a strong CYP3A inhibitor (itraconazole) increased the plasma exposure of palbociclib in healthy subjects by 87%. Avoid concomitant use of strong CYP3A inhibitors (e.g., clarithromycin, indinavir, itraconazole, ketoconazole, lopinavir/ritonavir, nefazodone, nelfinavir, posaconazole, ritonavir, saquinavir, telaprevir, telithromycin, and voriconazole). Avoid grapefruit or grapefruit juice during IBRANCE treatment. If coadministration of IBRANCE with a strong CYP3A inhibitor cannot be avoided, reduce the dose of IBRANCE [see Dosage and Administration (2.2) and Clinical Pharmacology (12.3) ] . 7.2 Agents That May Decrease Palbociclib Plasma Concentrations Effect of CYP3A Inducers Coadministration of a strong CYP3A inducer (rifampin) decreased the plasma exposure of palbociclib in healthy subjects by 85%. Avoid concomitant use of strong CYP3A inducers (e.g., phenytoin, rifampin, carbamazepine, enzalutamide, and St John's Wort) [see Clinical Pharmacology (12.3) ] . 7.3 Drugs That May Have Their Plasma Concentrations Altered by Palbociclib Coadministration of midazolam with multiple doses of IBRANCE increased the midazolam plasma exposure by 61%, in healthy subjects, compared to administration of midazolam alone. The dose of the sensitive CYP3A substrate with a narrow therapeutic index (e.g., alfentanil, cyclosporine, dihydroergotamine, ergotamine, everolimus, fentanyl, pimozide, quinidine, sirolimus, and tacrolimus) may need to be reduced, as IBRANCE may increase its exposure [see Clinical Pharmacology (12.3) ] ."
+    ]
+   },
+   "set_id": "89a142d5-7e61-48bf-9e77-e2cd124c4792",
+   "title": "Palbociclib"
+  },
+  "simvastatin": {
+   "brand_names": [],
+   "classes": [
+    "HMG-CoA Reductase Inhibitor"
+   ],
+   "downloaded": "2026-11-12",
+   "effective_time": "20260831",
+   "label_id": "6607bc0b-d728-46ed-9186-425d1b0405b2",
+   "sections": {
+    "contraindications": [
+     "4 CONTRAINDICATIONS Simvastatin is contraindicated in the following conditions: \u2022 Concomitant use of strong CYP3A4 inhibitors (select azole anti-fungals, macrolide antibiotics, anti-viral medications, and nefazodone) [see DRUG INTERACTIONS ( 7.1 )]. \u2022 Concomitant use of cyclosporine, danazol or gemfibrozil [see DRUG INTERACTIONS ( 7.1 )]. \u2022 Acute liver failure or decompensated cirrhosis [see WARNINGS AND PRECAUTIONS ( 5.3 )] \u2022 Hypersensitivity to simvastatin or any excipients in simvastatin tablets USP. Hypersensitivity reactions, including anaphylaxis, angioedema and Stevens-Johnson syndrome, have been reported [see ADVERSE REACTIONS ( 6.2 )] \u2022 Concomitant use of strong CYP3A4 inhibitors (select azole anti-fungals, macrolide antibiotics, anti-viral medications, and nefazodone) (, 7.1 ) \u2022 Concomitant use of cyclosporine, danazol or gemfibrozil (, 7.1 ) \u2022 Acute liver failure or decompensated cirrhosis (, 5.3 ) \u2022 Hypersensitivity to simvastatin or any excipient in simvastatin tablets USP (, 6.2 )"
+    ],
+    "drug_interactions": [
+     "7 DRUG INTERACTIONS \u2022 See full prescribing information for details regarding concomitant use of simvastatin with other drugs or grapefruit juice that increase the risk of myopathy and rhabdomyolysis. ( 2.5 , 7.1 ) \u2022 Coumarin Anticoagulants: Obtain INR before simvastatin initiation and monitor INR during simvastatin dosage initiation or adjustment. ( 7.2 ) \u2022 Digoxin: During simvastatin initiation, monitor digoxin levels. ( 7.2 ) 7.1 Drug Interactions that Increase the Risk of Myopathy and Rhabdomyolysis with Simvastatin Simvastatin is a substrate of CYP3A4 and of the transport protein OATP1B1. Simvastatin exposure can be significantly increased with concomitant administration of inhibitors of CYP3A4 and OATP1B1. Table 2 includes a list of drugs that increase the risk of myopathy and rhabdomyolysis when used concomitantly with simvastatin and instructions for preventing or managing them [see WARNINGS AND PRECAUTIONS ( 5.1 ) AND CLINICAL PHARMACOLOGY ( 12.3 )] . Table 2: Drug Interactions that Increase the Risk of Myopathy and Rhabdomyolysis with Simvastatin Strong CYP3A4 inhibitors Clinical Impact: Simvastatin is a substrate of CYP3A4. Concomitant use of strong CYP3A4 inhibitors with simvastatin increases simvastatin exposure and increases the risk of myopathy and rhabdomyolysis, particularly with higher simvastatin dosages. Intervention: Concomitant use of strong CYP3A4 inhibitors with Simvastatin is contraindicated [see CONTRAINDICATIONS ( )] . If treatment with a CYP3A4 inhibitor is unavoidable, suspend simvastatin during the course of strong CYP3A4 inhibitor treatment. Examples: Select azole anti-fungals (e.g., itraconazole, ketoconazole, posaconazole, and voriconazole), select macrolide antibiotics (e.g., erythromycin and clarithromycin), select HIV protease inhibitors (e.g., nelfinavir, ritonavir, and darunavir/ritonavir), select HCV protease inhibitors (e.g., boceprevir and telaprevir), cobicistat-containing products, and nefazodone. Cyclosporine, Danazol, or Gemfibrozil Clinical Impact: The risk of myopathy and rhabdomyolysis is increased with concomitant use of cyclosporine, danazol, or gemfibrozil with simvastatin. Gemfibrozil may cause myopathy when given alone. Intervention: Concomitant use of cyclosporine, danazol, or gemfibrozil with simvastatin is contraindicated [see CONTRAINDICATIONS ( )] . Amiodarone, Dronedarone, Ranolazine, or Calcium Channel Blockers Clinical Impact: The risk of myopathy and rhabdomyolysis is increased by concomitant use of amiodarone, dronedarone, ranolazine, or calcium channel blockers with simvastatin. Intervention: For patients taking verapamil, diltiazem, or dronedarone, do not exceed simvastatin 10 mg daily. For patients taking amiodarone, amlodipine, or ranolazine, do not exceed simvastatin 20 mg daily [see DOSAGE AND ADMINISTRATION ( 2.5 )] . Lomitapide Clinical Impact: Simvastatin exposure is approximately doubled with concomitant use of lomitapide and the risk of myopathy and rhabdomyolysis is increased. Intervention: Reduce the dose of simvastatin by 50% if initiating lomitapide. Do not exceed simvastatin 20 mg daily (or simvastatin 40 mg daily for patients who have previously taken an 80 mg daily dosage of simvastatin chronically) while taking lomitapide [see DOSAGE AND ADMINISTRATION ( 2.1 , 2.5 )] . Daptomycin Clinical Impact: Cases of rhabdomyolysis have been reported with simvastatin administered with daptomycin. Both simvastatin and daptomycin can cause myopathy and rhabdomyolysis when given alone and the risk of myopathy and rhabdomyolysis may be increased by coadministration. Intervention: If treatment with daptomycin is required, consider temporarily suspending simvastatin during the course of daptomycin treatment. Niacin Clinical Impact: Cases of myopathy and rhabdomyolysis have been observed with concomitant use of lipid modifying dosages of niacin-containing products (\u22651 gram/day niacin) with simvastatin. The risk of myopathy is greater in Chinese patients. In a clinical study (median follow-up 3.9 years) of patients at high risk of CVD and with well-controlled LDL-C levels on simvastatin 40 mg/day with or without ezetimibe 10 mg/day, there was no incremental benefit on cardiovascular outcomes with the addition of lipid-modifying doses of niacin. Intervention: Concomitant use of simvastatin with lipid-modifying dosages of niacin is not recommended in Chinese patients [see USE IN SPECIFIC POPULATIONS ( 8.8 )]. For non-Chinese patients, consider if the benefit of using lipid-modifying doses of niacin concomitantly with simvastatin outweighs the increased risk of myopathy and rhabdomyolysis. If concomitant use is decided, monitor patients for signs and symptoms of myopathy, particularly during initiation of therapy and during upward dose titration of either drug. Fibrates (other than Gemfibrozil) Clinical Impact: Fibrates may cause myopathy when given alone. The risk of myopathy and rhabdomyolysis is increased with concomitant use of fibrates with simvastatin. Intervention: Consider if the benefit of using fibrates concomitantly with simvastatin outweighs the increased risk of myopathy and rhabdomyolysis. If concomitant use is decided, monitor patients for signs and symptoms of myopathy, particularly during initiation of therapy and during upward dose titration of either drug. Colchicine Clinical Impact: Cases of myopathy and rhabdomyolysis have been reported with concomitant use of colchicine with simvastatin. Intervention: Consider if the benefit of using colchicine concomitantly with simvastatin outweighs the increased risk of myopathy and rhabdomyolysis. If concomitant use is decided, monitor patients for signs and symptoms of myopathy, particularly during initiation of therapy and during upward dose titration of either drug. Grapefruit Juice Clinical Impact: Grapefruit juice can raise the plasma levels of simvastatin and may increase the risk of myopathy and rhabdomyolysis. Intervention: Avoid grapefruit juice when taking simvastatin. 7.2 Simvastatin Effects on Other Drugs Table 3 presents Simvastatin's effect on other drugs and instructions for preventing or managing them. Table 3: Simvastatin Effects on Other Drugs Coumarin Anticoagulants Clinical Impact: Simvastatin may potentiate the effect of coumarin anticoagulants and increase the INR. The concomitant use of simvastatin (20 to 40 mg) and coumarin anticoagulants increased the INR from a baseline of 1.7 to 1.8 in healthy subjects and from 2.6 to 3.4 in patients with hyperlipidemia. There are postmarketing reports of clinically evident bleeding and/or increased INR in patients taking concomitant statins and warfarin. Intervention: In patients taking coumarin anticoagulants, obtain an INR before starting simvastatin and frequently enough after initiation, dose titration, or discontinuation to ensure that no significant alteration in INR occurs. Once the INR is stable, monitor INR at regularly recommended intervals. Digoxin Clinical Impact: Concomitant use of digoxin with simvastatin may result in elevated plasma digoxin concentrations [ see CLINICAL PHARMACOLOGY ( 12.3 ) ]. Intervention: Monitor digoxin levels in patients taking digoxin when simvastatin is initiated."
+    ]
+   },
+   "set_id": "3f6fad0b-0278-433f-86db-761b673a5803",
+   "title": "Simvastatin"
+  },
+  "sulfamethoxazole": {
+   "brand_names": [
+    "Sulfamethoxazole And Trimethoprim"
+   ],
+   "classes": [
+    "Dihydrofolate Reductase Inhibitor Antibacterial",
+    "Sulfonamide Antimicrobial"
+   ],
+   "downloaded": "2026-11-12",
+   "effective_time": "20261014",
+   "label_id": "5dceb8d6-1db0-aaef-e063-6394a90a6424",
+   "sections": {
+    "contraindications": [
+     "CONTRAINDICATIONS Sulfamethoxazole and trimethoprim tablets are contraindicated in the following situations: known hypersensitivity to trimethoprim or sulfonamides history of drug-induced immune thrombocytopenia with use of trimethoprim and/or sulfonamides documented megaloblastic anemia due to folate deficiency pediatric patients less than 2 months of age marked hepatic damage severe renal insufficiency when renal function status cannot be monitored concomitant administration with dofetilide (see PRECAUTIONS )."
+    ],
+    "drug_interactions": [
+     "Drug Interactions Potential for Sulfamethoxazole and Trimethoprim to Affect Other Drugs Trimethoprim is an inhibitor of CYP2C8 as well as OCT2 transporter. Sulfamethoxazole is an inhibitor of CYP2C9. Avoid coadministration of sulfamethoxazole and trimethoprim with drugs that are substrates of CYP2C8 and 2C9 or OCT2. Table 1: Drug Interactions with Sulfamethoxazole and Trimethoprim Drug(s) Recommendation Comments Diuretics Avoid concurrent use In elderly patients concurrently receiving certain diuretics, primarily thiazides, an increased incidence of thrombocytopenia with purpura has been reported. Warfarin Monitor prothrombin time and INR It has been reported that sulfamethoxazole and trimethoprim may prolong the prothrombin time in patients who are receiving the anticoagulant warfarin (a CYP2C9 substrate). This interaction should be kept in mind when sulfamethoxazole and trimethoprim is given to patients already on anticoagulant therapy, and the coagulation time should be reassessed. Phenytoin Monitor serum phenytoin levels Sulfamethoxazole and trimethoprim may inhibit the hepatic metabolism of phenytoin (a CYP2C9 substrate). Sulfamethoxazole and trimethoprim, given at a common clinical dosage, increased the phenytoin half-life by 39% and decreased the phenytoin metabolic clearance rate by 27%. When administering these drugs concurrently, one should be alert for possible excessive phenytoin effect. Methotrexate Avoid concurrent use Sulfonamides can also displace methotrexate from plasma protein binding sites and can compete with the renal transport of methotrexate, thus increasing free methotrexate concentrations. Cyclosporine Avoid concurrent use There have been reports of marked but reversible nephrotoxicity with coadministration of sulfamethoxazole and trimethoprim and cyclosporine in renal transplant recipients. Digoxin Monitor serum digoxin levels Increased digoxin blood levels can occur with concomitant sulfamethoxazole and trimethoprim therapy, especially in elderly patients. Indomethacin Avoid concurrent use Increased sulfamethoxazole blood levels may occur in patients who are also receiving indomethacin. Pyrimethamine Avoid concurrent use Occasional reports suggest that patients receiving pyrimethamine as malaria prophylaxis in doses exceeding 25 mg weekly may develop megaloblastic anemia if sulfamethoxazole and trimethoprim is prescribed. Tricyclic Antidepressants (TCAs) Monitor therapeutic response and adjust dose of TCA accordingly The efficacy of tricyclic antidepressants can decrease when coadministered with sulfamethoxazole and trimethoprim. Oral Hypoglycemics Monitor blood glucose more frequently Like other sulfonamide-containing drugs, sulfamethoxazole and trimethoprim potentiates the effect of oral hypoglycemic that are metabolized by CYP2C8 (e.g., pioglitazone, repaglinide, and rosiglitazone) or CYP2C9 (e.g., glipizide and glyburide) or eliminated renally via OCT2 (e.g., metformin). Additional monitoring of blood glucose may be warranted. Amantadine Avoid concurrent use In the literature, a single case of toxic delirium has been reported after concomitant intake of sulfamethoxazole and trimethoprim and amantadine (an OCT2 substrate). Cases of interactions with other OCT2 substrates, memantine and metformin, have also been reported. Angiotensin Converting Enzyme Inhibitors Avoid concurrent use In the literature, three cases of hyperkalemia in elderly patients have been reported after concomitant intake of sulfamethoxazole and trimethoprim and an angiotensin converting enzyme inhibitor. 5,6 Zidovudine Monitor for hematologic toxicity Zidovudine and sulfamethoxazole and trimethoprim are known to induce hematological abnormalities. Hence, there is potential for an additive myelotoxicity when coadministered. 7 Dofetilide Concurrent administration is contraindicated Elevated plasma concentrations of dofetilide have been reported following concurrent administration of trimethoprim and dofetilide. Increased plasma concentrations of dofetilide may cause serious ventricular arrhythmias associated with QT interval prolongation, including torsade de pointes . 8,9 Procainamide Closely monitor for clinical and ECG signs of procainamide toxicity and/or procainamide plasma concentration if available Trimethoprim increases the plasma concentrations of procainamide and its active N-acetyl metabolite (NAPA) when trimethoprim and procainamide are coadministered. The increased procainamide and NAPA plasma concentrations that resulted from the pharmacokinetic interaction with trimethoprim are associated with further prolongation of the QTc interval. 10"
+    ]
+   },
+   "set_id": "3ef62512-0dc3-4821-9b60-6b375841c4c0",
+   "title": "Sulfamethoxazole And Trimethoprim"
+  },
+  "trimethoprim": {
+   "brand_names": [],
+   "classes": [
+    "Dihydrofolate Reductase Inhibitor Antibacterial"
+   ],
+   "downloaded": "2026-11-12",
+   "effective_time": "20240604",
+   "label_id": "6a57562b-424f-40ef-9b86-fa0e66c1c344",
+   "sections": {
+    "contraindications": [
+     "CONTRAINDICATIONS Trimethoprim is contraindicated in individuals hypersensitive to trimethoprim and in those with documented megaloblastic anemia due to folate deficiency."
+    ],
+    "drug_interactions": [
+     "Drug Interactions Trimethoprim may inhibit the hepatic metabolism of phenytoin. Trimethoprim, given at a common clinical dosage, increased the phenytoin half-life by 51% and decreased the phenytoin metabolic clearance rate by 30%. When administering these drugs concurrently, one should be alert for possible excessive phenytoin effect."
+    ]
+   },
+   "set_id": "249e938d-f181-47c4-a082-372d65462f33",
+   "title": "Trimethoprim"
+  },
+  "warfarin": {
+   "brand_names": [
+    "Warfarin Sodium"
+   ],
+   "classes": [],
+   "downloaded": "2026-11-02",
+   "effective_time": "20260831",
+   "label_id": "5a5b5d79-6112-f2ac-e063-6394a90a2244",
+   "sections": {
+    "contraindications": [
+     "4 CONTRAINDICATIONS Warfarin sodium is contraindicated in: Pregnancy Warfarin sodium is contraindicated in women who are pregnant except in pregnant women with mechanical heart valves, who are at high risk of thromboembolism [see Warnings and Precautions (5.7) and Use in Specific Populations (8.1 )] . Warfarin sodium can cause fetal harm when administered to a pregnant woman. Warfarin sodium exposure during pregnancy causes a recognized pattern of major congenital malformations (warfarin embryopathy and fetotoxicity), fatal fetal hemorrhage, and an increased risk of spontaneous abortion and fetal mortality. If warfarin sodium is used during pregnancy or if the patient becomes pregnant while taking this drug, the patient should be apprised of the potential hazard to a fetus [see Use in Specific Populations (8.1) ] . Warfarin sodium is contraindicated in patients with: Hemorrhagic tendencies or blood dyscrasias Recent or contemplated surgery of the central nervous system or eye, or traumatic surgery resulting in large open surfaces [see Warnings and Precautions (5.8) ] Bleeding tendencies associated with: \u2212 Active ulceration or overt bleeding of the gastrointestinal, genitourinary, or respiratory tract \u2212 Central nervous system hemorrhage \u2212 Cerebral aneurysms, dissecting aorta \u2212 Pericarditis and pericardial effusions \u2212 Bacterial endocarditis Threatened abortion, eclampsia, and preeclampsia Unsupervised patients with conditions associated with potential high level of non-compliance Spinal puncture and other diagnostic or therapeutic procedures with potential for uncontrollable bleeding Hypersensitivity to warfarin or to any other components of this product (e.g., anaphylaxis) [see Adverse Reactions (6) ] Major regional or lumbar block anesthesia Malignant hypertension Pregnancy, except in women with mechanical heart valves. ( 4 , 5.7 , 8.1 ) Hemorrhagic tendencies or blood dyscrasias. ( 4 ) Recent or contemplated surgery of the central nervous system (CNS) or eye, or traumatic surgery resulting in large open surfaces. ( 4, 5.8) Bleeding tendencies associated with certain conditions. ( 4 ) Threatened abortion, eclampsia, and preeclampsia. ( 4 ) Unsupervised patients with potential high levels of non-compliance. ( 4 ) Spinal puncture and other diagnostic or therapeutic procedures with potential for uncontrollable bleeding. ( 4 ) Hypersensitivity to warfarin or any component of the product. ( 4 ) Major regional or lumbar block anesthesia. ( 4 ) Malignant hypertension. ( 4 )"
+    ],
+    "drug_interactions": [
+     "7 DRUG INTERACTIONS Concomitant use of drugs that increase bleeding risk, antibiotics, antifungals, botanical (herbal) products, and inhibitors and inducers of CYP2C9, 1A2, or 3A4. ( 7 ) Consult labeling of all concurrently used drugs for complete information about interactions with warfarin sodium or increased risks for bleeding. (7) 7.1 General Information Drugs may interact with warfarin sodium through pharmacodynamic or pharmacokinetic mechanisms. Pharmacodynamic mechanisms for drug interactions with warfarin sodium are synergism (impaired hemostasis, reduced clotting factor synthesis), competitive antagonism (vitamin K), and alteration of the physiologic control loop for vitamin K metabolism (hereditary resistance). Pharmacokinetic mechanisms for drug interactions with warfarin sodium are mainly enzyme induction, enzyme inhibition, and reduced plasma protein binding. It is important to note that some drugs may interact by more than one mechanism. More frequent INR monitoring should be performed when starting or stopping other drugs, including botanicals, or when changing dosages of other drugs, including drugs intended for short-term use (e.g., antibiotics, antifungals, corticosteroids) [see Boxed Warning ] . Consult the labeling of all concurrently used drugs to obtain further information about interactions with warfarin sodium or adverse reactions pertaining to bleeding. 7.2 CYP450 Interactions CYP450 isozymes involved in the metabolism of warfarin include CYP2C9, 2C19, 2C8, 2C18, 1A2, and 3A4. The more potent warfarin S -enantiomer is metabolized by CYP2C9 while the R -enantiomer is metabolized by CYP1A2 and 3A4. Inhibitors of CYP2C9, 1A2, and/or 3A4 have the potential to increase the effect (increase INR) of warfarin by increasing the exposure of warfarin. Inducers of CYP2C9, 1A2, and/or 3A4 have the potential to decrease the effect (decrease INR) of warfarin by decreasing the exposure of warfarin. Examples of inhibitors and inducers of CYP2C9, 1A2, and 3A4 are below in Table 2; however, this list should not be considered all-inclusive. Consult the labeling of all concurrently used drugs to obtain further information about CYP450 interaction potential. The CYP450 inhibition and induction potential should be considered when starting, stopping, or changing dose of concomitant medications. Closely monitor INR if a concomitant drug is a CYP2C9, 1A2, and/or 3A4 inhibitor or inducer. Table 2: Examples of CYP450 Interactions with Warfarin Enzyme Inhibitors Inducers CYP2C9 amiodarone, capecitabine, cotrimoxazole, etravirine, fluconazole, fluvastatin, fluvoxamine, metronidazole, miconazole, oxandrolone, sulfinpyrazone, tigecycline, voriconazole, zafirlukast aprepitant, bosentan, carbamazepine, phenobarbital, rifampin CYP1A2 acyclovir, allopurinol, caffeine, cimetidine, ciprofloxacin, disulfiram, enoxacin, famotidine, fluvoxamine, methoxsalen, mexiletine, norfloxacin, oral contraceptives, phenylpropanolamine, propafenone, propranolol, terbinafine, thiabendazole, ticlopidine, verapamil, zileuton montelukast, moricizine, omeprazole, phenobarbital, phenytoin, cigarette smoking CYP3A4 alprazolam, amiodarone, amlodipine, amprenavir, aprepitant, atorvastatin, atazanavir, bicalutamide, cilostazol, cimetidine, ciprofloxacin, clarithromycin, conivaptan, cyclosporine, darunavir/ritonavir, diltiazem, erythromycin, fluconazole, fluoxetine, fluvoxamine, fosamprenavir, imatinib, indinavir, isoniazid, itraconazole, ketoconazole, lopinavir/ritonavir, nefazodone, nelfinavir, nilotinib, oral contraceptives, posaconazole, ranitidine, ranolazine, ritonavir, saquinavir, telithromycin, tipranavir, voriconazole, zileuton armodafinil, amprenavir, aprepitant, bosentan, carbamazepine, efavirenz, etravirine, modafinil, nafcillin, phenytoin, pioglitazone, prednisone, rifampin, rufinamide 7.3 Drugs that Increase Bleeding Risk Examples of drugs known to increase the risk of bleeding are presented in Table 3. Because bleeding risk is increased when these drugs are used concomitantly with warfarin, closely monitor patients receiving any such drug with warfarin. Table 3: Drugs that Can Increase the Risk of Bleeding Drug Class Specific Drugs Anticoagulants argatroban, dabigatran, bivalirudin, desirudin, heparin, lepirudin Antiplatelet Agents aspirin, cilostazol, clopidogrel, dipyridamole, prasugrel, ticlopidine Nonsteroidal Anti-Inflammatory Agents celecoxib, diclofenac, diflunisal, fenoprofen, ibuprofen, indomethacin, ketoprofen, ketorolac, mefenamic acid, naproxen, oxaprozin, piroxicam, sulindac Serotonin Reuptake Inhibitors citalopram, desvenlafaxine, duloxetine, escitalopram, fluoxetine, fluvoxamine, milnacipran, paroxetine, sertraline, venlafaxine, vilazodone 7.4 Antibiotics and Antifungals There have been reports of changes in INR in patients taking warfarin and antibiotics or antifungals, but clinical pharmacokinetic studies have not shown consistent effects of these agents on plasma concentrations of warfarin. Closely monitor INR when starting or stopping any antibiotic or antifungal in patients taking warfarin. 7.5 Botanical (Herbal) Products and Foods More frequent INR monitoring should be performed when starting or stopping botanicals. Few adequate, well-controlled studies evaluating the potential for metabolic and/or pharmacologic interactions between botanicals and warfarin sodium exist. Due to a lack of manufacturing standardization with botanical medicinal preparations, the amount of active ingredients may vary. This could further confound the ability to assess potential interactions and effects on anticoagulation. Some botanicals may cause bleeding events when taken alone (e.g., garlic and Ginkgo biloba) and may have anticoagulant, antiplatelet, and/or fibrinolytic properties. These effects would be expected to be additive to the anticoagulant effects of warfarin sodium. Conversely, some botanicals may decrease the effects of warfarin sodium (e.g., co-enzyme Q 10 , St. John\u2019s wort, ginseng). Some botanicals and foods can interact with warfarin sodium through CYP450 interactions (e.g., echinacea, grapefruit juice, ginkgo, goldenseal, St. John\u2019s wort). The amount of vitamin K in food may affect therapy with warfarin sodium. Advise patients taking warfarin sodium to eat a normal, balanced diet maintaining a consistent amount of vitamin K. Patients taking warfarin sodium should avoid drastic changes in dietary habits, such as eating large amounts of green leafy vegetables."
+    ]
+   },
+   "set_id": "5a5b5e3a-6556-a542-e063-6294a90a6d3f",
+   "title": "Warfarin"
+  }
+ },
+ "medications": {
+  "5-hydroxytryptophan (5-hydroxytryptophan 100 mg oral capsule)": {
+   "ingredients": [
+    "5-hydroxytryptophan"
+   ],
+   "rxcui": "410503"
+  },
+  "acetaminophen (Tylenol 325 mg oral capsule)": {
+   "ingredients": [
+    "acetaminophen"
+   ],
+   "rxcui": "1738139"
+  },
+  "acetaminophen-diphenhydramine (Tylenol PM 1000 mg-50 mg/30 mL oral liquid)": {
+   "ingredients": [
+    "acetaminophen",
+    "diphenhydramine"
+   ],
+   "rxcui": "1092375"
+  },
+  "azithromycin (azithromycin 250 mg oral tablet)": {
+   "ingredients": [
+    "azithromycin"
+   ],
+   "rxcui": "749783"
+  },
+  "caffeine (Cafcit 20 mg/mL intravenous solution)": {
+   "ingredients": [
+    "caffeine"
+   ],
+   "rxcui": "849932"
+  },
+  "captopril": {
+   "ingredients": [
+    "captopril"
+   ],
+   "rxcui": "1998"
+  },
+  "drospirenone-ethinyl estradiol (YAZ) 3-0.02 MG per tablet": {
+   "ingredients": [
+    "ethinyl estradiol"
+   ],
+   "rxcui": "4124"
+  },
+  "menaquinone (Vitamin K2)": {
+   "ingredients": [
+    "vitamin k2"
+   ],
+   "rxcui": "42781"
+  },
+  "multivitamin, prenatal (RightStep oral tablet)": {
+   "ingredients": [],
+   "rxcui": "2608806"
+  },
+  "omeprazole 20 mg capsule": {
+   "ingredients": [],
+   "rxcui": "2696145"
+  },
+  "template non-formulary (medication) (5-hydroxytryptophan (5-hydroxytryptophan 100 mg oral capsule))": {
+   "ingredients": [
+    "5-hydroxytryptophan"
+   ],
+   "rxcui": "94"
+  },
+  "template non-formulary (medication) (Bactrim)": {
+   "ingredients": [
+    "sulfamethoxazole",
+    "trimethoprim"
+   ],
+   "rxcui": "151399"
+  },
+  "template non-formulary (medication) (Benadryl 25 MG Oral Tablet)": {
+   "ingredients": [
+    "diphenhydramine"
+   ],
+   "rxcui": "1049632"
+  },
+  "template non-formulary (medication) (Ibrance)": {
+   "ingredients": [
+    "palbociclib"
+   ],
+   "rxcui": "1601381"
+  },
+  "template non-formulary (medication) (acenocoumarol)": {
+   "ingredients": [
+    "acenocoumarol"
+   ],
+   "rxcui": "154"
+  },
+  "template non-formulary (medication) (acidulated phosphate fluoride)": {
+   "ingredients": [
+    "acidulated phosphate fluoride"
+   ],
+   "rxcui": "236"
+  },
+  "template non-formulary (medication) (docosahexaenoate)": {
+   "ingredients": [],
+   "rxcui": "408369"
+  },
+  "warfarin 5 mg tablet": {
+   "ingredients": [
+    "warfarin"
+   ],
+   "rxcui": "855332"
+  }
+ },
+ "rxcui": {
+  "1047786": [
+   "hyoscyamine",
+   "methenamine",
+   "methylene blue",
+   "phenyl salicylate",
+   "sodium phosphate, monobasic"
+  ],
+  "1092375": [
+   "acetaminophen",
+   "diphenhydramine"
+  ],
+  "1148498": [
+   "crizotinib"
+  ],
+  "1601392": [
+   "palbociclib"
+  ],
+  "1601394": [
+   "palbociclib"
+  ],
+  "1738139": [
+   "acetaminophen"
+  ],
+  "198334": [
+   "sulfamethoxazole",
+   "trimethoprim"
+  ],
+  "1998": [
+   "captopril"
+  ],
+  "208220": [
+   "simvastatin"
+  ],
+  "208416": [
+   "sulfamethoxazole",
+   "trimethoprim"
+  ],
+  "312962": [
+   "simvastatin"
+  ],
+  "410503": [
+   "5-hydroxytryptophan"
+  ],
+  "4124": [
+   "ethinyl estradiol"
+  ],
+  "6058": [
+   "isosorbide dinitrate"
+  ],
+  "6375": [
+   "levodopa"
+  ],
+  "6691": [
+   "medroxyprogesterone"
+  ],
+  "749783": [
+   "azithromycin"
+  ],
+  "849932": [
+   "caffeine"
+  ]
+ },
+ "sections": [
+  "contraindications",
+  "drug_interactions"
+ ],
+ "source": "openFDA drug label API, https://open.fda.gov/apis/drug/label/ ; ingredients from RxNorm, https://lhncbc.nlm.nih.gov/RxNav/"
+}

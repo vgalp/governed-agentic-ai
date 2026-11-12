@@ -8,7 +8,9 @@ unchanged. What it reads, and how values become text, comes from the profile's f
 - Need-to-know: a resource type is requested only when the caller's role may see its data class, so
   data a role may not see is never fetched from the record system.
 - The patient is found by name, from the question: given and family name, searched on the server.
-  More than one match, or none, returns nothing.
+  Only exact names count (a FHIR name search also returns longer names that start the same way).
+  More than one match, or none, returns nothing. When the sign-in is for one patient (smart_user,
+  ADR 032), that patient is read and must match the name and date of birth; nothing is searched.
 """
 
 import re
@@ -80,16 +82,34 @@ def find_patient(client: FhirClient, m: FhirMap, query: str) -> tuple[dict | Non
     dates = birthdates_in(query) if m.needs_birthdate else [None]
     if not dates:
         return None, "birthdate"
+    pinned = getattr(getattr(client, "auth", None), "patient", None)
+    if pinned:                     # a sign-in for one patient (smart_user): read it, never search
+        res = client.read(m.resource, pinned)
+        return (res, None) if _is_named(res, query, dates) else (None, "none")
     for given, family in name_candidates(query):
         for dob in dates:
             params = {m.name_search["given"]: given, m.name_search["family"]: family}
             if dob:
                 params[m.name_search["birthdate"]] = dob
-            for res in client.search(m.resource, params, 5):
-                found[res.get("id")] = res
+            for res in client.search(m.resource, params, 20):
+                # FHIR name search matches the start of a name (Wilm finds Wilma): keep exact names only.
+                # The server has already matched the date of birth.
+                if _is_named(res, f"{given} {family}", [None]):
+                    found[res.get("id")] = res
     if len(found) == 1:
         return next(iter(found.values())), None
     return None, ("more than one" if found else "none")
+
+
+def _is_named(res: dict, query: str, dates: list) -> bool:
+    """The question names this patient: a given and family name on the record, and its date of birth
+    when the mapping asks for one. The same two identifiers a search would use."""
+    def low(x):
+        return (x or "").casefold()
+    names = res.get("name") or []
+    pairs = {(low(g), low(n.get("family"))) for n in names for g in (n.get("given") or [])}
+    named = any((low(g), low(f)) in pairs for g, f in name_candidates(query))
+    return named and (dates == [None] or res.get("birthDate") in dates)
 
 
 def _record(rid, title, text, classes) -> dict:

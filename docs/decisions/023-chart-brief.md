@@ -65,3 +65,39 @@ model behaving; the number an office cannot get from a model-written summary.
   the lists' clinical completeness. A clinical reviewer should read `chart_brief.yaml`.
 - Not done: trend lines (vitals over time), labs, and the problem-medication map beyond the
   demo's entries. Each is a list in the same file or a section in the same tool.
+
+## Update (2026-11-12): checks from the first Oracle Health brief
+
+The first brief from Oracle Health's sandbox (ADR 032) showed what a real record system's data does
+that the synthetic charts did not:
+
+- **Repeated entries are shown once.** The same medication ordered 15 times is one line: the latest
+  entry, with how many there are and the dates they span. The checks run once per medication too.
+- **Two new checks:** the same medication in several current orders, and the same ingredient in
+  several current medications (acetaminophen in Tylenol and in Tylenol PM), from the RxNorm
+  ingredients saved with the label file. Facts of the record, not a judgment of the doses.
+- **Vital signs:** a threshold matches the record's other words for it (`names`: "Temperature Oral",
+  "Pulse Sitting"); a value in other units is not compared (no conversion); a value outside
+  `plausible` is reported as one a measurement could not be (11.1 °C), and a date after today as a
+  future date.
+- **A problem that shares a word with another** is not checked as that one (`problem_not`: chronic
+  venous hypertension is not hypertension), in both the medication-reason and the treatment checks.
+- **Wording:** no doubled "Allergy to"; a missing date says "date not recorded" instead of "unknown".
+
+The accuracy run (eval/chart_brief_accuracy.py, 200 charts, seed 7) is unchanged after this: 0
+errors in 2,687 cited lines; precision and recall 1.000 for each check.
+
+## Update (2026-11-12): a list read only in part says so
+
+Wilm Smart's sandbox record returned exactly 20 allergies, a different 20 on each run: the limit,
+not the record. A partial allergy or medication list shown as the whole one is the worst thing a
+chart summary can do. Now:
+
+- The FHIR client reads in pages of 50 up to the record type's limit (fhir.yaml; medications and
+  allergies 200, problems 100, at most 250) and reports whether the server holds more (a `next`
+  link left, or a `total` larger than what was read).
+- For the sections that must be whole (`complete:` in chart_brief.yaml: problems, medications,
+  allergies), a cut-off list says under its heading "N shown; the record has more. Check it
+  directly", and the first check says the section is incomplete and the checks may miss entries.
+  Vitals and visits are the latest only and are not warned about.
+- The database source reads these three types without a limit, so it is never cut off.

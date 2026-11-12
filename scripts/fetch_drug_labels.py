@@ -35,16 +35,18 @@ def medications_from_fhir(profile, cfg: dict, patients: list[str]) -> list[tuple
     """(name, RxNorm code) of the current medications of the named patients, read from the FHIR
     server (ADR 013). Patient data stays here: only drug names and codes go to RxNorm and openFDA."""
     from fhir.client import client_from_settings
-    from mcp_servers.medication_review.server import fhir_medications
-    m = profile.fhir_map
-    client = client_from_settings(m.server)
+    from mcp_servers.common.patients import NotFound, Source
+    from mcp_servers.medication_review.server import load_config, medications_of
+    src = Source.open(profile, "fhir", client=client_from_settings(profile.fhir_map.server))
+    review_cfg = load_config(profile)
     out = []
     for p in patients:
-        name, meds = fhir_medications(client, m, m.record(cfg["medications"]), f"medications for {p}")
-        if name is None:
-            print(f"  ? {p}: {meds} found")
+        patient = src.find(f"medications for {p}")
+        if isinstance(patient, NotFound):
+            print(f"  ? {p}: {patient.reply}")
             continue
-        print(f"  ✓ {name}: {len(meds)} current medication(s)")
+        meds = medications_of(src, review_cfg, patient)
+        print(f"  ✓ {patient.name}: {len(meds)} current medication(s)")
         out += [(x["name"], x.get("rxcui")) for x in meds]
     return out
 
@@ -57,7 +59,7 @@ def main() -> None:
     args = ap.parse_args()
     import os
 
-    from scripts.epic_check import load_env  # EPIC_CLIENT_ID etc., as dev.sh does
+    from scripts.fhir_check import load_env  # client IDs and keys from .env, as dev.sh does
     load_env(Path(__file__).resolve().parent.parent / ".env")
     profile = load_profile(args.profile or os.environ.get("PROFILE") or "clinic-assistant")
     cfg_path = profile.path / "medication_review.yaml"

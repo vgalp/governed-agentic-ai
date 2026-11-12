@@ -1,0 +1,37 @@
+# Drug reference (ADR 024): what the FDA label says about a medication, quoted. For clinicians and
+# nurses who want to look a drug up that is not necessarily on a patient's list. The tool's text is
+# the answer (tools.yaml answer: direct): no model rewords the label.
+#
+# Safe by construction:
+#   - It is about drugs, never patients. The tool gets the masked question (no identifiers), and a
+#     question that still names a person ([PERSON_1]) is refused with a pointer to the medication
+#     review, which is the patient-specific tool.
+#   - It quotes only the sections listed here. Dosage and administration is not among them: a dose
+#     is the prescriber's decision, and dose questions keep hitting rules.yaml. An office may add it.
+#   - Decision words ("should we", "can I give") cancel the classifier exemption, so a question that
+#     asks what to do is handled as a decision, not as a lookup.
+#   - Labels come from openFDA (FDA) via RxNorm (NLM): public, free, dated, linked on DailyMed.
+
+store: data/drug_reference.json         # labels fetched on demand are kept here (sections below)
+fetch: on_demand                         # on_demand · never (only what is already in the store)
+max_chars_per_section: 1500              # longer sections are cut with a pointer to DailyMed
+max_drugs_per_question: 2
+
+# Sections that may be quoted, in the order shown, with the words in a question that ask for each.
+# A question that names no section gets `default_sections`.
+sections:
+  indications_and_usage:       {title: Indications and usage,       ask: [indication, indicated, "used for", "use of", "what is", "what's"]}
+  boxed_warning:               {title: Boxed warning,               ask: [boxed, "black box", warning]}
+  contraindications:           {title: Contraindications,           ask: [contraindicat]}
+  warnings_and_cautions:       {title: Warnings and precautions,    ask: [warning, precaution, caution, risk]}
+  warnings:                    {title: Warnings (older label format), ask: [warning, precaution, caution, risk]}
+  drug_interactions:           {title: Drug interactions,           ask: [interact, "together with", "combined with", "along with", "with"]}
+  adverse_reactions:           {title: Adverse reactions,           ask: ["side effect", adverse, reaction]}
+  use_in_specific_populations: {title: Use in specific populations, ask: [pregnan, renal, kidney, hepatic, liver, elderly, geriatric, pediatric, children, breastfeed, lactation, "specific population"]}
+default_sections: [indications_and_usage, boxed_warning, contraindications]
+
+# Words that are never a drug name (saves a lookup; the lookup itself also rejects poor matches).
+not_a_drug: [label, labels, fda, drug, drugs, medication, medications, medicine, medicines, tell, about, what, does,
+             says, say, with, together, interactions, interaction, contraindications, warnings, side, effects, dose,
+             dosage, dosing, reference, look, lookup, information, info, insert, package, prescribing, patient, give,
+             take, taking, should, could, would, between, versus, this, that, there, their, from, have, used, uses]

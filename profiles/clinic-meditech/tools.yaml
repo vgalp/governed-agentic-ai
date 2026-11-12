@@ -1,0 +1,81 @@
+# Tools this profile can use (see clinic-assistant/tools.yaml for what each field means).
+# search_records reads MEDITECH through the FHIR records server; everything else is the same.
+
+search_knowledge:
+  description: Approved clinic policies
+  server: http://127.0.0.1:8100/mcp
+  kind: read
+  data_label: approved_content
+  lane: knowledge
+
+search_records:
+  description: Patient records from MEDITECH (FHIR R4, read-only), built only from the data classes the role may see
+  server: http://127.0.0.1:8104/mcp         # mcp_servers/fhir_records
+  kind: read
+  data_label: patient_record               # never leaves the clinic (routing.never_external_labels)
+  lane: records
+  receives_identifiers: true               # looks patients up by name
+  role_filtered: true
+
+medication_review:
+  description: Medication review (where FDA drug labels mention one of the patient's medications with another)
+  server: http://127.0.0.1:8103/mcp
+  kind: read
+  data_label: patient_record
+  lane: records
+  receives_identifiers: true
+  role_filtered: true
+  when: interaction_review
+  answer: direct
+  timeout: 120
+
+# The patient's current medications as the record lists them (ADR 013, 017): a list question is
+# answered with the record's own lines, cited, and no model, so no AI wording can turn a list into
+# advice. Clinicians and nurses; others get the tool_denied reply.
+medication_list:
+  description: Medication list (the patient's current medications as the record lists them)
+  server: http://127.0.0.1:8103/mcp
+  kind: read
+  data_label: patient_record
+  lane: records
+  receives_identifiers: true
+  role_filtered: true
+  when: record_lookup                      # rules.yaml: "what medications is ... taking", "current medications"
+  answer: direct
+
+# Chart brief (ADR 023): the record's problem list, medications with recorded reasons, allergies, latest
+# vitals and visits, cited line by line, with documentation checks (chart_brief.yaml). No model.
+chart_brief:
+  description: Chart brief (the record's problem list, medications, allergies, vitals and visits, with documentation checks)
+  server: http://127.0.0.1:8106/mcp
+  kind: read
+  data_label: patient_record
+  lane: records
+  receives_identifiers: true
+  role_filtered: true
+  when: chart_brief
+  answer: direct
+  timeout: 120                             # seconds: a sandbox can take long to answer five searches
+
+# Drug reference (ADR 024): what the FDA label says about a medication, quoted (drug_reference.yaml).
+# Drugs only, never a patient. The tool's text is the answer. Clinicians and nurses.
+drug_reference:
+  description: Drug reference (FDA label sections for a named medication, quoted with version date and link)
+  server: http://127.0.0.1:8107/mcp
+  kind: read
+  data_label: approved_content
+  lane: knowledge
+  when: drug_reference
+  answer: direct
+
+web_research:
+  description: Web research (pages from allowed sites, fetched for this question and cited)
+  server: http://127.0.0.1:8105/mcp
+  kind: read
+  data_label: web_page                     # untrusted public text; never personal data
+  lane: knowledge
+  when: web_research                       # rules.yaml: only when asked to search the web
+  keeps: [LOCATION]                        # a place is the question ("rules in Ontario"); people never
+  on_empty: no_web_pages                   # responses.yaml: if no page could be read, say so; no model
+                                           # answers a current-events question from memory
+  timeout: 90                              # seconds: a search plus several pages at 10 s each
