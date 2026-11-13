@@ -24,6 +24,20 @@ server:
 #   scope: system/Patient.read system/MedicationRequest.read system/Medication.read system/Encounter.read system/Condition.read system/AllergyIntolerance.read system/Observation.read
 #   docs: docs/oracle-health/README.md
 
+
+# Launched from inside Oracle Health (PowerChart), as the clinician, on the open chart (ADR 035).
+# Register a provider app in Oracle Health's code console (SMART launch, user scopes below), with
+# launch URL http://localhost:8000/smart/launch and the redirect URI below, then launch it from the
+# console's SMART app launcher against the secure sandbox. Unused until ORACLE_LAUNCH_CLIENT_ID is set.
+launch:
+  client_id_env: ORACLE_LAUNCH_CLIENT_ID
+  # client_secret_ref: env:ORACLE_LAUNCH_CLIENT_SECRET    # a confidential app; or a vault reference
+  redirect_uri: http://localhost:8000/smart/callback      # https in any real deployment
+  scope: launch openid fhirUser user/Patient.read user/MedicationRequest.read user/Medication.read user/Encounter.read user/Condition.read user/AllergyIntolerance.read user/Observation.read
+  issuers: [https://fhir-ehr-code.cerner.com/r4/ec2458f2-1e24-41c8-b71b-0e701af7583d]   # the secure sandbox
+  roles: {Practitioner: clinician}
+  session_minutes: 480
+
 subject:
   noun: patient
   resource: Patient

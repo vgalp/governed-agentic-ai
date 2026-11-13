@@ -99,6 +99,7 @@ class FhirMap:
     max_results: int
     status: str | None
     identifier: dict | None = None     # {param, system, label}: look a patient up by record number (MRN)
+    launch: dict | None = None         # SMART launch from the EHR (ADR 035): client, scope, issuers, roles
 
     def data_classes(self) -> set[str]:
         out = {self.subject_class}
@@ -210,6 +211,48 @@ def _source_id(raw, where: str) -> SourceId:
     return SourceId(prefix, keep)
 
 
+def _launch(raw, server: dict, where: str) -> dict | None:
+    """The `launch:` block: launching from inside the EHR with the clinician's own session (ADR 035)."""
+    if raw is None:
+        return None
+    w = f"{where}: launch"
+    if not isinstance(raw, dict):
+        raise FhirMappingError(f"{w}: must be a mapping")
+    for k in ("client_id_env", "redirect_uri", "scope", "roles"):
+        _req(raw, k, w)
+    for k in ("client_secret", "private_key", "client_id"):
+        if k in raw:
+            raise FhirMappingError(f"{w}: name the secret ({k}_ref or {k}_env), never its value")
+    _refs(raw, w)
+    if not re.match(r"^https://\S+$|^http://(localhost|127\.0\.0\.1)(:\d+)?/\S*$", raw["redirect_uri"]):
+        raise FhirMappingError(f"{w}: redirect_uri must be https (http only on localhost, for development)")
+    scope = str(raw["scope"]).split()
+    if "launch" not in scope or not {"openid", "fhirUser"} <= set(scope):
+        raise FhirMappingError(f"{w}: scope needs launch, openid and fhirUser (the patient from the chart, "
+                               "and who signed in)")
+    if any(x.startswith(("system/", "patient/")) for x in scope) or \
+            any(x.endswith((".write", ".*", ".cud", ".c", ".u", ".d")) for x in scope):
+        raise FhirMappingError(f"{w}: scope must be the user's own read scopes (user/<Type>.read or .rs), no "
+                               "write and no system access")
+    roles = raw["roles"]
+    if not isinstance(roles, dict) or not roles or not all(isinstance(v, str) for v in roles.values()):
+        raise FhirMappingError(f"{w}: roles maps the EHR's user types to roles, e.g. {{Practitioner: clinician}}")
+    issuers = raw.get("issuers") or [server["base_url"]]
+    if not isinstance(issuers, list) or not all(isinstance(i, str) and i.startswith("https://") for i in issuers):
+        raise FhirMappingError(f"{w}: issuers lists the EHR FHIR addresses (https) launches are accepted from")
+    return {**raw, "issuers": issuers}
+
+
+def _refs(block: dict, w: str) -> None:
+    from fhir.secrets import SecretError, check_ref
+    for k, v in block.items():
+        if k.endswith("_ref"):
+            try:
+                check_ref(str(v))
+            except SecretError as e:
+                raise FhirMappingError(f"{w}: {k}: {e}") from None
+
+
 def parse(raw: dict, where: str, known_classes: set[str]) -> FhirMap:
     if not isinstance(raw, dict):
         raise FhirMappingError(f"{where}: must be a mapping")
@@ -224,14 +267,15 @@ def parse(raw: dict, where: str, known_classes: set[str]) -> FhirMap:
         if k in server:
             raise FhirMappingError(f"{where}: server: put {k} in .env and name the variable "
                                    f"({k}_env), never the value in this file")
+    _refs(server, f"{where}: server")
     if auth == "smart_backend":
         for k in ("token_url", "client_id_env"):
             _req(server, k, f"{where}: server (smart_backend)")
-        if server.get("private_key_env"):
+        if server.get("private_key_env") or server.get("private_key_ref"):
             _req(server, "key_id", f"{where}: server (smart_backend)")
-        elif not server.get("client_secret_env"):
-            raise FhirMappingError(f"{where}: server (smart_backend) needs private_key_env (a signed assertion) "
-                                   "or client_secret_env")
+        elif not (server.get("client_secret_env") or server.get("client_secret_ref")):
+            raise FhirMappingError(f"{where}: server (smart_backend) needs a private key (private_key_ref or "
+                                   "private_key_env) or a client secret (client_secret_ref or client_secret_env)")
     if auth == "smart_user":
         for k in ("token_url", "client_id_env", "token_store"):
             _req(server, k, f"{where}: server (smart_user)")
@@ -291,7 +335,7 @@ def parse(raw: dict, where: str, known_classes: set[str]) -> FhirMap:
         raise FhirMappingError(f"{w}: identifier needs param (the search parameter, usually identifier)")
     m = FhirMap(server, str(s.get("noun", "patient")), resource, ns, s_class, s_title, s_text,
                 _source_id(rec.get("source_id"), f"{w}: record"), tuple(records),
-                int(raw.get("max_results", 20)), raw.get("status"), ident)
+                int(raw.get("max_results", 20)), raw.get("status"), ident, _launch(raw.get("launch"), server, where))
     unknown = sorted(m.data_classes() - known_classes)
     if unknown:
         raise FhirMappingError(f"{where}: data class(es) not in roles.yaml: {', '.join(unknown)}")

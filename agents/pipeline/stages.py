@@ -361,6 +361,7 @@ def call_tools(rt: Runtime, r: Request) -> Outcome | None:
                 audit_args={"query": r.masked_message} if (receives_ids or spec.keeps) else None,
                 role=r.role,
                 on_progress=lambda m, lane=lane, tool=tool: t.step(lane, tool, "info", m, progress=True),
+                **({"launch": r.raw["launch"]} if r.raw.get("launch") else {}),
             )
         except ToolCallDenied:
             t.step(

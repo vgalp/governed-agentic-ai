@@ -12,7 +12,7 @@ from typing import Literal
 
 from confluent_kafka import Consumer
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
+from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse, RedirectResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
 from agents import actions
@@ -275,6 +275,108 @@ def evaluations():
                          "current": d["config"] == tu.config_id(profiles)}}
 
 
+# --- launched from the EHR (ADR 035) ----------------------------------------------------------------
+# The EHR opens /smart/launch from a patient's chart; /smart/callback receives the clinician's token
+# and keeps it server-side, encrypted; the browser gets only a random session ID in a cookie.
+LAUNCH_COOKIE = "gaai_launch"
+STATE_COOKIE = "gaai_launch_state"       # ties a sign-in to the browser that started it (login CSRF)
+LAUNCHER = None
+
+
+def _cookie(resp, request: Request, name: str, value: str, max_age: int) -> None:
+    secure = request.url.scheme == "https"
+    # Inside an EHR the app is often in a frame: a cross-site cookie needs SameSite=None, which needs https.
+    resp.set_cookie(name, value, max_age=max_age, httponly=True, secure=secure,
+                    samesite="none" if secure else "lax", path="/")
+
+
+def _launcher():
+    global LAUNCHER
+    if LAUNCHER is None and PROFILE.fhir_map is not None and PROFILE.fhir_map.launch:
+        from fhir.sessions import default_store
+        from fhir.smart_launch import Launcher, settings_from
+        settings = settings_from(PROFILE.fhir_map.launch)
+        unknown = sorted(set(settings.roles.values()) - set(PROFILE.roles))
+        if unknown:
+            raise RuntimeError(f"fhir.yaml launch.roles names roles not in roles.yaml: {', '.join(unknown)}")
+        LAUNCHER = Launcher(settings, default_store(PROFILE.name))
+    return LAUNCHER
+
+
+def launched(request: Request):
+    """The live session launched from the EHR for this browser, or None."""
+    sid = request.cookies.get(LAUNCH_COOKIE)
+    if not sid:
+        return None
+    try:
+        launcher = _launcher()
+    except Exception:  # noqa: BLE001  not configured: no launched sessions
+        return None
+    return launcher.session(sid) if launcher else None
+
+
+@app.get("/smart/launch", include_in_schema=False)
+def smart_launch(request: Request, iss: str = "", launch: str = ""):
+    """Step 1: the EHR opens this from a patient's chart."""
+    from fhir.client import FhirError
+    from fhir.smart_launch import PENDING_SECONDS
+    try:
+        launcher = _launcher()
+        if launcher is None:
+            return PlainTextResponse("This assistant is not set up to be launched from an EHR.", status_code=404)
+        resp = RedirectResponse(launcher.start(iss, launch), status_code=302)
+        _cookie(resp, request, STATE_COOKIE, launcher.last_state, PENDING_SECONDS)
+        return resp
+    except (FhirError, RuntimeError) as e:
+        log.warning("EHR launch refused: %s", e)
+        return PlainTextResponse(f"The assistant could not be launched: {e}", status_code=400)
+
+
+@app.get("/smart/callback", include_in_schema=False)
+def smart_callback(request: Request, code: str = "", state: str = "", error: str = ""):
+    """Step 2: the EHR sends the browser back with a code; the session is made and kept server-side."""
+    from fhir.client import FhirError
+    try:
+        launcher = _launcher()
+        if launcher is None:
+            return PlainTextResponse("This assistant is not set up to be launched from an EHR.", status_code=404)
+        session = launcher.finish(code, state, error or None, request.cookies.get(STATE_COOKIE, ""))
+    except (FhirError, RuntimeError) as e:
+        log.warning("EHR sign-in refused: %s", e)
+        return PlainTextResponse(f"Sign-in from the EHR did not complete: {e}", status_code=400)
+    log.info("Launched from the EHR: role %s, session until %s", session.role,
+             datetime.fromtimestamp(session.ends_at).isoformat(timespec="minutes"))
+    resp = RedirectResponse("/?launched=1", status_code=302)
+    _cookie(resp, request, LAUNCH_COOKIE, session.id, int(session.ends_at - session.created))
+    resp.delete_cookie(STATE_COOKIE, path="/")
+    return resp
+
+
+@app.get("/smart/session")
+def smart_session(request: Request):
+    """Who launched this page and on which chart, for the page's banner. No token is ever sent."""
+    s = launched(request)
+    if s is None:
+        return {"launched": False}
+    return {"launched": True, "user": s.user, "name": s.name, "role": s.role,
+            "role_title": PROFILE.roles[s.role].title if s.role in PROFILE.roles else s.role,
+            "patient": s.patient, "ehr": s.iss, "until": datetime.fromtimestamp(s.ends_at).isoformat(timespec="minutes")}
+
+
+@app.post("/smart/end")
+def smart_end(request: Request):
+    launcher = None
+    try:
+        launcher = _launcher()
+    except Exception:  # noqa: BLE001
+        pass
+    if launcher:
+        launcher.end(request.cookies.get(LAUNCH_COOKIE))
+    resp = JSONResponse({"launched": False})
+    resp.delete_cookie(LAUNCH_COOKIE, path="/")
+    return resp
+
+
 @app.get("/profile")
 def profile_info():
     """What the chat page needs: the active profile, its roles and example questions."""
@@ -323,13 +425,16 @@ def health():
     return JSONResponse(body, status_code=code)
 
 
-def submit(user_id: str, message: str, role: str | None, history: list[dict], web: bool | None = None) -> str:
+def submit(user_id: str, message: str, role: str | None, history: list[dict], web: bool | None = None,
+           launch: str | None = None) -> str:
     """Put a message on the pipeline. Every entry point (/chat, /v1/chat/completions) goes through here."""
     request_id = str(uuid.uuid4())
     event = {"request_id": request_id, "user_id": user_id, "message": message, "role": role,
              "profile": PROFILE.name, "history": history}
     if web is not None:
         event["web"] = web
+    if launch:
+        event["launch"] = launch      # the session's reference (its SHA-256), never the cookie itself
     if not producer.send("chat.requests", key=request_id, value=json.dumps(event)):
         # Never hand out a request ID that nothing will answer (audit OC-2).
         raise HTTPException(503, "The pipeline did not confirm your message (Kafka unavailable). Please try again.")
@@ -338,9 +443,16 @@ def submit(user_id: str, message: str, role: str | None, history: list[dict], we
 
 @app.post("/chat")
 def send_chat(req: ChatRequest, request: Request):
-    c = who(request, req.user_id, req.role)
+    s = launched(request)
+    if s is not None:
+        # Launched from the EHR (ADR 035): who is asking and in which role come from the EHR's sign-in,
+        # whatever the body says; the record tools read with this clinician's token, on this chart.
+        c = Caller(s.user[:200], s.name, s.role)
+        launch = LAUNCHER.store.ref(s.id)
+    else:
+        c, launch = who(request, req.user_id, req.role), None
     limit(request, c)
-    request_id = submit(c.user_id, req.message, c.role, [t.model_dump() for t in req.history], req.web)
+    request_id = submit(c.user_id, req.message, c.role, [t.model_dump() for t in req.history], req.web, launch)
     if SIGN_IN.on:
         owners[request_id] = c.user_id
     return {"request_id": request_id}

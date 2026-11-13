@@ -66,7 +66,7 @@ from gateway.transport import open_mcp
 from guardrails.check import check_text
 from profiles.loader import Profile, load_profile
 
-HIDDEN_PARAMS = ("tenant_id", "allowed_classes")   # set by the gateway, never by a caller
+HIDDEN_PARAMS = ("tenant_id", "allowed_classes", "launch_ref")   # set by the gateway, never by a caller
 MAX_MESSAGE = 4000                                  # characters in one question sent to /check
 CHAT_ID = re.compile(r"^chat-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
 CHAT_SECONDS = 600                                  # a governed chat request must finish within this

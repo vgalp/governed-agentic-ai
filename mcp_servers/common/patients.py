@@ -109,6 +109,9 @@ class Source:
         if patient is None:
             if why == "birthdate":
                 return NotFound("birthdate", NEED_BIRTHDATE)
+            if why == "other patient":
+                from mcp_servers.fhir_records.server import OTHER_PATIENT
+                return NotFound("other", OTHER_PATIENT)
             key = "several" if why == "more than one" else "none"
             return NotFound(key, NOT_FOUND[key])
         name = human_name(patient)

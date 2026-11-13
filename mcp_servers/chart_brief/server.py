@@ -561,11 +561,19 @@ if __name__ == "__main__":
     mcp = FastMCP("chart_brief", host="127.0.0.1", port=8106)
 
     @mcp.tool()
-    def chart_brief(query: str, allowed_classes: list[str]) -> dict:
+    def chart_brief(query: str, allowed_classes: list[str], launch_ref: str | None = None) -> dict:
         """For the patient named in the question: the record's problem list, current medications
         with recorded reasons, allergies, latest vitals and recent visits, cited line by line, with
         documentation checks. For a clinician's or nurse's review; no model, no recommendation."""
-        return brief(PROFILE.records_db, PROFILE, CONFIG, query, allowed_classes, CLIENT)
+        client = CLIENT
+        if launch_ref and PROFILE.fhir_map is not None and PROFILE.fhir_map.launch:   # from the gateway only
+            from fhir.client import FhirError
+            from fhir.smart_launch import launch_client
+            try:
+                client = launch_client(PROFILE.fhir_map, launch_ref, PROFILE.name)
+            except FhirError as e:
+                return {"results": [], "answer": str(e)}
+        return brief(PROFILE.records_db, PROFILE, CONFIG, query, allowed_classes, client)
 
     if CONFIG is None:
         print(f"Chart brief for profile {PROFILE.name}: not set up (no chart_brief.yaml)")

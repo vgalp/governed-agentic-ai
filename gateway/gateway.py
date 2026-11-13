@@ -115,7 +115,7 @@ async def _call_once(server_url: str, tool: str, args: dict, on_progress, limit:
 def call_tool(agent: str, tool: str, args: dict, request_id: str,
               profile: Profile | None = None, audit_args: dict | None = None,
               role: str | None = None, tenant: str | None = None,
-              client: str | None = None, on_progress=None) -> dict:
+              client: str | None = None, on_progress=None, launch: str | None = None) -> dict:
     """Call a tool if policy allows it. audit_args is what the audit records instead of
     args, for tools that receive real identifiers: the audit only ever holds masked text.
     on_progress(message) receives the tool's own progress messages while it runs.
@@ -157,6 +157,12 @@ def call_tool(agent: str, tool: str, args: dict, request_id: str,
     if filtered:
         args = {**args, "allowed_classes": classes}
         event["args"]["allowed_classes"] = classes
+    args.pop("launch_ref", None)                   # only ever from the launched session, never from a caller
+    if launch and filtered:
+        # Launched from the EHR (ADR 035): the record tools read as that clinician, on that chart. The
+        # audit notes it; the reference itself is not written (it finds the encrypted session).
+        args = {**args, "launch_ref": launch}
+        event["launched"] = True
     try:
         result = asyncio.run(_call(profile.tools[tool].server, tool, args, on_progress,
                                  profile.tools[tool].timeout))

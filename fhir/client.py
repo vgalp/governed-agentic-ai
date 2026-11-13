@@ -221,6 +221,14 @@ def _brief(r) -> str:
     return str({k: body[k] for k in ("error", "error_description") if k in body})[:300]
 
 
+def _secret(ref: str, environ) -> str:
+    from fhir.secrets import SecretError, get
+    try:
+        return get(ref, environ)
+    except SecretError as e:
+        raise FhirError(str(e)) from None
+
+
 def _need(server: dict, environ, keys: tuple[str, ...], docs: str) -> None:
     missing = [server[k] for k in keys if server.get(k) and not environ.get(server[k])]
     if missing:
@@ -234,11 +242,15 @@ def client_from_settings(server: dict, environ=os.environ, session=None) -> Fhir
     if kind == "smart_backend":
         _need(server, environ, ("client_id_env", "private_key_env", "client_secret_env"), docs)
         pem, secret = b"", None
-        if server.get("private_key_env"):
+        if server.get("private_key_ref"):                 # a vault, or a file (fhir/secrets.py)
+            pem = _secret(server["private_key_ref"], environ).encode()
+        elif server.get("private_key_env"):
             key = Path(environ[server["private_key_env"]]).expanduser()
             if not key.exists():
                 raise FhirError(f"private key not found: {key}")
             pem = key.read_bytes()
+        elif server.get("client_secret_ref"):
+            secret = _secret(server["client_secret_ref"], environ)
         else:
             secret = environ[server["client_secret_env"]]
         auth = SmartBackendAuth(SmartBackendSettings(server["token_url"], environ[server["client_id_env"]], pem,
@@ -249,6 +261,7 @@ def client_from_settings(server: dict, environ=os.environ, session=None) -> Fhir
         _need(server, environ, ("client_id_env", "client_secret_env"), docs)
         settings = SmartUserSettings(
             server["token_url"], environ[server["client_id_env"]],
+            _secret(server["client_secret_ref"], environ) if server.get("client_secret_ref") else
             environ.get(server["client_secret_env"]) if server.get("client_secret_env") else None,
             server["token_store"], **{k: server[k] for k in ("redirect_uri", "scope", "authorize_url") if server.get(k)})
         auth = SmartUserAuth(settings, session=session, connect_hint=server.get("connect_hint", ""))

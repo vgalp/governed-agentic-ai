@@ -12,6 +12,20 @@ server:
   private_key_env: EPIC_PRIVATE_KEY_PATH   # path to privatekey.pem, in .env; never in the repo
   key_id: gaai-sandbox-1                   # the kid in the published JWK Set (docs/epic/jwks.json)
 
+
+# Launched from inside Epic, as the clinician, on the open chart (ADR 035). Register a second app at
+# fhir.epic.com for this (audience: clinicians; SMART on FHIR; the R4 read APIs this file uses), with
+# launch URL http://localhost:8000/smart/launch and redirect URI below. Unused until
+# EPIC_LAUNCH_CLIENT_ID is set; the backend sign-in above keeps working either way.
+launch:
+  client_id_env: EPIC_LAUNCH_CLIENT_ID
+  # client_secret_ref: env:EPIC_LAUNCH_CLIENT_SECRET      # a confidential app; or a vault:
+  # client_secret_ref: azure-keyvault:https://<vault>.vault.azure.net/secrets/epic-launch-secret
+  redirect_uri: http://localhost:8000/smart/callback      # https in any real deployment
+  scope: launch openid fhirUser user/Patient.read user/MedicationRequest.read user/Medication.read user/Encounter.read user/Condition.read user/AllergyIntolerance.read user/Observation.read
+  roles: {Practitioner: clinician}                        # who the EHR says signed in -> role here
+  session_minutes: 480
+
 subject:
   noun: patient
   resource: Patient

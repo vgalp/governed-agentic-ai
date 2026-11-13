@@ -800,7 +800,10 @@ async function ask(text, asRole) {
 
 const NOTE = "Your role decides what you may see. In a real deployment it comes from your sign-in.";
 let noteTimer = null;
+let launchedFromEhr = null;              // set when the page was opened from a patient's chart (ADR 035)
+
 function setRole(k, why) {
+  if (launchedFromEhr) k = launchedFromEhr.role;   // the EHR's sign-in decides the role, not the page
   const changed = role && role !== k;
   role = k;
   if ($("roleSel")) $("roleSel").value = k;
@@ -832,6 +835,19 @@ fetch("/profile").then(r => r.json()).then(p => {
   } else {
     $("whoRow").remove();
   }
+  fetch("/smart/session").then(r => r.json()).then(s => {
+    if (!s.launched) return;
+    launchedFromEhr = s;
+    setRole(s.role);
+    const row = $("whoRow");
+    row.replaceChildren();
+    row.append(el("span", "", "Opened from the EHR as "), el("strong", "", s.name),
+               el("span", "", ` (${s.role_title}), on the patient's chart. The record system shows this access under your name.`));
+    const end = el("button", "more", "End session");
+    end.type = "button";
+    end.onclick = () => fetch("/smart/end", {method: "POST"}).then(() => location.replace("/"));
+    row.append(end);
+  }).catch(() => {});
   const list = SCENARIOS[p.name] || p.examples.map(t => ({title: t, hint: "", role: null, text: t}));
   list.forEach((s, i) => {
     const b = el("button", "scn" + (i >= MAIN_EXAMPLES ? " extra" : ""));

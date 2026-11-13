@@ -348,17 +348,32 @@ if __name__ == "__main__":
             print(f"Medication review: the FHIR server is not set up yet ({e})")
     mcp = FastMCP("medication_review", host="127.0.0.1", port=8103)
 
+    def _client(launch_ref):
+        """The clinician's own client when launched from the chart (the gateway sets launch_ref)."""
+        if launch_ref and PROFILE.fhir_map is not None and PROFILE.fhir_map.launch:
+            from fhir.smart_launch import launch_client
+            return launch_client(PROFILE.fhir_map, launch_ref, PROFILE.name)
+        return CLIENT
+
     @mcp.tool()
-    def medication_review(query: str, allowed_classes: list[str]) -> dict:
+    def medication_review(query: str, allowed_classes: list[str], launch_ref: str | None = None) -> dict:
         """For the patient named in the question: their current medications, and where the FDA
         labels mention one of them with another, quoted with the source. For a clinician's review."""
-        return review(PROFILE.records_db, PROFILE, CONFIG, query, allowed_classes, CLIENT)
+        try:
+            client = _client(launch_ref)
+        except FhirError as e:
+            return {"results": [], "answer": str(e)}
+        return review(PROFILE.records_db, PROFILE, CONFIG, query, allowed_classes, client)
 
     @mcp.tool(name="medication_list")
-    def medication_list_tool(query: str, allowed_classes: list[str]) -> dict:
+    def medication_list_tool(query: str, allowed_classes: list[str], launch_ref: str | None = None) -> dict:
         """For the patient named in the question: their current medications exactly as the record
         lists them, with source IDs. No model, no recommendation."""
-        return medication_list(PROFILE.records_db, PROFILE, CONFIG, query, allowed_classes, CLIENT)
+        try:
+            client = _client(launch_ref)
+        except FhirError as e:
+            return {"results": [], "answer": str(e)}
+        return medication_list(PROFILE.records_db, PROFILE, CONFIG, query, allowed_classes, client)
 
     if CONFIG is None:
         print(f"Medication review for profile {PROFILE.name}: not set up (no medication_review.yaml)")

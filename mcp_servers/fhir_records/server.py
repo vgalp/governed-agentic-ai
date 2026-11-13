@@ -18,6 +18,7 @@ import re
 from mcp.server.fastmcp import FastMCP
 
 from fhir.client import FhirClient, FhirError, client_from_settings
+from fhir.smart_launch import launch_client
 from mcp_servers.common.serve import serve
 from profiles.fhir_map import FhirMap, RecordType, human_name, render
 from profiles.loader import load_profile
@@ -72,6 +73,8 @@ def birthdates_in(query: str) -> list[str]:
     return list(dict.fromkeys(dates))
 
 
+OTHER_PATIENT = ("This conversation is for the patient whose chart you opened. To look at another patient, "
+                 "open their chart and launch the assistant from there.")
 NEED_BIRTHDATE = ("The record system finds a patient by full name and date of birth (two identifiers). "
                   "Please ask again with both, for example: Camila Lopez, born 1987-09-12.")
 
@@ -81,12 +84,20 @@ MRN_RE = re.compile(r"\b(?:MRN|medical record (?:number|no\.?)|record (?:number|
 
 
 def find_patient(client: FhirClient, m: FhirMap, query: str) -> tuple[dict | None, str | None]:
-    """(the patient resource, None) or (None, why not: 'none', 'more than one' or 'birthdate')."""
+    """(the patient resource, None) or (None, why not: 'none', 'more than one', 'birthdate' or
+    'other patient')."""
+    auth = getattr(client, "auth", None)
+    if getattr(auth, "from_chart", False):
+        # Launched from the patient's chart (ADR 035): that patient, no name needed. A birth date in
+        # the question that is not this patient's means another patient: refused, never searched.
+        res = client.read(m.resource, auth.patient)
+        named = birthdates_in(query)
+        return (None, "other patient") if named and res.get("birthDate") not in named else (res, None)
     found = {}
     dates = birthdates_in(query) if m.needs_birthdate else [None]
     if not dates:
         return None, "birthdate"
-    pinned = getattr(getattr(client, "auth", None), "patient", None)
+    pinned = getattr(auth, "patient", None)
     if pinned:                     # a sign-in for one patient (smart_user): read it, never search
         res = client.read(m.resource, pinned)
         return (res, None) if _is_named(res, query, dates) else (None, "none")
@@ -147,6 +158,7 @@ def search(client: FhirClient | None, m: FhirMap | None, query: str, allowed_cla
         patient, why = find_patient(client, m, query)
         if patient is None:
             note = {"more than one": f"more than one {m.noun} matches; use the full name",
+                    "other patient": OTHER_PATIENT,
                     "birthdate": NEED_BIRTHDATE}.get(why, f"no {m.noun} found by that name"
                                                      + (" and date of birth" if m.needs_birthdate else ""))
             return {"results": [], "note": note}
@@ -189,10 +201,15 @@ if __name__ == "__main__":
     mcp = FastMCP("fhir_records", host="127.0.0.1", port=8104)
 
     @mcp.tool()
-    def search_records(query: str, allowed_classes: list[str]) -> dict:
+    def search_records(query: str, allowed_classes: list[str], launch_ref: str | None = None) -> dict:
         """Find the patient named in the question and return the records the caller's role may see
         (allowed_classes), from the FHIR server, with source IDs."""
         global CLIENT
+        if launch_ref and MAP is not None and MAP.launch:   # set by the gateway, never by a caller
+            try:
+                return search(launch_client(MAP, launch_ref, PROFILE.name), MAP, query, allowed_classes)
+            except FhirError as e:
+                return {"results": [], "note": str(e)}
         if CLIENT is None and MAP is not None:
             try:
                 CLIENT = client_from_settings(MAP.server)
