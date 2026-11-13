@@ -10,6 +10,7 @@
     ./gaai check PROFILE [--patient "Wilm Smart 1990-09-15"]
     ./gaai ask --role clinician "What is our cancellation policy?"     through the governed pipeline
     ./gaai chat "is everything running?"    one question to the local assistant (Qwen via Ollama)
+    ./gaai new                              build a new office profile from a few questions
 
 Exit status: 0 when what was asked for is fine (status: every service running; audit: intact).
 """
@@ -48,6 +49,7 @@ def main(argv: list[str] | None = None) -> int:
     k.add_argument("question")
     k.add_argument("--role", required=True)
     k.add_argument("--json", action="store_true")
+    sub.add_parser("new", help="build a new office profile from a few questions")
     ch = sub.add_parser("chat", help="one question to the local assistant")
     ch.add_argument("question")
     ch.add_argument("--model")

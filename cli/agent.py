@@ -41,6 +41,7 @@ Rules:
   pipeline proposes (e.g. an appointment update); they have nothing to do with starting or switching the platform.
 - You cannot read patient records or send questions through the assistant pipeline, and you cannot approve
   pending changes: point the operator to the web page (http://localhost:8000) for those.
+- To create a profile for a new office, tell the operator to type /new: it asks a few questions and builds one.
 - Answer in short plain sentences. Name services, profiles and commands exactly. If something failed, quote the
   relevant log line and say what to try next.
 /no_think"""

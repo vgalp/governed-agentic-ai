@@ -30,6 +30,7 @@ COMMANDS = {
     "/approvals": "changes waiting for an approver",
     "/ask": "send a question through the governed pipeline (/ask clinician What is our cancellation policy?)",
     "/check": "check a profile's record system (/check clinic-oracle [Wilm Smart 1990-09-15])",
+    "/new": "build a new office profile from a few questions (Qwen drafts; tested before it is saved)",
     "/model": "show or change the assistant's model (/model qwen3:8b)",
     "/clear": "forget the conversation with the assistant",
     "/quit": "leave (or Ctrl-D)",
@@ -243,6 +244,59 @@ class Shell:
         with ui.spinner(f"checking {args[0]}'s record system"):
             res = pf.fhir_check(args[0], " ".join(args[1:]) or None)
         self.write(res["output"].rstrip())
+
+    def cmd_new(self, args):
+        from cli import builder as b
+        self.write(ui.panel("new office profile", [
+            "A few questions about the office. The local model drafts the rest from your answers.",
+            "The profile keeps the platform's safety baseline and is tested before it is saved.",
+            "Ctrl-C stops without saving."]))
+        try:
+            answers = b.Interview(ask=self.read, say=self.write).run()
+        except (KeyboardInterrupt, EOFError):
+            self.write(ui.style("  stopped; nothing was saved", "grey"))
+            return
+        ok, what = self.agent.available()
+        drafter = b.Drafter(self.agent.model, self.agent.host, self.agent.http) if ok else None
+        if not drafter:
+            self.write(f"  {ui.mark('warn')} {what}: using your answers as they are")
+        notes = []
+        with ui.spinner(f"drafting with {self.agent.model}" if drafter else "building"):
+            b.draft(answers, drafter, notes.append)
+        for n in notes:
+            self.write(ui.style(f"  ⎿ {n}", "grey"))
+        for _ in range(4):
+            path = b.generate(answers)
+            passed, lines = b.check(path, answers)
+            self.write(ui.panel(f"{answers.name}: checks", [f"{ui.mark('ok' if good else 'bad')} {t}" for good, t in lines]))
+            missed = [d for d in answers.decisions for t in (d.tests or d.phrases[:2])
+                      if any(not good and t in line for good, line in lines)]
+            if passed or not missed or "loader refuses" in lines[0][1]:
+                break
+            d = missed[0]
+            self.write(f"  {ui.mark('warn')} Not every request for \"{d.what}\" was refused.")
+            more = b.Interview(self.read, self.write).lines("   Add phrases that appear in those questions")
+            if not more:
+                break
+            d.phrases = list(dict.fromkeys([*d.phrases, *more]))
+        if "loader refuses" in lines[0][1]:
+            self.write(ui.style("  not saved: the platform would not load it", "grey"))
+            return
+        self.write(ui.panel(answers.name, [
+            f"{answers.title} · for {answers.audience}" + (" · web search" if answers.web else ""),
+            *(f"never decides: {d.what} → {d.who} ({len(d.phrases)} phrases)" for d in answers.decisions),
+            f"{len(answers.knowledge)} approved notes · {len(answers.examples)} example questions",
+            "baseline kept: crisis, warning signs, abuse, medication, diagnosis, legal, financial"]))
+        prompt = (f"  Save it to profiles/{answers.name}? [y/N] " if passed else
+                  f"  {ui.style('Some checks failed.', 'amber')} Type save to keep it anyway, anything else to stop: ")
+        with ui.paused():
+            reply = self.read(prompt).strip().lower()
+        if reply not in (("y", "yes") if passed else ("save",)):
+            self.write(ui.style("  not saved", "grey"))
+            return
+        target = b.save(path, answers.name)
+        self.write(f"  {ui.mark('ok')} saved to profiles/{target.name}. Review its files (the notes and replies are "
+                   f"drafts), then {ui.style('/use ' + target.name, 'cyan')} to run it.")
 
     def cmd_model(self, args):
         if args:

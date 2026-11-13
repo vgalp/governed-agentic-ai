@@ -225,6 +225,7 @@ PROFILE=clinic-meditech ./scripts/dev.sh start   # the clinic on MEDITECH Greenf
 ./gaai                                   # the operator console: status, commands, and a local assistant
 ./gaai status                            # exit 0 when every service runs
 ./gaai ask --role clinician "What is our cancellation policy?"
+./gaai new                               # a new office profile from a few questions, tested before it is saved
 ```
 
 The console's assistant is a Qwen model on this computer (Ollama). It reads the platform's state,
