@@ -219,6 +219,18 @@ PROFILE=clinic-oracle ./scripts/dev.sh start     # the clinic on Oracle Health's
 PROFILE=clinic-meditech ./scripts/dev.sh start   # the clinic on MEDITECH Greenfield (docs/meditech/README.md)
 ```
 
+### The command line
+
+```bash
+./gaai                                   # the operator console: status, commands, and a local assistant
+./gaai status                            # exit 0 when every service runs
+./gaai ask --role clinician "What is our cancellation policy?"
+```
+
+The console's assistant is a Qwen model on this computer (Ollama). It reads the platform's state,
+logs and audit result, never patient records, and every start, stop or profile switch waits for
+your yes. See docs/cli/README.md and ADR 033.
+
 This project integrates with Epic, Oracle Health and MEDITECH through their public FHIR APIs, tested in their developer sandboxes. It is not a partner of these companies and is not certified or endorsed by them.
 
 Each profile also says which models it may use and when. OPA (`policies/routing.rego`) decides per request whether the local or an external model answers, from facts only (the kinds of personal information found, never the values). External models only ever receive masked text, a profile can forbid them entirely, and every decision is audited. The ADHD profile is local only. See [ADR 004](docs/decisions/004-model-routing.md).

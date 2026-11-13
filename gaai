@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# gaai: the platform's command line and operator console (ADR 033). ./gaai --help
+cd "$(dirname "$0")" || exit 1
+[ -f .env ] && set -a && . ./.env && set +a
+exec "${PY:-.venv/bin/python}" -m cli "$@"
