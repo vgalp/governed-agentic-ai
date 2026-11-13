@@ -17,8 +17,9 @@ sections:
 
 # Sections that must be whole. A list read only in part (the record holds more than fhir.yaml's
 # limit) says so under its heading and as the first check, so a partial allergy or medication list
-# is never shown as the whole one. Vitals and visits are the latest only, so they are not listed.
-complete: [problems, medications, allergies]
+# is never shown as the whole one. For vitals and visits (read newest first, fhir.yaml) a cut-off read
+# says the latest may be missing.
+complete: [problems, medications, allergies, vitals, visits]
 
 # The structured fields the checks read: FHIR paths (a,b takes the first with a value).
 # Vitals with components (blood pressure) are split into one row per component by the server.

@@ -515,3 +515,121 @@ def test_a_cut_off_allergy_list_is_said_so_in_place_and_as_the_first_check(monke
 
 def test_check_lines_name_medications_as_the_list_does(oracle_brief):
     assert "No reason recorded for Acetaminophen (Tylenol" in oracle_brief
+
+
+# --- production hardening: order, waiting, signing in again, record numbers ---------------------------------
+
+class Scripted:
+    """Answers GETs from a list of (status, body, headers)."""
+
+    def __init__(self, answers):
+        self.answers, self.calls = list(answers), []
+
+    def get(self, url, params=None, headers=None, timeout=None):
+        self.calls.append(dict(headers or {}))
+        status, body, h = self.answers.pop(0)
+        r = Response(status, body)
+        r.headers = h
+        return r
+
+
+def test_a_busy_server_is_waited_for_as_it_asks_then_read():
+    waits = []
+    s = Scripted([(429, {}, {"Retry-After": "3"}), (503, {}, {}),
+                  (200, {"resourceType": "CapabilityStatement"}, {})])
+    c = FhirClient("https://fhir.example.test/r4", None, s, sleep=waits.append)
+    assert c.capability()["resourceType"] == "CapabilityStatement"
+    assert waits == [3.0, 2.0]                        # its Retry-After, then 2 s
+
+
+def test_a_long_retry_after_is_not_waited_for_and_three_busy_answers_fail():
+    waits = []
+    s = Scripted([(429, {}, {"Retry-After": "600"})] * 3)
+    c = FhirClient("https://fhir.example.test/r4", None, s, sleep=waits.append)
+    with pytest.raises(FhirError, match="429"):
+        c.capability()
+    assert waits == [10.0, 10.0]
+
+
+def test_a_refused_token_is_replaced_once():
+    class Auth:
+        n = 0
+
+        def token(self):
+            return f"t-{self.n}"
+
+        def invalidate(self):
+            self.n += 1
+    s = Scripted([(401, {}, {}), (200, {"resourceType": "CapabilityStatement"}, {})])
+    FhirClient("https://fhir.example.test/r4", Auth(), s).capability()
+    assert [h["Authorization"] for h in s.calls] == ["Bearer t-0", "Bearer t-1"]
+    s2 = Scripted([(401, {}, {}), (401, {}, {})])
+    with pytest.raises(FhirError, match="401"):
+        FhirClient("https://fhir.example.test/r4", Auth(), s2).capability()
+
+
+def test_parallel_reads_sign_in_once():
+    import concurrent.futures
+
+    class SlowToken(FakeFhir):
+        def post(self, url, data=None, headers=None, timeout=None):
+            time.sleep(0.05)
+            return super().post(url, data, headers, timeout)
+    fake = SlowToken("")
+    auth = SmartBackendAuth(SmartBackendSettings(TOKEN_URL, "a", b"", None, None, "s"), fake)
+    with concurrent.futures.ThreadPoolExecutor(6) as pool:
+        assert set(pool.map(lambda _: auth.token(), range(6))) == {"t-1"}
+    assert len(fake.posts) == 1
+
+
+def test_vitals_and_visits_are_the_newest_by_date_whatever_the_servers_order():
+    m = ORACLE.fhir_map
+    visits, vitals = m.record("visits"), m.record("vitals")
+    found = [{"id": str(i), "period": {"start": d}} for i, d in enumerate(
+        ["2024-01-05", "2026-09-01", "2025-03-02", "2026-11-01", "2023-07-07"])]
+    assert [v["period"]["start"] for v in visits.arrange(found)] == ["2026-11-01", "2026-09-01", "2025-03-02"]
+    from datetime import date
+    p = vitals.params("12724065", today=date(2026, 11, 12))
+    assert p["date"] == "ge2024-11-12T00:00:00Z" and p["_count"] == 250 and p["category"] == "vital-signs"
+    readings = [{"effectiveDateTime": "2025-01-01T08:00:00Z"}, {"issued": "2026-10-30T09:00:00Z"},
+                {"effectivePeriod": {"start": "2026-02-01"}}]
+    assert vitals.arrange(readings)[0] == {"issued": "2026-10-30T09:00:00Z"}
+
+
+def test_a_cut_off_vitals_read_says_the_latest_may_be_missing(monkeypatch):
+    import mcp_servers.chart_brief.server as cb
+    import mcp_servers.medication_review.server as mr
+    monkeypatch.setattr(mr, "fetch_missing", lambda cfg, meds, lookup=None: [])
+
+    class More(ChartServer):
+        def get(self, url, params=None, headers=None, timeout=None):
+            r = super().get(url, params, headers, timeout)
+            if url.endswith("/Observation"):
+                r._body["link"] = [{"relation": "next", "url": url + "?page=2"}]
+            return r
+    m = ORACLE.fhir_map
+    c = FhirClient(m.server["base_url"], None, More(m.server["base_url"]))
+    c.max_pages = 1
+    answer = cb.brief(None, ORACLE, cb.load_config(ORACLE), "Give me a brief on Ines Testarossa, born 1971-03-04",
+                      list(ORACLE.data_classes), c)["answer"]
+    assert "- 2 read; the record has more, so the latest may be missing. Check it directly." in answer
+    assert "- Latest vitals may not be the latest: 2 entries were read" in answer
+
+
+def test_a_record_number_finds_the_patient_and_the_birth_date_must_match():
+    from dataclasses import replace
+    m = replace(ORACLE.fhir_map, identifier={"param": "identifier", "system": "urn:oid:2.16.840.1.113883.6.1000"})
+
+    class ById(FakeFhir):
+        def get(self, url, params=None, headers=None, timeout=None):
+            if url.endswith("/Patient") and "identifier" in (params or {}):
+                self.gets.append(("/Patient", dict(params), {}))
+                ok = params["identifier"] == "urn:oid:2.16.840.1.113883.6.1000|MRN-7781"
+                return Response(200, bundle([PATIENT] if ok else []))
+            return super().get(url, params, headers, timeout)
+    fake = ById(m.server["base_url"])
+    c = FhirClient(m.server["base_url"], None, fake)
+    p, why = find_patient(c, m, "Brief on MRN: MRN-7781, born 1971-03-04")
+    assert p["id"] == "90000001" and fake.gets[0][1] == {"identifier": "urn:oid:2.16.840.1.113883.6.1000|MRN-7781"}
+    assert find_patient(c, m, "medical record number MRN-7781, born 1980-01-01") == (None, "none")
+    assert find_patient(c, ORACLE.fhir_map, "MRN 7781 born 1971-03-04")[1] == "none"   # not configured: by name only

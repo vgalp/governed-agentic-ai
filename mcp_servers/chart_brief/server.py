@@ -374,6 +374,23 @@ def group_lines(recs: list[dict], name: str) -> list[tuple[str, str]]:
     return out
 
 
+def _cut_line(r, n: int) -> str:
+    """Under a section read only in part."""
+    if getattr(r, "newest_first", None):
+        return f"- {n} read; the record has more, so the latest may be missing. Check it directly."
+    return f"- {n} shown; the record has more. Check it directly."
+
+
+def _cut_check(sec, n: int) -> str:
+    """A section read only in part. For the latest entries (vitals, visits) the risk is a missing newest
+    one; for a list (allergies) it is a missing entry."""
+    if getattr(sec.record, "newest_first", None):
+        return (f"{sec.heading} may not be the latest: {n} entries were read and the record has more, so a newer "
+                "one may be missing. Check the record directly.")
+    return (f"{sec.heading} is incomplete: {n} entries were read and the record has more, so this brief and its "
+            "checks may miss some. Check the record directly.")
+
+
 def interactions_summary(profile: Profile, query: str, allowed: list[str], db_path, client) -> tuple[str | None, list[dict]]:
     """One line from the medication review (ADR 017), and its label records to cite."""
     try:
@@ -445,11 +462,8 @@ def brief(
     meds, problems = group_medications(rows.get("medications", [])), rows.get("problems", [])
     latest = latest_vitals(rows.get("vitals", []))
     vital_lines, vital_flags = check_vitals(latest, cfg) if "vitals" in rows else ([], {})
-    checks = [
-        f"{sec.heading} is incomplete: {cut[sec.record.name]} entries were read and the record has more, so this "
-        "brief and its checks may miss some. Check the record directly."
-        for sec in cfg.sections if sec.record.name in cut and sec.record.data_class in allowed
-    ]
+    checks = [_cut_check(sec, cut[sec.record.name])
+              for sec in cfg.sections if sec.record.name in cut and sec.record.data_class in allowed]
     if "medications" in rows and "problems" in rows:
         checks += check_medication_reasons(meds, problems, cfg)
         checks += check_problem_treatment(problems, meds, cfg)
@@ -500,11 +514,13 @@ def brief(
                     )
                     + (f" — {flag}" if flag else "")
                 )
+            if r.name in cut:
+                lines.append(_cut_line(r, cut[r.name]))
             continue
         for text, rid in group_lines(recs, name):
             lines.append(_cite(text, rid))
         if r.name in cut:
-            lines.append(f"- {cut[r.name]} shown; the record has more. Check it directly.")
+            lines.append(_cut_line(r, cut[r.name]))
     lines += ["", "Checks (what the record does or does not show):"]
     if checks:
         lines += [f"- {c}" for c in checks]

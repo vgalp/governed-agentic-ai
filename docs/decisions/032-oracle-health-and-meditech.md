@@ -50,3 +50,30 @@ use. Both offer FHIR R4, but they sign in differently:
 - MEDITECH Greenfield is not yet tested live (it needs a signed access agreement and an app). Until
   then it is tested against a fake US Core server only (`tests/test_fhir_connectors.py`).
 - Not certified or endorsed by Oracle or MEDITECH.
+
+## Update (2026-11-12): hardening Epic and Oracle Health
+
+A strict review before any clinical use found these, now fixed:
+
+- **"Latest" and "recent" never trust the server's order.** No search asked for an order, so the
+  brief picked the newest of 30 vitals and 3 visits in whatever order they came. A record type can
+  now read a recent window (`since_days`: the `date=ge…` search parameter; vitals 2 years, visits
+  3 years), sort what it read by its own date (`newest_first`) and keep the newest (`show`: the 3
+  latest visits). If the window itself is cut off, the brief says the latest may be missing, under
+  the heading and as a check.
+- **A busy server is waited for:** 429, 502, 503 and 504 are retried twice, after the server's
+  Retry-After (up to 10 seconds) or 1 then 2 seconds.
+- **A refused token is replaced once:** a 401 drops the cached token (backend sign-in) or forces a
+  refresh (sign-in by a person) and the request is tried again.
+- **Signing in is thread-safe:** the parallel chart-brief reads share one token; only one sign-in
+  runs at a time.
+- **A patient can be found by record number** (`subject.identifier: {param, system}` in fhir.yaml,
+  per hospital: the MRN's system differs between organizations): "MRN 7781, born 1971-03-04". The
+  birth date must still match. Without it, lookup is by name and birth date as before.
+- Home medications: Epic and Oracle Health record what a patient reports taking as
+  MedicationRequest in FHIR R4 (Oracle's R4 API offers no MedicationStatement), so the existing
+  medication search already includes them; nothing was added.
+
+Still open (production): launching from the EHR with the clinician's own session (SMART EHR launch,
+user-level scopes), so the hospital's audit names the clinician and the patient comes from the
+chart; keys in a vault; replayed recordings of real sandbox responses; an Inferno (US Core) run.

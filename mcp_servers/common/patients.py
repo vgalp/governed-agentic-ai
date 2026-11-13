@@ -144,12 +144,12 @@ class Source:
         key = (r.name, patient.id)
         if key not in self._fetched:          # the lines and the checks read the same resources: ask once
             try:
-                params = {r.link: patient.id, **dict(r.search), "_count": r.limit}
+                params = r.params(patient.id)
                 if hasattr(self.client, "search_all"):
                     found, more = self.client.search_all(r.resource, params, r.limit)
                 else:                              # a client that cannot tell (a test double)
                     found, more = self.client.search(r.resource, params, r.limit), False
-                self._fetched[key] = found
+                self._fetched[key] = r.arrange(found)  # newest first when the mapping asks: not the server's order
                 if more:
                     self.cut[r.name] = len(found)
             except FhirError as e:

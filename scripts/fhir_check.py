@@ -120,7 +120,7 @@ def main(default_profile: str | None = None) -> int:
                   f"born {p.get('birthDate', '?')}")
             for r in m.records:
                 try:
-                    found = client.search(r.resource, {r.link: p["id"], **dict(r.search), "_count": r.limit}, r.limit)
+                    found = client.search(r.resource, r.params(p["id"]), r.limit)
                     print(f"   ✓ {r.name}: {len(found)} {r.resource} record(s)")
                 except FhirError as e:          # one refused search should not hide the others
                     print(f"   ✗ {r.name}: {e}")

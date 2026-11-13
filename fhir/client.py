@@ -20,6 +20,7 @@ The sign-in is set by the mapping's `server.auth`:
 import base64
 import os
 import re
+import threading
 import time
 import urllib.parse
 import uuid
@@ -54,6 +55,7 @@ class SmartBackendAuth:
     def __init__(self, s: SmartBackendSettings, session=None, clock=time.time):
         self.s, self.session, self.clock = s, session or requests.Session(), clock
         self._token, self._expires = None, 0.0
+        self._lock = threading.Lock()             # the chart brief reads several record types at once
 
     def assertion(self) -> str:
         now = int(self.clock())
@@ -62,7 +64,16 @@ class SmartBackendAuth:
         head = {"typ": "JWT", **({"kid": self.s.key_id} if self.s.key_id else {})}
         return jwt.encode(claims, self.s.private_key_pem, algorithm="RS384", headers=head)
 
+    def invalidate(self) -> None:
+        """The server refused the token (revoked, or ended early): ask for a new one next time."""
+        with self._lock:
+            self._token, self._expires = None, 0.0
+
     def token(self) -> str:
+        with self._lock:                          # one sign-in at a time; the others reuse its token
+            return self._token_locked()
+
+    def _token_locked(self) -> str:
         if self._token and self.clock() < self._expires - 30:
             return self._token
         form, headers = {"grant_type": "client_credentials"}, {"Accept": "application/json"}
@@ -84,14 +95,28 @@ class SmartBackendAuth:
         return self._token
 
 
+BUSY = {429, 502, 503, 504}       # the server asks us to wait, or a gateway in front of it failed
+MAX_WAIT = 10.0                   # seconds: a longer Retry-After is not waited for (the question would hang)
+
+
+def retry_after(r, attempt: int) -> float:
+    """Seconds to wait: the server's Retry-After (seconds form), else 1, 2, 4 …"""
+    try:
+        return min(MAX_WAIT, max(0.0, float(r.headers.get("Retry-After"))))
+    except (TypeError, ValueError, AttributeError):
+        return min(MAX_WAIT, float(2 ** attempt))
+
+
 class FhirClient:
     """GET-only access to one FHIR R4 server."""
 
+    RETRIES = 2                   # after a busy answer: wait and try again, twice
+
     def __init__(self, base_url: str, auth=None, session=None,
-                 timeout: float = 20, max_pages: int = 6):
+                 timeout: float = 20, max_pages: int = 6, sleep=time.sleep):
         self.base = base_url.rstrip("/")
         self.auth, self.session = auth, session or requests.Session()
-        self.timeout, self.max_pages = timeout, max_pages
+        self.timeout, self.max_pages, self.sleep = timeout, max_pages, sleep
 
     def _inside_base(self, url: str) -> bool:
         """The URL is on the configured server: same scheme and host, path under the base path.
@@ -103,14 +128,24 @@ class FhirClient:
     def _get(self, url: str, params: dict | None = None) -> dict:
         if not self._inside_base(url):
             raise FhirError(f"refusing to follow a link outside {self.base}")
-        headers = {"Accept": FHIR_JSON}
-        if self.auth:
-            headers["Authorization"] = f"Bearer {self.auth.token()}"
-        try:
-            r = _send(self.session.get, url, params=params, headers=headers, timeout=self.timeout, retry=1)
-        except FhirError as e:
-            raise FhirError(f"{e} after {self.timeout:g} s; a slow server can be given longer with "
-                            "server.timeout in fhir.yaml" if "Timeout" in str(e) else str(e)) from None
+        signed_again = False
+        for attempt in range(self.RETRIES + 1):
+            headers = {"Accept": FHIR_JSON}
+            if self.auth:
+                headers["Authorization"] = f"Bearer {self.auth.token()}"
+            try:
+                r = _send(self.session.get, url, params=params, headers=headers, timeout=self.timeout, retry=1)
+            except FhirError as e:
+                raise FhirError(f"{e} after {self.timeout:g} s; a slow server can be given longer with "
+                                "server.timeout in fhir.yaml" if "Timeout" in str(e) else str(e)) from None
+            if r.status_code == 401 and self.auth and hasattr(self.auth, "invalidate") and not signed_again:
+                self.auth.invalidate()             # a token the server no longer takes: sign in again, once
+                signed_again = True
+                continue
+            if r.status_code in BUSY and attempt < self.RETRIES:
+                self.sleep(retry_after(r, attempt))
+                continue
+            break
         if r.status_code != 200:
             # the path only: a paged 'next' link carries the search (patient ids) in its query string
             path = urllib.parse.urlsplit(url).path.removeprefix(urllib.parse.urlsplit(self.base).path)

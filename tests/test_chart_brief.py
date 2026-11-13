@@ -205,7 +205,10 @@ def test_the_brief_from_a_fhir_server_reads_only_allowed_resources_and_splits_bl
         "Observation",
         "Encounter",
     }
-    assert ("Observation", {"patient": "eXYZ12345678", "category": "vital-signs", "_count": 30}) in epic.searched
+    from datetime import date, timedelta
+    two_years = "ge" + (date.today() - timedelta(days=730)).isoformat() + "T00:00:00Z"
+    assert ("Observation", {"patient": "eXYZ12345678", "category": "vital-signs", "_count": 250,
+                            "date": two_years}) in epic.searched    # the last 2 years, newest found by date
     assert "Chart brief for Camila Lopez (born 1987-09-12" in a
     assert "Atrial fibrillation, on the problem list since 2024-03-01 [cond-AAAA1111]" in a
     assert "Essential hypertension, on the problem list since 2022-01-05 [cond-BBBB2222]" in a

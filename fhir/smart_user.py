@@ -165,6 +165,13 @@ class SmartUserAuth:
             raise FhirError(f"not signed in to the FHIR server: {self.hint}")
         return data
 
+    def invalidate(self) -> None:
+        """The server refused the access token: refresh it on the next request."""
+        with self.store.locked():
+            data = self.store.load()
+            if data:
+                self.store.save({**data, "expires_at": 0})
+
     @property
     def patient(self) -> str | None:
         """The patient the sign-in is for, when the server named one."""

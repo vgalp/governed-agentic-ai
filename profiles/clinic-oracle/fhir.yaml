@@ -52,7 +52,10 @@ records:
     link: patient
     data_class: visit_dates
     source_id: {prefix: enc-, keep_last: 8}
-    limit: 3
+    since_days: 1095                      # the last 3 years (date=ge…), all of it, newest first
+    newest_first: period.start
+    limit: 100
+    show: 3                               # the 3 most recent, by the visit's own date
     title: Past visit
     text: "{subject}: {class.display,class.code} visit on {period.start|date}."
     more_detail:
@@ -89,7 +92,9 @@ records:
     search: {category: vital-signs}
     data_class: vitals
     source_id: {prefix: vit-, keep_last: 8}
-    limit: 30
+    since_days: 730                       # the last 2 years, all of it: the latest is found by date,
+    newest_first: effectiveDateTime,effectivePeriod.start,issued   # never by the server's order
+    limit: 250
     title: Vital sign
     text: "{subject}: {code.text,code.coding.display} {valueQuantity.value,component.valueQuantity.value} {valueQuantity.unit,component.valueQuantity.unit}, measured {effectiveDateTime|date}."
 

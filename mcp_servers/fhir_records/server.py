@@ -76,6 +76,10 @@ NEED_BIRTHDATE = ("The record system finds a patient by full name and date of bi
                   "Please ask again with both, for example: Camila Lopez, born 1987-09-12.")
 
 
+MRN_RE = re.compile(r"\b(?:MRN|medical record (?:number|no\.?)|record (?:number|no\.?))\s*[:#]?\s*([A-Za-z0-9-]{3,20})\b",
+                    re.IGNORECASE)
+
+
 def find_patient(client: FhirClient, m: FhirMap, query: str) -> tuple[dict | None, str | None]:
     """(the patient resource, None) or (None, why not: 'none', 'more than one' or 'birthdate')."""
     found = {}
@@ -86,6 +90,13 @@ def find_patient(client: FhirClient, m: FhirMap, query: str) -> tuple[dict | Non
     if pinned:                     # a sign-in for one patient (smart_user): read it, never search
         res = client.read(m.resource, pinned)
         return (res, None) if _is_named(res, query, dates) else (None, "none")
+    mrn = MRN_RE.search(query) if m.identifier else None
+    if mrn:                        # a record number: exact, so no name search; the birth date still has to match
+        system = m.identifier.get("system")
+        value = f"{system}|{mrn.group(1)}" if system else mrn.group(1)
+        hits = [res for res in client.search(m.resource, {m.identifier["param"]: value}, 5)
+                if dates == [None] or res.get("birthDate") in dates]
+        return (hits[0], None) if len(hits) == 1 else (None, "more than one" if hits else "none")
     for given, family in name_candidates(query):
         for dob in dates:
             params = {m.name_search["given"]: given, m.name_search["family"]: family}
@@ -120,7 +131,7 @@ def records_of_type(client: FhirClient, r: RecordType, pid: str, name: str, allo
     detail = r.more_detail if r.more_detail and r.more_detail.data_class in allowed else None
     text = detail.text if detail else r.text
     classes = [r.data_class] + ([detail.data_class] if detail else [])
-    found = client.search(r.resource, {r.link: pid, **dict(r.search), "_count": r.limit}, r.limit)
+    found = r.arrange(client.search(r.resource, r.params(pid), r.limit))
     extra = {"subject": name}
     return [_record(r.source_id.make(res.get("id", "")), render(r.title, res, extra), render(text, res, extra),
                     classes) for res in found]

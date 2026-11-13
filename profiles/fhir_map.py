@@ -14,6 +14,7 @@ is the person's name; in record texts, `{subject}` is the subject's name.
 
 import re
 from dataclasses import dataclass
+from datetime import date, timedelta
 
 PLACEHOLDER = re.compile(r"\{([^{}]+)\}")
 PATH = re.compile(r"^[A-Za-z][A-Za-z0-9]*(\[\d+\])?(\.[A-Za-z][A-Za-z0-9]*(\[\d+\])?)*$")
@@ -61,6 +62,27 @@ class RecordType:
     source_id: SourceId
     limit: int
     more_detail: Detail | None
+    newest_first: str | None = None    # date path(s): sort what was read, newest first (servers' order varies)
+    since_days: int | None = None      # read only this recent window (the `date` search parameter)
+    date_param: str = "date"
+    show: int | None = None            # after sorting, keep only the newest N (e.g. the 3 latest visits)
+
+    def params(self, pid: str, today: date | None = None) -> dict:
+        """The search parameters for one patient's records of this type."""
+        out = {self.link: pid, **dict(self.search), "_count": self.limit}
+        if self.since_days:
+            # with a time: the FHIR standard allows it for every date search, and Oracle Health requires
+            # it for Encounter ("date: must have a time")
+            start = (today or date.today()) - timedelta(days=self.since_days)
+            out[self.date_param] = f"ge{start.isoformat()}T00:00:00Z"
+        return out
+
+    def arrange(self, found: list[dict]) -> list[dict]:
+        """Newest first by the record's own date when asked (never trusting the server's order), then
+        the newest `show`."""
+        if self.newest_first:
+            found = sorted(found, key=lambda r: str(value_of(r, self.newest_first, {}) or ""), reverse=True)
+        return found[: self.show] if self.show else found
 
 
 @dataclass(frozen=True)
@@ -76,6 +98,7 @@ class FhirMap:
     records: tuple[RecordType, ...]
     max_results: int
     status: str | None
+    identifier: dict | None = None     # {param, system, label}: look a patient up by record number (MRN)
 
     def data_classes(self) -> set[str]:
         out = {self.subject_class}
@@ -252,13 +275,23 @@ def parse(raw: dict, where: str, known_classes: set[str]) -> FhirMap:
         limit = r.get("limit", 10)
         if not isinstance(limit, int) or not 1 <= limit <= 250:
             raise FhirMappingError(f"{rw}: limit must be a number from 1 to 250 (read in pages of 50)")
+        since, show = r.get("since_days"), r.get("show")
+        if since is not None and (not isinstance(since, int) or not 1 <= since <= 3650):
+            raise FhirMappingError(f"{rw}: since_days must be a number of days from 1 to 3650")
+        if show is not None and (not isinstance(show, int) or not 1 <= show <= limit):
+            raise FhirMappingError(f"{rw}: show must be a number from 1 to the limit ({limit})")
+        if show and not r.get("newest_first"):
+            raise FhirMappingError(f"{rw}: show keeps the newest entries, so it needs newest_first (a date path)")
         records.append(RecordType(name, res, str(_req(r, "link", rw)),
                                   tuple((str(k), str(v)) for k, v in (r.get("search") or {}).items()),
                                   str(_req(r, "data_class", rw)), title, text, _source_id(r.get("source_id"), rw),
-                                  limit, detail))
+                                  limit, detail, r.get("newest_first"), since, str(r.get("date_param", "date")), show))
+    ident = s.get("identifier")
+    if ident is not None and (not isinstance(ident, dict) or not ident.get("param")):
+        raise FhirMappingError(f"{w}: identifier needs param (the search parameter, usually identifier)")
     m = FhirMap(server, str(s.get("noun", "patient")), resource, ns, s_class, s_title, s_text,
                 _source_id(rec.get("source_id"), f"{w}: record"), tuple(records),
-                int(raw.get("max_results", 20)), raw.get("status"))
+                int(raw.get("max_results", 20)), raw.get("status"), ident)
     unknown = sorted(m.data_classes() - known_classes)
     if unknown:
         raise FhirMappingError(f"{where}: data class(es) not in roles.yaml: {', '.join(unknown)}")

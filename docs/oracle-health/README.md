@@ -72,6 +72,19 @@ about to end.
 | Source IDs | last 8 characters | last 8, or the whole ID when shorter (4 to 8) |
 | Finding a patient | name and birth date | name and birth date; or by id in the check |
 
+
+## Finding a patient by record number (MRN)
+
+Each organization gives its record numbers its own system (an OID). Once you know it, add to
+`subject:` in `profiles/clinic-oracle/fhir.yaml`:
+
+```yaml
+  identifier: {param: identifier, system: "urn:oid:<the organization's MRN system>"}
+```
+
+Then "Give me a brief on MRN 12345, born 1990-09-15" reads that patient directly; the birth date must
+still match. Without it, patients are found by name and birth date.
+
 ## Run the assistant on Oracle Health's records
 
 ```bash
