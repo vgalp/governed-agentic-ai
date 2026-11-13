@@ -348,6 +348,12 @@ if __name__ == "__main__":
             print(f"Medication review: the FHIR server is not set up yet ({e})")
     mcp = FastMCP("medication_review", host="127.0.0.1", port=8103)
 
+    def _budget():
+        """One time budget for all the FHIR requests of a tool call (ADR 036)."""
+        from fhir.transport import request_budget
+        fhir = CONFIG is not None and CONFIG.source == "fhir" and PROFILE.fhir_map is not None
+        return request_budget(PROFILE.fhir_map.server if fhir else None)
+
     def _client(launch_ref):
         """The clinician's own client when launched from the chart (the gateway sets launch_ref)."""
         if launch_ref and PROFILE.fhir_map is not None and PROFILE.fhir_map.launch:
@@ -359,21 +365,23 @@ if __name__ == "__main__":
     def medication_review(query: str, allowed_classes: list[str], launch_ref: str | None = None) -> dict:
         """For the patient named in the question: their current medications, and where the FDA
         labels mention one of them with another, quoted with the source. For a clinician's review."""
-        try:
-            client = _client(launch_ref)
-        except FhirError as e:
-            return {"results": [], "answer": str(e)}
-        return review(PROFILE.records_db, PROFILE, CONFIG, query, allowed_classes, client)
+        with _budget():
+            try:
+                client = _client(launch_ref)
+            except FhirError as e:
+                return {"results": [], "answer": str(e)}
+            return review(PROFILE.records_db, PROFILE, CONFIG, query, allowed_classes, client)
 
     @mcp.tool(name="medication_list")
     def medication_list_tool(query: str, allowed_classes: list[str], launch_ref: str | None = None) -> dict:
         """For the patient named in the question: their current medications exactly as the record
         lists them, with source IDs. No model, no recommendation."""
-        try:
-            client = _client(launch_ref)
-        except FhirError as e:
-            return {"results": [], "answer": str(e)}
-        return medication_list(PROFILE.records_db, PROFILE, CONFIG, query, allowed_classes, client)
+        with _budget():
+            try:
+                client = _client(launch_ref)
+            except FhirError as e:
+                return {"results": [], "answer": str(e)}
+            return medication_list(PROFILE.records_db, PROFILE, CONFIG, query, allowed_classes, client)
 
     if CONFIG is None:
         print(f"Medication review for profile {PROFILE.name}: not set up (no medication_review.yaml)")

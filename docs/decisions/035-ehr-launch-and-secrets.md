@@ -45,7 +45,7 @@ with that clinician's own access, on that chart. Separately, keys and secrets li
   see, and the assistant cannot drift to another patient.
 - Backend sign-in still works for profiles and tools that need it (and the CLI's checks).
 - A shared session store is a folder on one machine; several machines need a shared store with the
-  same three calls.
+  same three calls. (Done in ADR 036: `GAAI_SESSIONS_URL` names a Redis over TLS.)
 - Tested against a fake EHR that signs its own ID tokens (tests/test_smart_launch.py): every refusal
   above is a test. Not yet run against Epic's or Oracle Health's own launch; docs/smart-launch/ says
   how.

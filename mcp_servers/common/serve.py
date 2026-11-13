@@ -6,6 +6,7 @@ signed by the local CA, which only the gateway holds (audit SC-6): another proce
 can no longer call a tool directly and pass its own tenant or data classes.
 """
 
+import logging
 import os
 import ssl
 from pathlib import Path
@@ -25,8 +26,24 @@ def tls_files() -> dict | None:
     return files
 
 
+def add_metrics_route(mcp) -> None:
+    """GET /metrics: this server's FHIR call metrics in Prometheus text format (ADR 036). On the same
+    port as the tools, so with mutual TLS on only a client holding a certificate signed by the
+    local CA can read it, like the tools themselves."""
+    from starlette.responses import PlainTextResponse
+
+    from fhir.metrics import METRICS
+
+    @mcp.custom_route("/metrics", methods=["GET"], include_in_schema=False)
+    async def metrics(_request) -> PlainTextResponse:
+        return PlainTextResponse(METRICS.prometheus_text(), media_type="text/plain; version=0.0.4")
+
+
 def serve(mcp) -> None:
     """Run a FastMCP server over streamable HTTP, with mutual TLS when it is configured."""
+    logging.basicConfig(level=os.environ.get("GAAI_LOG_LEVEL", "INFO"),
+                        format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+    add_metrics_route(mcp)
     files = tls_files()
     if files is None:
         mcp.run(transport="streamable-http")

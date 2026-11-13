@@ -17,8 +17,10 @@ import re
 
 from mcp.server.fastmcp import FastMCP
 
+from fhir.capabilities import Capabilities, check_map
 from fhir.client import FhirClient, FhirError, client_from_settings
 from fhir.smart_launch import launch_client
+from fhir.transport import request_budget
 from mcp_servers.common.serve import serve
 from profiles.fhir_map import FhirMap, RecordType, human_name, render
 from profiles.loader import load_profile
@@ -196,6 +198,8 @@ if __name__ == "__main__":
             meta = CLIENT.capability()
             print(f"FHIR records for profile {PROFILE.name}: {MAP.server['base_url']} "
                   f"(FHIR {meta.get('fhirVersion', '?')}, {(meta.get('software') or {}).get('name', 'server')})")
+            for finding in check_map(Capabilities.parse(meta), MAP):   # what the server may not apply
+                print(f"  {finding}")
         except FhirError as e:
             print(f"FHIR records for profile {PROFILE.name}: not reachable yet ({e}); will retry on each request")
     mcp = FastMCP("fhir_records", host="127.0.0.1", port=8104)
@@ -205,16 +209,17 @@ if __name__ == "__main__":
         """Find the patient named in the question and return the records the caller's role may see
         (allowed_classes), from the FHIR server, with source IDs."""
         global CLIENT
-        if launch_ref and MAP is not None and MAP.launch:   # set by the gateway, never by a caller
-            try:
-                return search(launch_client(MAP, launch_ref, PROFILE.name), MAP, query, allowed_classes)
-            except FhirError as e:
-                return {"results": [], "note": str(e)}
-        if CLIENT is None and MAP is not None:
-            try:
-                CLIENT = client_from_settings(MAP.server)
-            except FhirError as e:
-                return {"results": [], "note": f"the record system is not set up: {e}"}
-        return search(CLIENT, MAP, query, allowed_classes)
+        with request_budget(MAP.server if MAP is not None else None):   # all requests together (ADR 036)
+            if launch_ref and MAP is not None and MAP.launch:   # set by the gateway, never by a caller
+                try:
+                    return search(launch_client(MAP, launch_ref, PROFILE.name), MAP, query, allowed_classes)
+                except FhirError as e:
+                    return {"results": [], "note": str(e)}
+            if CLIENT is None and MAP is not None:
+                try:
+                    CLIENT = client_from_settings(MAP.server)
+                except FhirError as e:
+                    return {"results": [], "note": f"the record system is not set up: {e}"}
+            return search(CLIENT, MAP, query, allowed_classes)
 
     serve(mcp)   # plain HTTP, or mutual TLS (ADR 030)

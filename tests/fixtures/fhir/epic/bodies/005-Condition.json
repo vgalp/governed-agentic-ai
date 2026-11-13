@@ -1,0 +1,42 @@
+{
+ "entry": [
+  {
+   "fullUrl": "{{base}}/Condition/eCo.afib0001",
+   "resource": {
+    "category": [
+     {
+      "coding": [
+       {
+        "code": "problem-list-item"
+       }
+      ]
+     }
+    ],
+    "clinicalStatus": {
+     "coding": [
+      {
+       "code": "active"
+      }
+     ]
+    },
+    "code": {
+     "text": "Atrial fibrillation"
+    },
+    "id": "eCo.afib0001",
+    "resourceType": "Condition"
+   },
+   "search": {
+    "mode": "match"
+   }
+  }
+ ],
+ "link": [
+  {
+   "relation": "self",
+   "url": "{{base}}/x"
+  }
+ ],
+ "resourceType": "Bundle",
+ "total": 1,
+ "type": "searchset"
+}

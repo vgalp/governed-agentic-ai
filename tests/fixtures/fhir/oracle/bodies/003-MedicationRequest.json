@@ -1,0 +1,56 @@
+{
+ "entry": [
+  {
+   "fullUrl": "{{base}}/MedicationRequest/300000017",
+   "resource": {
+    "authoredOn": "2026-03-01T10:00:00Z",
+    "id": "300000017",
+    "intent": "order",
+    "medicationCodeableConcept": {
+     "coding": [
+      {
+       "code": "861007",
+       "system": "http://www.nlm.nih.gov/research/umls/rxnorm"
+      }
+     ],
+     "text": "metformin 500 MG tablet"
+    },
+    "resourceType": "MedicationRequest",
+    "status": "active"
+   },
+   "search": {
+    "mode": "match"
+   }
+  },
+  {
+   "fullUrl": "{{base}}/MedicationRequest/300000018",
+   "resource": {
+    "authoredOn": "2025-06-12T09:00:00Z",
+    "id": "300000018",
+    "intent": "order",
+    "medicationCodeableConcept": {
+     "coding": [
+      {
+       "code": "314076",
+       "system": "http://www.nlm.nih.gov/research/umls/rxnorm"
+      }
+     ],
+     "text": "lisinopril 10 MG tablet"
+    },
+    "resourceType": "MedicationRequest",
+    "status": "active"
+   },
+   "search": {
+    "mode": "match"
+   }
+  }
+ ],
+ "link": [
+  {
+   "relation": "self",
+   "url": "{{base}}/x"
+  }
+ ],
+ "resourceType": "Bundle",
+ "type": "searchset"
+}

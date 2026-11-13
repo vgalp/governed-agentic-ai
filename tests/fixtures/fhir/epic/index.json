@@ -1,0 +1,164 @@
+{
+ "format": 1,
+ "source": "hand-built",
+ "recorded_on": "2026-11-13",
+ "profile": "clinic-epic",
+ "patient": {
+  "id": "eQx1Rk3Tp7Vb9Wm2Ys4Zd0A3",
+  "query": "Nora Testwell, born 1987-09-12"
+ },
+ "note": "Hand-built in the recording format from what Epic's sandbox sent on 2026-11-12 (total on every search, a warning OperationOutcome entry for an empty search). Invented patient. Replace with scripts/fhir_record.py.",
+ "base_url": "https://fhir.epic.com/interconnect-fhir-oauth/api/FHIR/R4",
+ "exchanges": [
+  {
+   "path": "/metadata",
+   "query": [],
+   "status": 200,
+   "content_type": "application/fhir+json; charset=utf-8",
+   "headers": {},
+   "body": "bodies/000-metadata.json"
+  },
+  {
+   "path": "/Patient/eQx1Rk3Tp7Vb9Wm2Ys4Zd0A3",
+   "query": [],
+   "status": 200,
+   "content_type": "application/fhir+json; charset=utf-8",
+   "headers": {},
+   "body": "bodies/001-Patient.json"
+  },
+  {
+   "path": "/Patient",
+   "query": [
+    [
+     "birthdate",
+     "1987-09-12"
+    ],
+    [
+     "family",
+     "Testwell"
+    ],
+    [
+     "given",
+     "Nora"
+    ]
+   ],
+   "status": 200,
+   "content_type": "application/fhir+json; charset=utf-8",
+   "headers": {},
+   "body": "bodies/002-Patient.json"
+  },
+  {
+   "path": "/MedicationRequest",
+   "query": [
+    [
+     "_count",
+     "50"
+    ],
+    [
+     "patient",
+     "eQx1Rk3Tp7Vb9Wm2Ys4Zd0A3"
+    ],
+    [
+     "status",
+     "active"
+    ]
+   ],
+   "status": 200,
+   "content_type": "application/fhir+json; charset=utf-8",
+   "headers": {},
+   "body": "bodies/003-MedicationRequest.json"
+  },
+  {
+   "path": "/Encounter",
+   "query": [
+    [
+     "_count",
+     "50"
+    ],
+    [
+     "date",
+     "ge????-??-??T??:??:??Z"
+    ],
+    [
+     "patient",
+     "eQx1Rk3Tp7Vb9Wm2Ys4Zd0A3"
+    ]
+   ],
+   "status": 200,
+   "content_type": "application/fhir+json; charset=utf-8",
+   "headers": {},
+   "body": "bodies/004-Encounter.json"
+  },
+  {
+   "path": "/Condition",
+   "query": [
+    [
+     "_count",
+     "50"
+    ],
+    [
+     "category",
+     "problem-list-item"
+    ],
+    [
+     "clinical-status",
+     "active"
+    ],
+    [
+     "patient",
+     "eQx1Rk3Tp7Vb9Wm2Ys4Zd0A3"
+    ]
+   ],
+   "status": 200,
+   "content_type": "application/fhir+json; charset=utf-8",
+   "headers": {},
+   "body": "bodies/005-Condition.json"
+  },
+  {
+   "path": "/AllergyIntolerance",
+   "query": [
+    [
+     "_count",
+     "50"
+    ],
+    [
+     "clinical-status",
+     "active"
+    ],
+    [
+     "patient",
+     "eQx1Rk3Tp7Vb9Wm2Ys4Zd0A3"
+    ]
+   ],
+   "status": 200,
+   "content_type": "application/fhir+json; charset=utf-8",
+   "headers": {},
+   "body": "bodies/006-AllergyIntolerance.json"
+  },
+  {
+   "path": "/Observation",
+   "query": [
+    [
+     "_count",
+     "50"
+    ],
+    [
+     "category",
+     "vital-signs"
+    ],
+    [
+     "date",
+     "ge????-??-??T??:??:??Z"
+    ],
+    [
+     "patient",
+     "eQx1Rk3Tp7Vb9Wm2Ys4Zd0A3"
+    ]
+   ],
+   "status": 200,
+   "content_type": "application/fhir+json; charset=utf-8",
+   "headers": {},
+   "body": "bodies/007-Observation.json"
+  }
+ ]
+}

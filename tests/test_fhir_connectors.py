@@ -537,9 +537,16 @@ def test_a_busy_server_is_waited_for_as_it_asks_then_read():
     waits = []
     s = Scripted([(429, {}, {"Retry-After": "3"}), (503, {}, {}),
                   (200, {"resourceType": "CapabilityStatement"}, {})])
-    c = FhirClient("https://fhir.example.test/r4", None, s, sleep=waits.append)
+    c = FhirClient("https://fhir.example.test/r4", None, s, sleep=waits.append, jitter=None)
     assert c.capability()["resourceType"] == "CapabilityStatement"
     assert waits == [3.0, 2.0]                        # its Retry-After, then 2 s
+
+
+def test_a_wait_the_server_did_not_set_is_jittered_and_its_own_is_not():
+    waits = []
+    s = Scripted([(503, {}, {}), (429, {}, {"Retry-After": "3"}), (200, {"resourceType": "CapabilityStatement"}, {})])
+    FhirClient("https://fhir.example.test/r4", None, s, sleep=waits.append).capability()
+    assert 0.5 <= waits[0] <= 1.0 and waits[1] == 3.0   # 1 s backoff, half of it random; Retry-After exactly
 
 
 def test_a_long_retry_after_is_not_waited_for_and_three_busy_answers_fail():

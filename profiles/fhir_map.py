@@ -211,6 +211,44 @@ def _source_id(raw, where: str) -> SourceId:
     return SourceId(prefix, keep)
 
 
+# How the server is called (ADR 036): name -> (low, high, what it is). Each is optional; the defaults
+# are in fhir/transport.ServerPolicy.
+CONNECTIVITY = {
+    "retries": (0, 5, "further attempts after a busy answer, a timeout or a lost connection"),
+    "max_concurrent": (1, 32, "requests in flight to the server at once"),
+    "pool_size": (1, 64, "kept-alive connections"),
+    "budget": (5, 600, "seconds for one question, all requests together"),
+    "cache_seconds": (0, 120, "seconds a person's answers are kept for their next question"),
+}
+RATE_LIMIT = {"per_second": (0.1, 1000, "requests per second"), "burst": (1, 1000, "requests at once")}
+BREAKER = {"failures": (1, 50, "failures in a row before the server is left alone"),
+           "reset_seconds": (1, 600, "seconds before trying a server that failed")}
+
+
+def _bounded(value, low, high, name: str, what: str, where: str) -> None:
+    if isinstance(value, bool) or not isinstance(value, (int, float)) or not low <= value <= high:
+        raise FhirMappingError(f"{where} {name} must be a number from {low:g} to {high:g} ({what})")
+
+
+def _connectivity(server: dict, where: str) -> None:
+    for name, (low, high, what) in CONNECTIVITY.items():
+        if name in server:
+            _bounded(server[name], low, high, name, what, where)
+    for block, spec in (("rate_limit", RATE_LIMIT), ("breaker", BREAKER)):
+        if block not in server:
+            continue
+        raw = server[block]
+        if not isinstance(raw, dict) or set(raw) - set(spec):
+            raise FhirMappingError(f"{where} {block} takes {', '.join(spec)}")
+        for name, (low, high, what) in spec.items():
+            if name in raw:
+                _bounded(raw[name], low, high, f"{block}.{name}", what, where)
+    if "rate_limit" in server and "per_second" not in server["rate_limit"]:
+        raise FhirMappingError(f"{where} rate_limit needs per_second")
+    if "budget" in server and server["budget"] <= server.get("timeout", 20):
+        raise FhirMappingError(f"{where} budget must be longer than timeout (one request)")
+
+
 def _launch(raw, server: dict, where: str) -> dict | None:
     """The `launch:` block: launching from inside the EHR with the clinician's own session (ADR 035)."""
     if raw is None:
@@ -285,6 +323,7 @@ def parse(raw: dict, where: str, known_classes: set[str]) -> FhirMap:
     t = server.get("timeout", 20)
     if not isinstance(t, (int, float)) or not 1 <= t <= 120:
         raise FhirMappingError(f"{where}: server timeout must be a number of seconds from 1 to 120")
+    _connectivity(server, f"{where}: server")
     for k in ("token_url", "authorize_url"):
         if server.get(k) and not re.match(r"^https://\S+$", server[k]):
             raise FhirMappingError(f"{where}: server {k} must be an https URL")

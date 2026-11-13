@@ -28,6 +28,7 @@ dev = [
 deploy = [
     "azure-identity>=1.25",
     "aws-msk-iam-sasl-signer-python>=1.0.2",
+    "redis>=5.2",                          # shared launch sessions across servers (fhir/sessions.py, ADR 036)
 ]
 train = [
     "torch>=2.14.1",

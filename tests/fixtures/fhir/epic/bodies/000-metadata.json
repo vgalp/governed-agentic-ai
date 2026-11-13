@@ -1,0 +1,142 @@
+{
+ "fhirVersion": "4.0.1",
+ "format": [
+  "json"
+ ],
+ "kind": "instance",
+ "resourceType": "CapabilityStatement",
+ "rest": [
+  {
+   "mode": "server",
+   "resource": [
+    {
+     "searchParam": [
+      {
+       "name": "_id",
+       "type": "token"
+      },
+      {
+       "name": "identifier",
+       "type": "token"
+      },
+      {
+       "name": "given",
+       "type": "token"
+      },
+      {
+       "name": "family",
+       "type": "token"
+      },
+      {
+       "name": "birthdate",
+       "type": "token"
+      },
+      {
+       "name": "name",
+       "type": "token"
+      }
+     ],
+     "type": "Patient"
+    },
+    {
+     "searchParam": [
+      {
+       "name": "patient",
+       "type": "token"
+      },
+      {
+       "name": "status",
+       "type": "token"
+      },
+      {
+       "name": "intent",
+       "type": "token"
+      }
+     ],
+     "type": "MedicationRequest"
+    },
+    {
+     "searchParam": [
+      {
+       "name": "_id",
+       "type": "token"
+      }
+     ],
+     "type": "Medication"
+    },
+    {
+     "searchParam": [
+      {
+       "name": "patient",
+       "type": "token"
+      },
+      {
+       "name": "date",
+       "type": "token"
+      },
+      {
+       "name": "_id",
+       "type": "token"
+      }
+     ],
+     "type": "Encounter"
+    },
+    {
+     "searchParam": [
+      {
+       "name": "patient",
+       "type": "token"
+      },
+      {
+       "name": "category",
+       "type": "token"
+      },
+      {
+       "name": "clinical-status",
+       "type": "token"
+      }
+     ],
+     "type": "Condition"
+    },
+    {
+     "searchParam": [
+      {
+       "name": "patient",
+       "type": "token"
+      },
+      {
+       "name": "clinical-status",
+       "type": "token"
+      }
+     ],
+     "type": "AllergyIntolerance"
+    },
+    {
+     "searchParam": [
+      {
+       "name": "patient",
+       "type": "token"
+      },
+      {
+       "name": "category",
+       "type": "token"
+      },
+      {
+       "name": "date",
+       "type": "token"
+      },
+      {
+       "name": "code",
+       "type": "token"
+      }
+     ],
+     "type": "Observation"
+    }
+   ]
+  }
+ ],
+ "software": {
+  "name": "Epic (hand-built)"
+ },
+ "status": "active"
+}

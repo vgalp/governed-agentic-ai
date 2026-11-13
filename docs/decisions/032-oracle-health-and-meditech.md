@@ -77,3 +77,6 @@ A strict review before any clinical use found these, now fixed:
 Still open (production): launching from the EHR with the clinician's own session (SMART EHR launch,
 user-level scopes), so the hospital's audit names the clinician and the patient comes from the
 chart; keys in a vault; replayed recordings of real sandbox responses; an Inferno (US Core) run.
+(EHR launch and vaults: ADR 035. Circuit breaker, limits, metrics, validation, budgets, the
+per-session cache, the capability check, replayed recordings and a shared session store: ADR 036.
+Inferno remains.)

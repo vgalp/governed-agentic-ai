@@ -1,0 +1,46 @@
+{
+ "entry": [
+  {
+   "fullUrl": "{{base}}/Observation/O3",
+   "resource": {
+    "category": [
+     {
+      "coding": [
+       {
+        "code": "vital-signs"
+       }
+      ]
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "code": "29463-7",
+       "system": "http://loinc.org"
+      }
+     ],
+     "text": "Body weight"
+    },
+    "effectiveDateTime": "2026-05-15T08:10:00Z",
+    "id": "O3",
+    "resourceType": "Observation",
+    "status": "final",
+    "valueQuantity": {
+     "unit": "kg",
+     "value": 71.2
+    }
+   },
+   "search": {
+    "mode": "match"
+   }
+  }
+ ],
+ "link": [
+  {
+   "relation": "self",
+   "url": "{{base}}/x"
+  }
+ ],
+ "resourceType": "Bundle",
+ "type": "searchset"
+}

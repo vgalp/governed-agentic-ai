@@ -181,6 +181,11 @@ class SmartUserAuth:
     def scope_granted(self) -> str | None:
         return (self.store.load() or {}).get("scope")
 
+    @property
+    def cache_scope(self) -> str:
+        """The person who signed in (one token file per sign-in): see fhir/cache.py."""
+        return "user:" + hashlib.sha256(str(self.s.token_store).encode()).hexdigest()[:24]
+
     def token(self) -> str:
         data = self._current()
         if self.clock() < data.get("expires_at", 0) - 30:

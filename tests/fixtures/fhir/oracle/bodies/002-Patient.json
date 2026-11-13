@@ -1,0 +1,34 @@
+{
+ "entry": [
+  {
+   "fullUrl": "{{base}}/Patient/90000001",
+   "resource": {
+    "birthDate": "1971-03-04",
+    "gender": "female",
+    "id": "90000001",
+    "name": [
+     {
+      "family": "TESTAROSSA",
+      "given": [
+       "INES"
+      ],
+      "text": "TESTAROSSA, INES",
+      "use": "official"
+     }
+    ],
+    "resourceType": "Patient"
+   },
+   "search": {
+    "mode": "match"
+   }
+  }
+ ],
+ "link": [
+  {
+   "relation": "self",
+   "url": "{{base}}/x"
+  }
+ ],
+ "resourceType": "Bundle",
+ "type": "searchset"
+}

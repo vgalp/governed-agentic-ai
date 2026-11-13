@@ -9,6 +9,12 @@ server:
   base_url: https://fhir-open.cerner.com/r4/ec2458f2-1e24-41c8-b71b-0e701af7583d
   auth: none
   timeout: 45                               # the open sandbox can be slow on visits and problems
+  # How the server is called (ADR 036). Each line is optional; these are the values for this sandbox.
+  max_concurrent: 4                        # requests in flight at once, per tool server
+  rate_limit: {per_second: 10, burst: 20}  # stay under the EHR's limits instead of meeting its 429s
+  breaker: {failures: 5, reset_seconds: 30}  # five failures in a row: say so at once for 30 s
+  budget: 85                         # seconds for one question, all requests and retries; below the tool's timeout
+  cache_seconds: 60                        # a launched clinician's answers, for their next question (never the backend's)
   docs: docs/oracle-health/README.md
 
 # The secure sandbox, or a hospital's system account, signs the app in (SMART Backend Services).

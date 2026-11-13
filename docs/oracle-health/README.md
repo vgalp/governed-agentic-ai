@@ -85,6 +85,25 @@ Each organization gives its record numbers its own system (an OID). Once you kno
 Then "Give me a brief on MRN 12345, born 1990-09-15" reads that patient directly; the birth date must
 still match. Without it, patients are found by name and birth date.
 
+
+## How the connector calls the server (ADR 036)
+
+`server:` in fhir.yaml also sets how the server is called. Every line is optional:
+
+```yaml
+  max_concurrent: 4                          # requests in flight at once, per tool server
+  rate_limit: {per_second: 10, burst: 20}    # stay under the EHR's limits
+  breaker: {failures: 5, reset_seconds: 30}  # after 5 failures in a row, say so at once for 30 s
+  budget: 80                                 # seconds for one question, all requests together
+  cache_seconds: 60                          # a launched clinician's answers, for their next question
+```
+
+`scripts/fhir_check.py` prints any search parameter the profile uses that the server does not
+declare (the server may ignore it), and a one-line summary of the requests it made. Each tool
+server serves its request counts, latencies, retries and breaker state at `/metrics` (Prometheus
+format). To record the sandbox's answers for the tests: `scripts/fhir_record.py`
+(tests/fixtures/fhir/README.md).
+
 ## Run the assistant on Oracle Health's records
 
 ```bash

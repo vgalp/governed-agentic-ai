@@ -1,0 +1,32 @@
+{
+ "entry": [
+  {
+   "fullUrl": "{{base}}/AllergyIntolerance/9000001",
+   "resource": {
+    "clinicalStatus": {
+     "coding": [
+      {
+       "code": "active"
+      }
+     ]
+    },
+    "code": {
+     "text": "Penicillin"
+    },
+    "id": "9000001",
+    "resourceType": "AllergyIntolerance"
+   },
+   "search": {
+    "mode": "match"
+   }
+  }
+ ],
+ "link": [
+  {
+   "relation": "self",
+   "url": "{{base}}/x"
+  }
+ ],
+ "resourceType": "Bundle",
+ "type": "searchset"
+}

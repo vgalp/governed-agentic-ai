@@ -167,11 +167,20 @@ class Source:
             return
         from concurrent.futures import ThreadPoolExecutor
 
+        from fhir.client import FhirError
+        from fhir.resilience import run_in_context
+
         if getattr(self.client, "auth", None) is not None:
-            self.client.auth.token()          # sign in once, before the parallel reads
+            try:
+                self.client.auth.token()      # sign in once, before the parallel reads
+            except FhirError:
+                pass                          # each read below reports it, under its own record type
         types = [r for r in types if (r.name, patient.id) not in self._fetched]
         with ThreadPoolExecutor(max_workers=max(1, min(6, len(types)))) as pool:
-            list(pool.map(lambda r: self.resources(r, patient), types))
+            # each read runs in a copy of this context: the tool call's time budget applies there too
+            futures = [pool.submit(run_in_context(self.resources, r, patient)) for r in types]
+            for f in futures:
+                f.result()
 
     def _fhir_records(self, r, patient: Patient, allowed: set[str]) -> list[dict]:
         from profiles.fhir_map import render

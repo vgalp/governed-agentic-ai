@@ -1,0 +1,16 @@
+{
+ "birthDate": "1971-03-04",
+ "gender": "female",
+ "id": "90000001",
+ "name": [
+  {
+   "family": "TESTAROSSA",
+   "given": [
+    "INES"
+   ],
+   "text": "TESTAROSSA, INES",
+   "use": "official"
+  }
+ ],
+ "resourceType": "Patient"
+}

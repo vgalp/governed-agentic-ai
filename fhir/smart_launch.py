@@ -292,6 +292,7 @@ def launch_client(fhir_map, ref: str, profile: str, store: SessionStore | None =
     address is the session's, which was checked against the profile's issuers at launch."""
     from fhir.client import FhirClient
     from fhir.sessions import default_store
+    from fhir.transport import ServerPolicy
     store = store or default_store(profile)
     s = store.load_ref(ref)
     if s is None:
@@ -299,7 +300,7 @@ def launch_client(fhir_map, ref: str, profile: str, store: SessionStore | None =
     if _norm(s.iss) not in {_norm(i) for i in (fhir_map.launch or {}).get("issuers", [])}:
         raise FhirError("this session is from an EHR the profile does not accept")
     return FhirClient(s.iss, LaunchAuth(store, ref=ref), session=session,
-                      timeout=float(fhir_map.server.get("timeout", 20)))
+                      policy=ServerPolicy.from_settings(fhir_map.server))
 
 
 def _local(url: str) -> bool:
@@ -333,6 +334,11 @@ class LaunchAuth:
     @property
     def scope_granted(self) -> str:
         return self._s().scope
+
+    @property
+    def cache_scope(self) -> str:
+        """This clinician's session: cached answers are never served to another (fhir/cache.py)."""
+        return "launch:" + (self.ref or self.sessions.ref(self.sid or ""))
 
     def invalidate(self) -> None:
         pass                       # a refused token cannot be renewed from here: the next call says so

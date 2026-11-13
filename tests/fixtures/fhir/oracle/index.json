@@ -1,0 +1,218 @@
+{
+ "format": 1,
+ "source": "hand-built",
+ "recorded_on": "2026-11-13",
+ "profile": "clinic-oracle",
+ "patient": {
+  "id": "90000001",
+  "query": "Ines Testarossa, born 1971-03-04"
+ },
+ "note": "Hand-built in the recording format from what the open sandbox sent on 2026-11-12 (paging with -pageContext, upper-case names, 400 for a date without a time). Invented patient. Replace with scripts/fhir_record.py.",
+ "base_url": "https://fhir-open.cerner.com/r4/ec2458f2-1e24-41c8-b71b-0e701af7583d",
+ "exchanges": [
+  {
+   "path": "/metadata",
+   "query": [],
+   "status": 200,
+   "content_type": "application/fhir+json; charset=utf-8",
+   "headers": {},
+   "body": "bodies/000-metadata.json"
+  },
+  {
+   "path": "/Patient/90000001",
+   "query": [],
+   "status": 200,
+   "content_type": "application/fhir+json; charset=utf-8",
+   "headers": {},
+   "body": "bodies/001-Patient.json"
+  },
+  {
+   "path": "/Patient",
+   "query": [
+    [
+     "birthdate",
+     "1971-03-04"
+    ],
+    [
+     "family",
+     "Testarossa"
+    ],
+    [
+     "given",
+     "Ines"
+    ]
+   ],
+   "status": 200,
+   "content_type": "application/fhir+json; charset=utf-8",
+   "headers": {},
+   "body": "bodies/002-Patient.json"
+  },
+  {
+   "path": "/MedicationRequest",
+   "query": [
+    [
+     "_count",
+     "50"
+    ],
+    [
+     "patient",
+     "90000001"
+    ],
+    [
+     "status",
+     "active"
+    ]
+   ],
+   "status": 200,
+   "content_type": "application/fhir+json; charset=utf-8",
+   "headers": {},
+   "body": "bodies/003-MedicationRequest.json"
+  },
+  {
+   "path": "/Encounter",
+   "query": [
+    [
+     "_count",
+     "50"
+    ],
+    [
+     "date",
+     "ge????-??-??T??:??:??Z"
+    ],
+    [
+     "patient",
+     "90000001"
+    ]
+   ],
+   "status": 200,
+   "content_type": "application/fhir+json; charset=utf-8",
+   "headers": {},
+   "body": "bodies/004-Encounter.json"
+  },
+  {
+   "path": "/Encounter",
+   "query": [
+    [
+     "_count",
+     "50"
+    ],
+    [
+     "date",
+     "ge2023-11-13"
+    ],
+    [
+     "patient",
+     "90000001"
+    ]
+   ],
+   "status": 400,
+   "content_type": "application/fhir+json; charset=utf-8",
+   "headers": {},
+   "body": "bodies/005-Encounter.json"
+  },
+  {
+   "path": "/Condition",
+   "query": [
+    [
+     "_count",
+     "50"
+    ],
+    [
+     "category",
+     "problem-list-item"
+    ],
+    [
+     "clinical-status",
+     "active"
+    ],
+    [
+     "patient",
+     "90000001"
+    ]
+   ],
+   "status": 200,
+   "content_type": "application/fhir+json; charset=utf-8",
+   "headers": {},
+   "body": "bodies/006-Condition.json"
+  },
+  {
+   "path": "/AllergyIntolerance",
+   "query": [
+    [
+     "_count",
+     "50"
+    ],
+    [
+     "clinical-status",
+     "active"
+    ],
+    [
+     "patient",
+     "90000001"
+    ]
+   ],
+   "status": 200,
+   "content_type": "application/fhir+json; charset=utf-8",
+   "headers": {},
+   "body": "bodies/007-AllergyIntolerance.json"
+  },
+  {
+   "path": "/Observation",
+   "query": [
+    [
+     "_count",
+     "50"
+    ],
+    [
+     "category",
+     "vital-signs"
+    ],
+    [
+     "date",
+     "ge????-??-??T??:??:??Z"
+    ],
+    [
+     "patient",
+     "90000001"
+    ]
+   ],
+   "status": 200,
+   "content_type": "application/fhir+json; charset=utf-8",
+   "headers": {},
+   "body": "bodies/008-Observation.json"
+  },
+  {
+   "path": "/Observation",
+   "query": [
+    [
+     "-pageContext",
+     "pc_Q2F0YWxvZw"
+    ],
+    [
+     "-pageDirection",
+     "NEXT"
+    ],
+    [
+     "_count",
+     "50"
+    ],
+    [
+     "category",
+     "vital-signs"
+    ],
+    [
+     "date",
+     "ge????-??-??T??:??:??Z"
+    ],
+    [
+     "patient",
+     "90000001"
+    ]
+   ],
+   "status": 200,
+   "content_type": "application/fhir+json; charset=utf-8",
+   "headers": {},
+   "body": "bodies/009-Observation.json"
+  }
+ ]
+}

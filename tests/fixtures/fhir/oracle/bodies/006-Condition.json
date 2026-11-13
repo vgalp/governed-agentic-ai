@@ -1,0 +1,70 @@
+{
+ "entry": [
+  {
+   "fullUrl": "{{base}}/Condition/8000001",
+   "resource": {
+    "category": [
+     {
+      "coding": [
+       {
+        "code": "problem-list-item"
+       }
+      ]
+     }
+    ],
+    "clinicalStatus": {
+     "coding": [
+      {
+       "code": "active"
+      }
+     ]
+    },
+    "code": {
+     "text": "Type 2 diabetes mellitus"
+    },
+    "id": "8000001",
+    "resourceType": "Condition"
+   },
+   "search": {
+    "mode": "match"
+   }
+  },
+  {
+   "fullUrl": "{{base}}/Condition/8000002",
+   "resource": {
+    "category": [
+     {
+      "coding": [
+       {
+        "code": "problem-list-item"
+       }
+      ]
+     }
+    ],
+    "clinicalStatus": {
+     "coding": [
+      {
+       "code": "active"
+      }
+     ]
+    },
+    "code": {
+     "text": "Essential hypertension"
+    },
+    "id": "8000002",
+    "resourceType": "Condition"
+   },
+   "search": {
+    "mode": "match"
+   }
+  }
+ ],
+ "link": [
+  {
+   "relation": "self",
+   "url": "{{base}}/x"
+  }
+ ],
+ "resourceType": "Bundle",
+ "type": "searchset"
+}

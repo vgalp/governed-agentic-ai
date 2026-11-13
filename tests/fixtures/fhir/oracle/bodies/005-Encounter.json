@@ -1,0 +1,13 @@
+{
+ "issue": [
+  {
+   "code": "invalid",
+   "details": {
+    "text": "date: must have a time"
+   },
+   "diagnostics": "date: must have a time",
+   "severity": "error"
+  }
+ ],
+ "resourceType": "OperationOutcome"
+}

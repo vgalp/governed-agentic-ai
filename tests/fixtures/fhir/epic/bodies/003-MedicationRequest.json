@@ -1,0 +1,57 @@
+{
+ "entry": [
+  {
+   "fullUrl": "{{base}}/MedicationRequest/eMR.warf0001",
+   "resource": {
+    "authoredOn": "2026-02-01",
+    "id": "eMR.warf0001",
+    "intent": "order",
+    "medicationCodeableConcept": {
+     "coding": [
+      {
+       "code": "855332",
+       "system": "http://www.nlm.nih.gov/research/umls/rxnorm"
+      }
+     ],
+     "text": "warfarin 5 MG tablet"
+    },
+    "resourceType": "MedicationRequest",
+    "status": "active"
+   },
+   "search": {
+    "mode": "match"
+   }
+  },
+  {
+   "fullUrl": "{{base}}/MedicationRequest/eMR.ibup0002",
+   "resource": {
+    "authoredOn": "2026-09-28",
+    "id": "eMR.ibup0002",
+    "intent": "order",
+    "medicationCodeableConcept": {
+     "coding": [
+      {
+       "code": "197806",
+       "system": "http://www.nlm.nih.gov/research/umls/rxnorm"
+      }
+     ],
+     "text": "ibuprofen 400 MG tablet"
+    },
+    "resourceType": "MedicationRequest",
+    "status": "active"
+   },
+   "search": {
+    "mode": "match"
+   }
+  }
+ ],
+ "link": [
+  {
+   "relation": "self",
+   "url": "{{base}}/x"
+  }
+ ],
+ "resourceType": "Bundle",
+ "total": 2,
+ "type": "searchset"
+}

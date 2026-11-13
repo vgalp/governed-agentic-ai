@@ -11,6 +11,12 @@ server:
   client_id_env: EPIC_CLIENT_ID            # the app's Non-Production Client ID, in .env
   private_key_env: EPIC_PRIVATE_KEY_PATH   # path to privatekey.pem, in .env; never in the repo
   key_id: gaai-sandbox-1                   # the kid in the published JWK Set (docs/epic/jwks.json)
+  # How the server is called (ADR 036). Each line is optional; these are the values for this sandbox.
+  max_concurrent: 4                        # requests in flight at once, per tool server
+  rate_limit: {per_second: 10, burst: 20}  # stay under the EHR's limits instead of meeting its 429s
+  breaker: {failures: 5, reset_seconds: 30}  # five failures in a row: say so at once for 30 s
+  budget: 80                         # seconds for one question, all requests and retries; below the tool's timeout
+  cache_seconds: 60                        # a launched clinician's answers, for their next question (never the backend's)
 
 
 # Launched from inside Epic, as the clinician, on the open chart (ADR 035). Register a second app at

@@ -1,0 +1,84 @@
+{
+ "entry": [
+  {
+   "fullUrl": "{{base}}/Observation/O1",
+   "resource": {
+    "category": [
+     {
+      "coding": [
+       {
+        "code": "vital-signs"
+       }
+      ]
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "code": "8480-6",
+       "system": "http://loinc.org"
+      }
+     ],
+     "text": "Systolic blood pressure"
+    },
+    "effectiveDateTime": "2026-10-02T13:40:00Z",
+    "id": "O1",
+    "resourceType": "Observation",
+    "status": "final",
+    "valueQuantity": {
+     "unit": "mm[Hg]",
+     "value": 132
+    }
+   },
+   "search": {
+    "mode": "match"
+   }
+  },
+  {
+   "fullUrl": "{{base}}/Observation/O2",
+   "resource": {
+    "category": [
+     {
+      "coding": [
+       {
+        "code": "vital-signs"
+       }
+      ]
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "code": "8462-4",
+       "system": "http://loinc.org"
+      }
+     ],
+     "text": "Diastolic blood pressure"
+    },
+    "effectiveDateTime": "2026-10-02T13:40:00Z",
+    "id": "O2",
+    "resourceType": "Observation",
+    "status": "final",
+    "valueQuantity": {
+     "unit": "mm[Hg]",
+     "value": 84
+    }
+   },
+   "search": {
+    "mode": "match"
+   }
+  }
+ ],
+ "link": [
+  {
+   "relation": "self",
+   "url": "{{base}}/x"
+  },
+  {
+   "relation": "next",
+   "url": "{{base}}/Observation?patient=90000001&category=vital-signs&date=ge2024-11-12T00%3A00%3A00Z&_count=50&-pageContext=pc_Q2F0YWxvZw&-pageDirection=NEXT"
+  }
+ ],
+ "resourceType": "Bundle",
+ "type": "searchset"
+}

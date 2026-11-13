@@ -1,0 +1,53 @@
+{
+ "entry": [
+  {
+   "fullUrl": "{{base}}/AllergyIntolerance/eAl.sulf0001",
+   "resource": {
+    "clinicalStatus": {
+     "coding": [
+      {
+       "code": "active"
+      }
+     ]
+    },
+    "code": {
+     "text": "Sulfa (Sulfonamide Antibiotics)"
+    },
+    "id": "eAl.sulf0001",
+    "resourceType": "AllergyIntolerance"
+   },
+   "search": {
+    "mode": "match"
+   }
+  },
+  {
+   "fullUrl": "{{base}}/AllergyIntolerance/eAl.pean0002",
+   "resource": {
+    "clinicalStatus": {
+     "coding": [
+      {
+       "code": "active"
+      }
+     ]
+    },
+    "code": {
+     "text": "Peanut"
+    },
+    "id": "eAl.pean0002",
+    "resourceType": "AllergyIntolerance"
+   },
+   "search": {
+    "mode": "match"
+   }
+  }
+ ],
+ "link": [
+  {
+   "relation": "self",
+   "url": "{{base}}/x"
+  }
+ ],
+ "resourceType": "Bundle",
+ "total": 2,
+ "type": "searchset"
+}

@@ -1,0 +1,31 @@
+{
+ "entry": [
+  {
+   "resource": {
+    "issue": [
+     {
+      "code": "processing",
+      "details": {
+       "text": "4101: Resource request returns no results."
+      },
+      "diagnostics": "4101: Resource request returns no results.",
+      "severity": "warning"
+     }
+    ],
+    "resourceType": "OperationOutcome"
+   },
+   "search": {
+    "mode": "outcome"
+   }
+  }
+ ],
+ "link": [
+  {
+   "relation": "self",
+   "url": "{{base}}/x"
+  }
+ ],
+ "resourceType": "Bundle",
+ "total": 0,
+ "type": "searchset"
+}

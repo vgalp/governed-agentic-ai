@@ -1,0 +1,81 @@
+{
+ "entry": [
+  {
+   "fullUrl": "{{base}}/Observation/eOb.bp000001",
+   "resource": {
+    "category": [
+     {
+      "coding": [
+       {
+        "code": "vital-signs"
+       }
+      ]
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "code": "85354-9",
+       "system": "http://loinc.org"
+      }
+     ],
+     "text": "Blood pressure"
+    },
+    "effectiveDateTime": "2026-09-28T10:05:00Z",
+    "id": "eOb.bp000001",
+    "resourceType": "Observation",
+    "status": "final",
+    "valueQuantity": {
+     "unit": "mm[Hg]",
+     "value": 128
+    }
+   },
+   "search": {
+    "mode": "match"
+   }
+  },
+  {
+   "fullUrl": "{{base}}/Observation/eOb.hr000002",
+   "resource": {
+    "category": [
+     {
+      "coding": [
+       {
+        "code": "vital-signs"
+       }
+      ]
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "code": "8867-4",
+       "system": "http://loinc.org"
+      }
+     ],
+     "text": "Heart rate"
+    },
+    "effectiveDateTime": "2026-09-28T10:05:00Z",
+    "id": "eOb.hr000002",
+    "resourceType": "Observation",
+    "status": "final",
+    "valueQuantity": {
+     "unit": "/min",
+     "value": 72
+    }
+   },
+   "search": {
+    "mode": "match"
+   }
+  }
+ ],
+ "link": [
+  {
+   "relation": "self",
+   "url": "{{base}}/x"
+  }
+ ],
+ "resourceType": "Bundle",
+ "total": 2,
+ "type": "searchset"
+}

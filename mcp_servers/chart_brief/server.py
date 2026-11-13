@@ -556,6 +556,9 @@ if __name__ == "__main__":
 
         try:
             CLIENT = client_from_settings(PROFILE.fhir_map.server)
+            from fhir.capabilities import startup_check
+            for finding in startup_check(CLIENT, PROFILE.fhir_map, "chart brief"):
+                print(f"Chart brief: {finding}")
         except FhirError as e:
             print(f"Chart brief: the FHIR server is not set up yet ({e})")
     mcp = FastMCP("chart_brief", host="127.0.0.1", port=8106)
@@ -565,15 +568,19 @@ if __name__ == "__main__":
         """For the patient named in the question: the record's problem list, current medications
         with recorded reasons, allergies, latest vitals and recent visits, cited line by line, with
         documentation checks. For a clinician's or nurse's review; no model, no recommendation."""
+        from fhir.transport import request_budget
+
         client = CLIENT
-        if launch_ref and PROFILE.fhir_map is not None and PROFILE.fhir_map.launch:   # from the gateway only
-            from fhir.client import FhirError
-            from fhir.smart_launch import launch_client
-            try:
-                client = launch_client(PROFILE.fhir_map, launch_ref, PROFILE.name)
-            except FhirError as e:
-                return {"results": [], "answer": str(e)}
-        return brief(PROFILE.records_db, PROFILE, CONFIG, query, allowed_classes, client)
+        fhir = PROFILE.fhir_map if CONFIG is not None and CONFIG.source == "fhir" else None
+        with request_budget(fhir.server if fhir is not None else None):   # all reads together (ADR 036)
+            if launch_ref and PROFILE.fhir_map is not None and PROFILE.fhir_map.launch:   # from the gateway only
+                from fhir.client import FhirError
+                from fhir.smart_launch import launch_client
+                try:
+                    client = launch_client(PROFILE.fhir_map, launch_ref, PROFILE.name)
+                except FhirError as e:
+                    return {"results": [], "answer": str(e)}
+            return brief(PROFILE.records_db, PROFILE, CONFIG, query, allowed_classes, client)
 
     if CONFIG is None:
         print(f"Chart brief for profile {PROFILE.name}: not set up (no chart_brief.yaml)")

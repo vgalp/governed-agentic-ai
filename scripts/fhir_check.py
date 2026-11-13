@@ -9,7 +9,8 @@
 1. Sign in, as the profile's fhir.yaml says: none (an open server), the app itself (smart_backend:
    a signed assertion or a client secret), or a person who signed in with scripts/fhir_connect.py
    (smart_user).
-2. The server: its CapabilityStatement (FHIR version, software, the resource types it offers).
+2. The server: its CapabilityStatement (FHIR version, software, the resource types it offers), and
+   any search parameter the profile uses that the server does not declare (ADR 036).
 3. Optional: find a test patient by name and date of birth, or read one by id, and count what the
    profile would read for them. With smart_user, the patient the sign-in is for is used by default.
 
@@ -25,6 +26,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
+from fhir.capabilities import Capabilities, check_map  # noqa: E402
 from fhir.client import FhirError, client_from_settings  # noqa: E402
 from profiles.loader import load_profile  # noqa: E402
 
@@ -78,15 +80,18 @@ def main(default_profile: str | None = None) -> int:
 
     print("2. Reading the server's capabilities")
     try:
-        meta = client.capability()
-        kinds = {r["type"] for rest in meta.get("rest", []) for r in rest.get("resource", [])}
-        need = {m.resource, *(r.resource for r in m.records)}
-        print(f"   ✓ FHIR {meta.get('fhirVersion', '?')}, {(meta.get('software') or {}).get('name', 'server')}; "
-              f"resource types this profile reads: "
-              + ", ".join(f"{k} {'✓' if k in kinds else '✗ not offered'}" for k in sorted(need)))
+        caps = Capabilities.parse(client.capability())
     except FhirError as e:
         print(f"   ✗ {e}")
         return 1
+    need = {m.resource, *(r.resource for r in m.records)}
+    print(f"   ✓ FHIR {caps.fhir_version}, {caps.software}; resource types this profile reads: "
+          + ", ".join(f"{k} {'✓' if caps.offers(k) else '✗ not offered'}" for k in sorted(need)))
+    findings = check_map(caps, m)
+    for f in findings:
+        print(f"   {'✗' if f.level == 'error' else '!'} {f.message}")
+    if not findings:
+        print("   ✓ every search parameter this profile uses is declared")
 
     pid = args.patient_id or (getattr(client.auth, "patient", None) if not args.patient else None)
     if args.patient or pid:
@@ -127,8 +132,21 @@ def main(default_profile: str | None = None) -> int:
         except FhirError as e:
             print(f"   ✗ {e}")
             return 1
+    print(summary(client))
     print("Connected.")
     return 0
+
+
+def summary(client) -> str:
+    """One line from this run's metrics: attempts, retries, latency (ADR 036)."""
+    from fhir.metrics import METRICS
+    server = client.transport.server
+    attempts = METRICS.total("fhir_requests_total", server=server)
+    ok = METRICS.total("fhir_requests_total", server=server, outcome="ok")
+    retries = METRICS.total("fhir_retries_total", server=server)
+    invalid = METRICS.total("fhir_response_invalid_total", server=server)
+    return (f"   {attempts:g} request(s) to {server}: {ok:g} answered, {retries:g} tried again"
+            + (f", {invalid:g} malformed" if invalid else ""))
 
 
 if __name__ == "__main__":
