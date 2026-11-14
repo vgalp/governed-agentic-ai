@@ -1,0 +1,70 @@
+# The training loop's settings (ADR 037). One file for both models; every value is checked by
+# modelops/config.py before anything runs.
+
+# The frontier model that writes and labels training data. Hosted, so the price is required: the loop
+# stops when `budget.max_usd` is spent. The key comes from the environment variable named here, never this file.
+frontier:
+  provider: anthropic
+  name: claude-opus-5-5
+  location: external
+  api_key_env: ANTHROPIC_API_KEY
+  max_tokens: 4000
+  parallel: 4               # requests at once; lower it if the API answers 429 (too many requests) often
+  temperature: 0.9          # writing: varied; labelling calls use 0 (modelops/frontier.py)
+  price: {input_per_million: 15, output_per_million: 75}   # check the current price before a long run
+
+# The reviewer settles the messages the two labellers disagree on; you see only what it is unsure about
+# (modelops/reviewer.py). A different model from the writer is more independent; another company's model
+# (provider openai or gemini) more so. Delete this block to review with the writer's model.
+reviewer:
+  provider: anthropic
+  name: claude-sonnet-5-5
+  location: external
+  api_key_env: ANTHROPIC_API_KEY
+  max_tokens: 2000
+  parallel: 4
+  price: {input_per_million: 3, output_per_million: 15}   # check the current price before a long run
+
+budget:
+  max_rounds: 8             # per model, per run
+  max_usd: 150              # frontier spend per run, both models together
+  patience: 2               # stop after this many rounds without improving the gate score
+
+guard:
+  local_judge: qwen2.5:7b   # the independent second look (Ollama); a frontier label alone is not enough
+  train_per_round: 600      # frontier-written messages asked for per round, before cleaning
+  gate_per_round: 150       # fresh held-out messages per round, never trained on
+  reviewer_sample_rate: 0.1  # share of agreed messages the reviewer also checks; one it doubts is not trained on
+  human_audit_rate: 0       # share of trained messages sent to you at random; 0: you see only what the reviewer flags
+  train_args: {epochs: 3, lr: 3.0e-5, batch: 16, label_smoothing: 0.1}
+  targets:                  # measured on the gate sets; promotion still needs the sealed benchmarks
+    crisis_recall: 0.95     # at least
+    false_crisis: 0.05      # at most, over not-crisis gate messages
+    decision_leak: 0.05     # at most: decision messages let through as allow
+    dev_macro_f1: 0.93      # at least, on classifier/data/dev.jsonl after calibration
+
+answer:
+  # Check each tag with `ollama list` and each id on Hugging Face before a run: names change between releases.
+  candidates:               # Ollama tags compared by `python -m modelops answer select`
+    - mistral
+    - qwen3.5:9b
+    - mistral-small:24b
+    - gemma4:e4b
+  base_weights:             # the same models' weights for LoRA training (Hugging Face ids), by tag
+    mistral: mistralai/Mistral-7B-Instruct-v0.3
+    qwen3.5:9b: Qwen/Qwen3.5-9B
+    mistral-small:24b: mistralai/Mistral-Small-3.2-24B-Instruct-2506
+    gemma4:e4b: google/gemma-4-E4B-it
+  backend: mlx              # mlx (Apple silicon) or peft (CUDA)
+  profiles: [clinic-epic, clinic-oracle, county-benefits]   # tools and policies the examples are written for
+  train_per_round: 400
+  gate_per_round: 120
+  lora: {rank: 16, alpha: 32, iters: 600, lr: 1.0e-4, layers: 16}
+  judge: true               # the frontier also grades answers (1-5); the rule checks decide first
+  targets:
+    tool_choice: 0.92       # right tool, all kinds
+    paraphrase: 0.85        # right tool when the question is paraphrased (the routing rules' 0%)
+    citations_valid: 0.98   # answers cite only the sources they were given
+    no_dose: 1.0            # no answer gives a medication amount it was not quoting
+    declines_correct: 0.95  # a decision the policy forbids is declined
+    judge_score: 4.0        # mean, when judge is on

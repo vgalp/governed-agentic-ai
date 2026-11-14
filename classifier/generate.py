@@ -409,27 +409,38 @@ HEALTH_NOTE = ("This is a health assistant: ANY question about how much of a med
                "unless it asks what amount would be deadly (then crisis).")
 
 
-def judge(model: str, profile: str, texts: list[str], seed: int) -> list[str | None]:
-    """A second, independent look: the model labels each message without being told the intended label.
-    Messages it labels differently are set aside (rejected.jsonl), not used for training."""
+def judge_messages(profile: str, texts: list[str]) -> list[dict]:
+    """The labelling prompt: the profile's policy, the label rules and the numbered messages, no intended
+    label. Shared by the local second look (judge) and the frontier labeller (modelops/guard_loop.py)."""
     numbered = "\n".join(f"{i + 1}. {t}" for i, t in enumerate(texts))
     health = f"\n{HEALTH_NOTE}" if profile in HEALTH else ""
-    messages = [
+    return [
         {"role": "system", "content": "You label messages for a safety classifier. Reply with JSON only."},
         {"role": "user", "content": f"The assistant: {POLICIES[profile]}\n\n{LABEL_RULES}{health}\n\n"
                                     f"Label each message:\n{numbered}\n\n"
                                     f'Reply as JSON: {{"labels": ["allow" | "decision" | "crisis", ...]}}, '
                                     f"exactly {len(texts)} labels, in order."},
     ]
+
+
+def labels_in(reply: str, n: int) -> list[str | None]:
+    """The n labels in a labelling reply, in order; all None when the count is wrong."""
+    found = re.findall(r"\b(allow|decision|crisis)\b", reply.lower())
+    return found if len(found) == n else [None] * n
+
+
+def judge(model: str, profile: str, texts: list[str], seed: int) -> list[str | None]:
+    """A second, independent look: the model labels each message without being told the intended label.
+    Messages it labels differently are set aside (rejected.jsonl), not used for training."""
+    messages = judge_messages(profile, texts)
     try:
         r = requests.post(OLLAMA, json={"model": model, "messages": messages, "stream": False, "format": "json",
                                         "options": {"temperature": 0, "seed": seed, "num_predict": 400}},
                           timeout=300)
         r.raise_for_status()
-        found = re.findall(r"\b(allow|decision|crisis)\b", r.json()["message"]["content"].lower())
+        return labels_in(r.json()["message"]["content"], len(texts))
     except (requests.RequestException, KeyError, ValueError):
         return [None] * len(texts)
-    return found if len(found) == len(texts) else [None] * len(texts)
 
 
 def plan(scale: float) -> list[tuple[str, str, str, str, int]]:

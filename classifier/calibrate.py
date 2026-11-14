@@ -6,7 +6,8 @@
 The frozen test set is never used for this (eval/datasets/guard_test_protocol.md, rule 2).
 
 1. Crisis threshold: the LOWEST one that keeps false alarms (non-crisis messages labelled crisis)
-   within MAX_FALSE_ALARMS of dev. For a safety label, the safer side (labels.md rule 8). v1 and v2
+   within MAX_FALSE_ALARMS of dev (2%; --max-false-alarms changes it, and the training loop sets it
+   to its false_crisis target, ADR 037). For a safety label, the safer side (labels.md rule 8). v1 and v2
    took the highest threshold among those that caught every dev crisis message; dev's crisis
    messages were easy, so that chose 0.8 for v2, too strict for harder messages
    (eval/results/guard_test_v2_notes.md).
@@ -39,11 +40,11 @@ def false_alarms(gold: list[str], pred: list[str]) -> float:
     return sum(p == "crisis" for p in other) / max(1, len(other))
 
 
-def choose(gold: list[str], probs: list[dict[str, float]]) -> dict[str, float]:
+def choose(gold: list[str], probs: list[dict[str, float]], max_false_alarms: float = MAX_FALSE_ALARMS) -> dict[str, float]:
     def labels(t):
         return [decide(p, t) for p in probs]
 
-    within = [tc for tc in GRID if false_alarms(gold, labels({"crisis": tc, "decision": 0.5})) <= MAX_FALSE_ALARMS]
+    within = [tc for tc in GRID if false_alarms(gold, labels({"crisis": tc, "decision": 0.5})) <= max_false_alarms]
     tc = min(within) if within else 0.5
     scored = []
     for td in GRID:
@@ -56,7 +57,13 @@ def choose(gold: list[str], probs: list[dict[str, float]]) -> dict[str, float]:
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--model", default="guard-modernbert-v4", help="folder name under models/")
-    model_dir = MODELS / ap.parse_args().model
+    ap.add_argument("--max-false-alarms", type=float, default=MAX_FALSE_ALARMS,
+                    help="share of non-crisis dev messages the crisis threshold may flag (the training loop passes its "
+                         "false_crisis target; a higher value buys crisis recall)")
+    args = ap.parse_args()
+    if not 0 < args.max_false_alarms <= 0.2:
+        raise SystemExit("--max-false-alarms must be above 0 and at most 0.2")
+    model_dir = MODELS / args.model
     rows = read_jsonl(DEV)
     guard = GuardModel(model_dir)
     by_profile = defaultdict(list)
@@ -68,7 +75,7 @@ def main() -> None:
             probs[i] = p
 
     gold = [r["label"] for r in rows]
-    thresholds = choose(gold, probs)
+    thresholds = choose(gold, probs, args.max_false_alarms)
     before = metrics([LABEL_ID[g] for g in gold], [LABEL_ID[decide(p, None)] for p in probs])
     pred = [decide(p, thresholds) for p in probs]
     after = metrics([LABEL_ID[g] for g in gold], [LABEL_ID[p] for p in pred])
@@ -85,7 +92,7 @@ def main() -> None:
 
     (model_dir / "thresholds.json").write_text(json.dumps({
         "thresholds": thresholds, "chosen_on": "dev", "dev_rows": len(rows), "grid": [GRID[0], GRID[-1]],
-        "max_false_alarms": MAX_FALSE_ALARMS, "dev_before": before, "dev_after": after,
+        "max_false_alarms": args.max_false_alarms, "dev_before": before, "dev_after": after,
         "labels": list(LABELS)}, indent=2))
     print(f"\nSaved {model_dir / 'thresholds.json'}")
 

@@ -18,6 +18,7 @@ ADR 018): the provider's own token counts where it returns them, else an estimat
 """
 
 import os
+import re
 import time
 
 import requests
@@ -43,7 +44,14 @@ HOSTED = set(BASE_URLS)            # always third-party services: location must 
 
 
 class ModelUnavailable(Exception):
-    """The model could not be called or gave no usable answer. The router then falls back."""
+    """The model could not be called or gave no usable answer. The router then falls back.
+
+    `detail` holds the provider's own error message, kept out of str(): it can echo the request, which in
+    the pipeline may hold personal data. Offline tools on synthetic data (modelops) may show it."""
+
+    def __init__(self, message: str, detail: str = ""):
+        super().__init__(message)
+        self.detail = detail
 
 
 def is_available(model: dict) -> bool:
@@ -72,12 +80,31 @@ def _post(url: str, headers: dict, body: dict) -> dict:
     except requests.RequestException as e:
         raise ModelUnavailable(f"could not reach the model: {type(e).__name__}") from e
     if resp.status_code != 200:
-        # The status only: error bodies can echo the request, which may hold personal data.
-        raise ModelUnavailable(f"model returned HTTP {resp.status_code}")
+        # The status and the provider's error type only (e.g. authentication_error): error messages can
+        # echo the request, which may hold personal data.
+        raise ModelUnavailable(f"model returned HTTP {resp.status_code}{_error_type(resp)}", _error_message(resp))
     try:
         return resp.json()
     except ValueError as e:
         raise ModelUnavailable("model returned a response that is not JSON") from e
+
+
+def _error_type(resp) -> str:
+    try:
+        err = resp.json().get("error")
+        kind = err.get("type") if isinstance(err, dict) else None
+    except (ValueError, AttributeError):
+        return ""
+    return f" ({kind})" if isinstance(kind, str) and re.fullmatch(r"[a-z_]{3,40}", kind) else ""
+
+
+def _error_message(resp) -> str:
+    try:
+        err = resp.json().get("error")
+        msg = err.get("message") if isinstance(err, dict) else None
+    except (ValueError, AttributeError):
+        return ""
+    return msg[:500] if isinstance(msg, str) else ""
 
 
 def no_think(messages: list[dict]) -> list[dict]:
@@ -121,14 +148,17 @@ def _anthropic_chat(model: dict, messages: list[dict]) -> tuple[str, dict]:
     }, {
         "model": model["name"],
         "max_tokens": model.get("max_tokens", 1024),
-        "temperature": model.get("temperature", 0),
+        # temperature: null in a model's settings leaves it to the provider (some models refuse the setting)
+        **({} if "temperature" in model and model["temperature"] is None else {"temperature": model.get("temperature", 0)}),
         "system": system,
         "messages": [{"role": m["role"], "content": m["content"]}
                      for m in messages if m["role"] != "system"],
     })
     text = "".join(b.get("text", "") for b in data.get("content") or [] if b.get("type") == "text")
     if not text:
-        raise ModelUnavailable("model response has no answer text")
+        stop = data.get("stop_reason")
+        raise ModelUnavailable("model response has no answer text",
+                               f"stop_reason={stop}" if isinstance(stop, str) else "")
     u = data.get("usage") or {}
     return text, {"input": u.get("input_tokens"), "output": u.get("output_tokens")}
 
@@ -149,6 +179,12 @@ def _call(model: dict, messages: list[dict]) -> tuple[str, dict]:
                                    "({chars} characters received)").format(chars=len(last))
         return text, {}
     raise ModelUnavailable(f"unknown provider {provider!r}")
+
+
+def complete(model: dict, messages: list[dict]) -> tuple[str, dict]:
+    """(answer text, {"input": tokens, "output": tokens}), outside any request's meter: for offline
+    work that keeps its own account of spend (modelops/frontier.py). Counts may be None."""
+    return _call(model, messages)
 
 
 def chat(model: dict, messages: list[dict], purpose: str = "answer") -> str:

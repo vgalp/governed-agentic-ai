@@ -46,7 +46,7 @@ classifier:
     - {code: S2, name: professional decision, category: professional_decision}
   default_category: professional_decision
   input_engine: guard_model
-  guard_model: guard-modernbert-v6.1
+  guard_model: guard-modernbert-v7
   decision_category: professional_decision
   # The guard classifier reads this paragraph. This profile is not in training data: the
   # classifier sees it for the first time here (as the unseen office profiles in test set v5).

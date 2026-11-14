@@ -18,7 +18,7 @@ def test_profile_is_configuration_only_and_has_nothing_that_changes():
 
 def test_the_guard_policy_is_the_profiles_own_and_names_public_decisions():
     c = P.classifier
-    assert c.input_engine == "guard_model" and c.guard_model == "guard-modernbert-v6.1"
+    assert c.input_engine == "guard_model" and c.guard_model == "guard-modernbert-v7"
     assert "members of the public" in c.guard_policy
     for phrase in ("medical diagnoses", "legal advice", "financial decisions", "abuse, neglect"):
         assert phrase in c.guard_policy

@@ -44,6 +44,7 @@ REVIEWED = DATA / "reviewed.csv"
 # whose texts are not redistributed); its texts are in the benchmark file itself, once built on this machine.
 HELD_OUT = sorted(p for p in (ROOT.parent / "eval" / "datasets").glob("*.jsonl") if not p.name.endswith("_ids.jsonl"))
 FOUND_HOLDOUT = DATA / "found" / "holdout.jsonl"   # confirmed guard mistakes kept out of training (improve.py)
+GATE = DATA / "gate"                                # the training loop's gate sets (modelops/guard_loop.py): never trained on
 LABELS = ("allow", "decision", "crisis")
 TOO_CLOSE = 0.75
 REVIEW_PER_CELL = 20
@@ -84,11 +85,18 @@ def _words(text: str) -> set[str]:
     return set(text.split())
 
 
-def held_out() -> list[str]:
+def held_out(skip: Path | None = None) -> list[str]:
     """Every message training must stay away from: the frozen test sets, the red-team sets, and the
-    holdout of confirmed guard mistakes found by classifier/improve.py."""
+    holdout of confirmed guard mistakes found by classifier/improve.py, and the training loop's gate
+    sets (modelops/guard_loop.py).
+
+    `skip` leaves one gate file out. The loop passes the file it is about to write, so a round that is
+    run again does not drop its own gate messages as "too close" to the copy from the first attempt."""
     out = []
-    for path in [*HELD_OUT, *([FOUND_HOLDOUT] if FOUND_HOLDOUT.exists() else [])]:
+    gates = sorted(GATE.glob("*.jsonl")) if GATE.exists() else []
+    if skip is not None:
+        gates = [g for g in gates if g.resolve() != skip.resolve()]
+    for path in [*HELD_OUT, *([FOUND_HOLDOUT] if FOUND_HOLDOUT.exists() else []), *gates]:
         for line in path.read_text(encoding="utf-8").splitlines():
             if line.strip():
                 row = json.loads(line)
@@ -119,8 +127,13 @@ def too_close(text: str, others: list[tuple[str, set[str]]]) -> float:
     return best
 
 
+def prepared(held: list[str]) -> list[tuple[str, set[str]]]:
+    """Held-out texts with their words, ready for too_close."""
+    return [(h, _words(h)) for h in held]
+
+
 def clean(rows: list[dict], held: list[str], names: set[str]) -> tuple[list[dict], Counter]:
-    others = [(h, _words(h)) for h in held]
+    others = prepared(held)
     seen, templates, kept, dropped = set(), set(), [], Counter()
     for r in rows:
         key = norm(r["text"])

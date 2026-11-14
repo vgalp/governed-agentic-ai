@@ -29,3 +29,10 @@ deploy/**/.terragrunt-cache/
 deploy/**/.local-state/
 deploy/**/*.tfstate*
 deploy/**/*.tfvars
+
+# Training loop runs (ADR 037): commit ledger.jsonl and the round reports; never the frontier cache,
+# training data copies or model weights.
+modelops/runs/*/frontier_cache/
+modelops/runs/*/answer/round_*/data/
+modelops/runs/*/answer/round_*/model/
+modelops/runs/*/spend.json
