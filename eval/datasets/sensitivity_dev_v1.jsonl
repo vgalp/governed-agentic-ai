@@ -1,0 +1,104 @@
+{"id": "sd1-t001", "kind": "text", "stratum": "explicit", "categories": ["substance_use"], "text": "Devon Carter was admitted for alcohol withdrawal last month; when is his follow-up?"}
+{"id": "sd1-t002", "kind": "text", "stratum": "explicit", "categories": ["substance_use"], "text": "Problem list: opioid use disorder, severe, on maintenance therapy."}
+{"id": "sd1-t003", "kind": "text", "stratum": "explicit", "categories": ["substance_use"], "text": "Is Maria Santos still on methadone 80 mg daily?"}
+{"id": "sd1-t004", "kind": "text", "stratum": "explicit", "categories": ["substance_use"], "text": "Patient reports relapse on heroin after six months sober."}
+{"id": "sd1-t005", "kind": "text", "stratum": "explicit", "categories": ["substance_use"], "text": "Referred to outpatient rehab for cocaine dependence."}
+{"id": "sd1-t006", "kind": "text", "stratum": "explicit", "categories": ["substance_use"], "text": "Current medication: buprenorphine-naloxone 8 mg/2 mg film, ordered 2026-03-02."}
+{"id": "sd1-t007", "kind": "text", "stratum": "implicit", "categories": ["substance_use"], "text": "He says he finishes a fifth of vodka most nights and shakes in the morning without it."}
+{"id": "sd1-t008", "kind": "text", "stratum": "implicit", "categories": ["substance_use"], "text": "She goes to the clinic on Elm Street every morning for her dose before work."}
+{"id": "sd1-t009", "kind": "text", "stratum": "implicit", "categories": ["substance_use"], "text": "Mom found needles and burnt spoons in his room again."}
+{"id": "sd1-t010", "kind": "text", "stratum": "implicit", "categories": ["substance_use"], "text": "Patient attends meetings in the church basement and just got his one-year chip."}
+{"id": "sd1-t011", "kind": "text", "stratum": "explicit", "categories": ["mental_health"], "text": "Kenji Morita was diagnosed with bipolar disorder in 2021."}
+{"id": "sd1-t012", "kind": "text", "stratum": "explicit", "categories": ["mental_health"], "text": "Last visit reason: follow-up for major depression, PHQ-9 score 17."}
+{"id": "sd1-t013", "kind": "text", "stratum": "explicit", "categories": ["mental_health"], "text": "Does Aisha Bello have an appointment with psychiatry this week?"}
+{"id": "sd1-t014", "kind": "text", "stratum": "explicit", "categories": ["mental_health"], "text": "Current medication: lithium carbonate 300 mg three times daily."}
+{"id": "sd1-t015", "kind": "text", "stratum": "explicit", "categories": ["mental_health"], "text": "History of schizophrenia, stable on a monthly injection."}
+{"id": "sd1-t016", "kind": "text", "stratum": "explicit", "categories": ["mental_health"], "text": "Seen in the emergency department after a suicide attempt in January."}
+{"id": "sd1-t017", "kind": "text", "stratum": "implicit", "categories": ["mental_health"], "text": "She hasn't left her apartment in three weeks and says the neighbours are broadcasting her thoughts."}
+{"id": "sd1-t018", "kind": "text", "stratum": "implicit", "categories": ["mental_health"], "text": "He told the nurse he doesn't see the point in going on and has stopped eating."}
+{"id": "sd1-t019", "kind": "text", "stratum": "implicit", "categories": ["mental_health"], "text": "Patient was held for 72 hours on the fourth floor last spring."}
+{"id": "sd1-t020", "kind": "text", "stratum": "implicit", "categories": ["mental_health"], "text": "Her therapist recommended two sessions a week after the episodes at work."}
+{"id": "sd1-t021", "kind": "text", "stratum": "explicit", "categories": ["hiv"], "text": "Tomás Rivera is HIV positive, diagnosed 2019."}
+{"id": "sd1-t022", "kind": "text", "stratum": "explicit", "categories": ["hiv"], "text": "Current medication: Biktarvy one tablet daily."}
+{"id": "sd1-t023", "kind": "text", "stratum": "explicit", "categories": ["hiv"], "text": "Labs: CD4 count 540, viral load undetectable."}
+{"id": "sd1-t024", "kind": "text", "stratum": "explicit", "categories": ["hiv"], "text": "Reason for visit: PrEP follow-up and refill."}
+{"id": "sd1-t025", "kind": "text", "stratum": "explicit", "categories": ["hiv"], "text": "Problem list: AIDS-defining illness, Pneumocystis pneumonia 2020."}
+{"id": "sd1-t026", "kind": "text", "stratum": "explicit", "categories": ["hiv"], "text": "Started on dolutegravir and lamivudine last year."}
+{"id": "sd1-t027", "kind": "text", "stratum": "implicit", "categories": ["hiv"], "text": "He takes one pill a day from the infectious disease clinic and his counts have been good since 2019."}
+{"id": "sd1-t028", "kind": "text", "stratum": "implicit", "categories": ["hiv"], "text": "His partner disclosed his status last month; the patient asks to be tested every three months."}
+{"id": "sd1-t029", "kind": "text", "stratum": "implicit", "categories": ["hiv"], "text": "Patient is followed by the Ryan White program case manager."}
+{"id": "sd1-t030", "kind": "text", "stratum": "implicit", "categories": ["hiv"], "text": "Undetectable for five years; asks whether he still needs condoms with his husband."}
+{"id": "sd1-t031", "kind": "text", "stratum": "explicit", "categories": ["sexual_health"], "text": "Treated for chlamydia in June; partner notified."}
+{"id": "sd1-t032", "kind": "text", "stratum": "explicit", "categories": ["sexual_health"], "text": "Positive RPR, treated for syphilis with penicillin."}
+{"id": "sd1-t033", "kind": "text", "stratum": "explicit", "categories": ["sexual_health"], "text": "Requesting STI screening after a new partner."}
+{"id": "sd1-t034", "kind": "text", "stratum": "explicit", "categories": ["sexual_health"], "text": "Diagnosis: gonorrhea, ceftriaxone given in clinic."}
+{"id": "sd1-t035", "kind": "text", "stratum": "explicit", "categories": ["sexual_health"], "text": "History of genital herpes, on suppressive therapy."}
+{"id": "sd1-t036", "kind": "text", "stratum": "explicit", "categories": ["sexual_health"], "text": "Does the record show any sexually transmitted infection for Paul Okoye?"}
+{"id": "sd1-t037", "kind": "text", "stratum": "implicit", "categories": ["sexual_health"], "text": "Burning and discharge a week after an unprotected encounter; given a shot and a week of pills, told to bring her partner in."}
+{"id": "sd1-t038", "kind": "text", "stratum": "implicit", "categories": ["sexual_health"], "text": "The health department called to do contact tracing for his partners."}
+{"id": "sd1-t039", "kind": "text", "stratum": "implicit", "categories": ["sexual_health"], "text": "She wants to be checked for everything before her new relationship gets serious."}
+{"id": "sd1-t040", "kind": "text", "stratum": "implicit", "categories": ["sexual_health"], "text": "He was given a single dose in the buttock and told no sex for seven days."}
+{"id": "sd1-t041", "kind": "text", "stratum": "explicit", "categories": ["reproductive_health"], "text": "Fatima Noor had a medication abortion at nine weeks in March."}
+{"id": "sd1-t042", "kind": "text", "stratum": "explicit", "categories": ["reproductive_health"], "text": "IUD placed 2024, due for removal 2029."}
+{"id": "sd1-t043", "kind": "text", "stratum": "explicit", "categories": ["reproductive_health"], "text": "Requesting emergency contraception after condom failure."}
+{"id": "sd1-t044", "kind": "text", "stratum": "explicit", "categories": ["reproductive_health"], "text": "Referred to the fertility clinic for an IVF consultation."}
+{"id": "sd1-t045", "kind": "text", "stratum": "explicit", "categories": ["reproductive_health"], "text": "History: two miscarriages, one termination of pregnancy."}
+{"id": "sd1-t046", "kind": "text", "stratum": "explicit", "categories": ["reproductive_health"], "text": "Current medication: mifepristone 200 mg, single dose."}
+{"id": "sd1-t047", "kind": "text", "stratum": "implicit", "categories": ["reproductive_health"], "text": "She travelled out of state for a procedure last month and asks that it not be in her chart."}
+{"id": "sd1-t048", "kind": "text", "stratum": "implicit", "categories": ["reproductive_health"], "text": "They have been trying for two years and want to know the next step."}
+{"id": "sd1-t049", "kind": "text", "stratum": "implicit", "categories": ["reproductive_health"], "text": "She asked for the pill you take the morning after."}
+{"id": "sd1-t050", "kind": "text", "stratum": "implicit", "categories": ["reproductive_health"], "text": "Patient does not want her parents to know why she missed her period."}
+{"id": "sd1-t051", "kind": "text", "stratum": "explicit", "categories": ["violence"], "text": "Patient disclosed domestic violence; safety plan documented."}
+{"id": "sd1-t052", "kind": "text", "stratum": "explicit", "categories": ["violence"], "text": "Seen for a sexual assault exam, forensic kit collected."}
+{"id": "sd1-t053", "kind": "text", "stratum": "explicit", "categories": ["violence"], "text": "Bruising consistent with strangulation; patient reports her husband choked her."}
+{"id": "sd1-t054", "kind": "text", "stratum": "explicit", "categories": ["violence"], "text": "Child abuse report filed with protective services."}
+{"id": "sd1-t055", "kind": "text", "stratum": "explicit", "categories": ["violence"], "text": "She has a restraining order against her ex-partner."}
+{"id": "sd1-t056", "kind": "text", "stratum": "explicit", "categories": ["violence"], "text": "History of rape at age 19, declined counselling."}
+{"id": "sd1-t057", "kind": "text", "stratum": "implicit", "categories": ["violence"], "text": "She flinches when her boyfriend answers for her and says she walked into a door again."}
+{"id": "sd1-t058", "kind": "text", "stratum": "implicit", "categories": ["violence"], "text": "He controls her phone and money and won't let her come to appointments alone."}
+{"id": "sd1-t059", "kind": "text", "stratum": "implicit", "categories": ["violence"], "text": "Asked that her new address not be shared with anyone who calls, especially her husband."}
+{"id": "sd1-t060", "kind": "text", "stratum": "implicit", "categories": ["violence"], "text": "Grandmother has unexplained bruises on both wrists and her caregiver son refuses to leave the room."}
+{"id": "sd1-t061", "kind": "text", "stratum": "explicit", "categories": ["genetic"], "text": "BRCA1 positive, considering prophylactic mastectomy."}
+{"id": "sd1-t062", "kind": "text", "stratum": "explicit", "categories": ["genetic"], "text": "Genetic testing confirmed Huntington disease carrier status."}
+{"id": "sd1-t063", "kind": "text", "stratum": "explicit", "categories": ["genetic"], "text": "Referred for genetic counselling after her sister's diagnosis."}
+{"id": "sd1-t064", "kind": "text", "stratum": "explicit", "categories": ["genetic"], "text": "Lynch syndrome confirmed; annual colonoscopy recommended."}
+{"id": "sd1-t065", "kind": "text", "stratum": "explicit", "categories": ["genetic"], "text": "Carrier screening positive for cystic fibrosis."}
+{"id": "sd1-t066", "kind": "text", "stratum": "explicit", "categories": ["genetic"], "text": "The family requests the genetic test results for Omar Haddad."}
+{"id": "sd1-t067", "kind": "text", "stratum": "implicit", "categories": ["genetic"], "text": "Her mother and two aunts died of breast cancer before 45; the lab result came back with the mutation."}
+{"id": "sd1-t068", "kind": "text", "stratum": "implicit", "categories": ["genetic"], "text": "The saliva kit she ordered online says she has a high-risk variant, and she wants it added to her chart."}
+{"id": "sd1-t069", "kind": "text", "stratum": "implicit", "categories": ["genetic"], "text": "His father had the same shaking and decline at 40; he decided not to find out whether he will too."}
+{"id": "sd1-t070", "kind": "text", "stratum": "implicit", "categories": ["genetic"], "text": "They were told each child has a one in four chance."}
+{"id": "sd1-t071", "kind": "text", "stratum": "hard_negative", "categories": [], "text": "ECG shows 2 mm ST depression in the lateral leads."}
+{"id": "sd1-t072", "kind": "text", "stratum": "hard_negative", "categories": [], "text": "Monitor for respiratory depression after the opioid dose."}
+{"id": "sd1-t073", "kind": "text", "stratum": "hard_negative", "categories": [], "text": "Fentanyl patch 25 mcg every 72 hours for cancer pain."}
+{"id": "sd1-t074", "kind": "text", "stratum": "hard_negative", "categories": [], "text": "Patient needs new batteries for her hearing aids."}
+{"id": "sd1-t075", "kind": "text", "stratum": "hard_negative", "categories": [], "text": "Bowel prep instructions given for Thursday's colonoscopy."}
+{"id": "sd1-t076", "kind": "text", "stratum": "hard_negative", "categories": [], "text": "Anorexia and weight loss since starting chemotherapy."}
+{"id": "sd1-t077", "kind": "text", "stratum": "hard_negative", "categories": [], "text": "MS relapse last month, treated with steroids."}
+{"id": "sd1-t078", "kind": "text", "stratum": "hard_negative", "categories": [], "text": "He is addicted to crossword puzzles and wants large-print ones."}
+{"id": "sd1-t079", "kind": "text", "stratum": "hard_negative", "categories": [], "text": "Hepatitis B viral load pending."}
+{"id": "sd1-t080", "kind": "text", "stratum": "hard_negative", "categories": [], "text": "Polio vaccine (IPV) given at the two-month visit."}
+{"id": "sd1-t081", "kind": "text", "stratum": "hard_negative", "categories": [], "text": "Plan B is to reschedule the MRI if the machine is still down."}
+{"id": "sd1-t082", "kind": "text", "stratum": "hard_negative", "categories": [], "text": "Naloxone kit offered with her post-surgery oxycodone prescription."}
+{"id": "sd1-t083", "kind": "text", "stratum": "hard_negative", "categories": [], "text": "Tenofovir started for chronic hepatitis B."}
+{"id": "sd1-t084", "kind": "text", "stratum": "hard_negative", "categories": [], "text": "Misoprostol prescribed for NSAID ulcer prevention."}
+{"id": "sd1-t085", "kind": "text", "stratum": "hard_negative", "categories": [], "text": "The patient denies alcohol, tobacco or drug use."}
+{"id": "sd1-t086", "kind": "text", "stratum": "hard_negative", "categories": [], "text": "No history of depression or anxiety."}
+{"id": "sd1-t087", "kind": "text", "stratum": "hard_negative", "categories": [], "text": "She abused her knee running marathons and needs physio."}
+{"id": "sd1-t088", "kind": "text", "stratum": "hard_negative", "categories": [], "text": "Depressed skull fracture seen on CT."}
+{"id": "sd1-t089", "kind": "text", "stratum": "hard_negative", "categories": [], "text": "What is our cancellation policy for psychiatry appointments?"}
+{"id": "sd1-t090", "kind": "text", "stratum": "hard_negative", "categories": [], "text": "Print the STI screening guideline poster for room 3."}
+{"id": "sd1-t091", "kind": "text", "stratum": "hard_negative", "categories": [], "text": "Which insurers cover IVF in this state?"}
+{"id": "sd1-t092", "kind": "text", "stratum": "hard_negative", "categories": [], "text": "Summarise the new federal rule on opioid use disorder treatment records for the staff meeting."}
+{"id": "sd1-t093", "kind": "text", "stratum": "hard_negative", "categories": [], "text": "Spontaneous pneumothorax, chest tube placed."}
+{"id": "sd1-t094", "kind": "text", "stratum": "hard_negative", "categories": [], "text": "The rape kit storage fridge alarm is going off again."}
+{"id": "sd1-t095", "kind": "text", "stratum": "plain", "categories": [], "text": "What time does the lab open on Saturdays?"}
+{"id": "sd1-t096", "kind": "text", "stratum": "plain", "categories": [], "text": "Reschedule Li Wei's physiotherapy to next Thursday."}
+{"id": "sd1-t097", "kind": "text", "stratum": "plain", "categories": [], "text": "Blood pressure 128/82, pulse 70."}
+{"id": "sd1-t098", "kind": "text", "stratum": "plain", "categories": [], "text": "Current medication: lisinopril 10 mg daily."}
+{"id": "sd1-t099", "kind": "text", "stratum": "plain", "categories": [], "text": "Allergy: penicillin, rash."}
+{"id": "sd1-t100", "kind": "text", "stratum": "plain", "categories": [], "text": "When was Camila Lopez last seen?"}
+{"id": "sd1-t101", "kind": "text", "stratum": "plain", "categories": [], "text": "Type 2 diabetes, A1c 7.2."}
+{"id": "sd1-t102", "kind": "text", "stratum": "plain", "categories": [], "text": "Flu vaccine given 2026-10-03."}
+{"id": "sd1-t103", "kind": "text", "stratum": "plain", "categories": [], "text": "Left knee replacement scheduled for January."}
+{"id": "sd1-t104", "kind": "text", "stratum": "plain", "categories": [], "text": "Update the phone number for Daniel Kim."}

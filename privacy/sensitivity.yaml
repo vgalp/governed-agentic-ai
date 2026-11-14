@@ -1,0 +1,170 @@
+# Sensitive categories of health information, and how each is recognised (ADR 038).
+#
+# A STARTING SET FOR DEVELOPMENT, NOT A CLINICAL VALUE SET. It was written by hand to exercise the
+# code and the evaluation. A deployment replaces these lists with its compliance team's own value
+# sets, and decides in law which records each category covers (42 CFR Part 2, for example, applies
+# to the records of covered programs, not to every mention of a substance).
+#
+# For each category:
+#   hl7_labels       security labels the source system put on a record (meta.security), from
+#                    http://terminology.hl7.org/CodeSystem/v3-ActCode. A label is trusted as it is.
+#   confidentiality  codes from http://terminology.hl7.org/CodeSystem/v3-Confidentiality.
+#   icd10            ICD-10-CM code prefixes, with or without the dot (F11 matches F11.20).
+#   drugs            medication names (generic or brand), matched as whole words, any case.
+#   phrases          regular expressions matched as whole words, any case.
+#   phrases_exact_case   the same, case-sensitive (AIDS, not "hearing aids").
+#
+# What is left out on purpose is noted beside each list: a name or code that usually means
+# something else would mark ordinary records as protected.
+
+version: 1
+
+categories:
+  substance_use:
+    title: Substance use and its treatment
+    hl7_labels: [ETH, ETHUD, OPIOIDUD, SUD, BH]
+    # F17 (nicotine) is left out. K70 is alcoholic liver disease.
+    icd10: [F10, F11, F12, F13, F14, F15, F16, F18, F19, K70, O99.31, O99.32, Z71.41, Z71.51]
+    # Left out: naloxone (given with ordinary opioid prescriptions), fentanyl and other opioids
+    # (pain treatment). Methadone and naltrexone have other uses: a match is a candidate.
+    drugs: [methadone, buprenorphine, naltrexone, disulfiram, acamprosate, lofexidine,
+            suboxone, subutex, sublocade, zubsolv, vivitrol, antabuse, campral]
+    phrases:
+      - '(?:opioid|opiate|alcohol|cocaine|cannabis|stimulant|sedative|substance|drug|heroin|methamphetamine) (?:use disorder|dependence|abuse|withdrawal|misuse|addiction)'
+      - 'substance use'
+      - 'heroin'
+      - 'crack cocaine'
+      - 'crystal meth'
+      - 'methamphetamine use'
+      - '(?:iv|intravenous|injection) drug use'
+      - 'detox(?:ification)?'
+      - 'rehab'
+      - 'addict(?:ion|ed)'
+      - 'sobriety'
+      - 'medication[- ]assisted treatment'
+      - 'methadone clinic'
+      - 'alcoholics anonymous'
+      - 'narcotics anonymous'
+      - 'binge drinking'
+      - 'alcoholism'
+    phrases_exact_case: ['IVDU', 'DUI']
+
+  mental_health:
+    title: Mental health
+    hl7_labels: [PSY, PSYTHPN, MH, EMOTDIS, BH]
+    # F0x (dementia and other organic conditions), F7x and F8x (intellectual and developmental)
+    # are left out. X71-X83 are intentional self-harm; Z91.5 is a history of it.
+    icd10: [F2, F3, F4, F5, F6, F9, R45.851, T14.91, X71, X72, X73, X74, X75, X76, X77, X78, X79,
+            X80, X81, X82, X83, Z91.5]
+    # Left out: duloxetine (pain), bupropion (smoking), trazodone and hydroxyzine (sleep, itching).
+    drugs: [lithium, clozapine, olanzapine, risperidone, quetiapine, aripiprazole, haloperidol,
+            ziprasidone, lurasidone, paliperidone, sertraline, fluoxetine, escitalopram, citalopram,
+            paroxetine, venlafaxine, mirtazapine]
+    phrases:
+      # not "ST depression" (ECG), "respiratory depression" or "depressed skull fracture"
+      - '(?<!st )(?<!respiratory )(?<!marrow )(?<!cns )depress(?:ion|ive)'
+      - 'depressed mood'
+      - 'bipolar'
+      - 'schizo\w+'
+      - 'psychosis'
+      - 'psychotic'
+      - 'psychiatr\w+'
+      - 'psychotherap\w+'
+      - 'suicid\w+'
+      - 'self[- ]harm'
+      - 'anxiety disorder'
+      - 'panic (?:attack|disorder)s?'
+      - 'post[- ]traumatic stress'
+      - 'eating disorder'
+      - 'anorexia nervosa'
+      - 'bulimia'
+      - 'obsessive[- ]compulsive'
+      - 'personality disorder'
+      - 'antidepressants?'
+      - 'antipsychotics?'
+      - 'mental (?:health|illness)'
+    phrases_exact_case: ['PTSD', 'OCD']
+
+  hiv:
+    title: HIV status, testing and treatment
+    hl7_labels: [HIV]
+    icd10: [B20, B97.35, O98.7, R75, Z11.4, Z20.6, Z21, Z71.7]
+    # Left out: tenofovir and lamivudine alone (hepatitis B), ritonavir (also in a COVID-19 treatment).
+    drugs: [dolutegravir, bictegravir, efavirenz, darunavir, atazanavir, rilpivirine, raltegravir,
+            abacavir, zidovudine, cabotegravir, emtricitabine, biktarvy, genvoya, triumeq, dovato,
+            atripla, symtuza, juluca, cabenuva, truvada, descovy, apretude]
+    phrases:
+      - 'antiretroviral\w*'
+      - 'cd4'
+      - 'pre[- ]exposure prophylaxis'
+    # Case matters: "hearing aids", "bowel prep".
+    phrases_exact_case: ['HIV', 'AIDS', 'PrEP']
+
+  sexual_health:
+    title: Sexually transmitted infections
+    hl7_labels: [STD]
+    icd10: [A50, A51, A52, A53, A54, A55, A56, A57, A58, A59, A60, A63, A64, Z11.3, Z20.2, Z72.5]
+    phrases:
+      - 'chlamydia\w*'
+      - 'gonorrh\w+'
+      - 'syphilis'
+      - 'genital (?:herpes|warts)'
+      - 'trichomon\w+'
+      - 'sexually transmitted'
+    phrases_exact_case: ['STI', 'STIs', 'STD', 'STDs']
+
+  reproductive_health:
+    title: Reproductive health
+    hl7_labels: [SEX, PREGNANT]
+    # Pregnancy in general (O09-O9A, Z34, Z3A) is left out; add it where the law in force covers it.
+    icd10: [O00, O01, O02, O03, O04, O07, O08, Z30, Z31, Z32, Z33, Z64.0]
+    # Left out: misoprostol (also for ulcers).
+    drugs: [mifepristone, ulipristal, levonorgestrel, clomiphene]
+    phrases:
+      - 'abortion'
+      - '(?:termination of pregnancy|pregnancy termination)'
+      - 'miscarriages?'
+      - 'contracepti\w+'
+      - 'birth control'
+      - 'morning[- ]after pill'
+      - 'infertility'
+      - 'fertility (?:clinic|treatment)'
+      - 'tubal ligation'
+      - 'vasectomy'
+    phrases_exact_case: ['IUD', 'IVF']
+
+  violence:
+    title: Abuse, assault and domestic violence
+    hl7_labels: [SDV, MST, VIO]
+    # T74 and T76 are confirmed and suspected abuse or neglect; Z69 is care for a victim or perpetrator.
+    icd10: [T74, T76, Z69, Z04.4, Z62.81, Z91.41, O9A.3, O9A.4, O9A.5, Y07]
+    phrases:
+      - 'domestic violence'
+      - 'intimate partner violence'
+      - 'sexual (?:assault|abuse)'
+      - '(?:child|elder|spousal|physical|emotional) abuse'
+      - 'raped?'
+      - 'molest\w+'
+      - 'strangulat\w+'
+      - '(?:restraining|protective) order'
+      - 'safety plan'
+
+  genetic:
+    title: Genetic information
+    hl7_labels: [GDIS, SCA, SICKLE]
+    # Z14 is carrier status, Z15 genetic susceptibility, G10 Huntington's disease.
+    icd10: [Z13.7, Z14, Z15, Z84.81, G10]
+    phrases:
+      - 'genetic (?:test\w*|counsel\w+|screen\w*|result\w*)'
+      - 'carrier (?:status|screening)'
+      - 'huntington\S* disease'
+      - 'lynch syndrome'
+      - 'hereditary cancer'
+    phrases_exact_case: ['BRCA', 'BRCA1', 'BRCA2']
+
+  protected:
+    title: Marked restricted by the source system
+    # Labels this file does not sort into a category above. The source system said "restricted":
+    # that is honoured without knowing why.
+    hl7_labels: [TBOO, SPI, COGN, DVD]
+    confidentiality: [R, V]

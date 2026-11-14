@@ -1,0 +1,419 @@
+[
+ {
+  "id": "sd1-r001",
+  "kind": "resource",
+  "stratum": "resource",
+  "categories": [
+   "substance_use"
+  ],
+  "resource": {
+   "resourceType": "Condition",
+   "code": {
+    "coding": [
+     {
+      "system": "http://hl7.org/fhir/sid/icd-10-cm",
+      "code": "F11.20",
+      "display": "Condition 1"
+     }
+    ]
+   }
+  }
+ },
+ {
+  "id": "sd1-r002",
+  "kind": "resource",
+  "stratum": "resource",
+  "categories": [
+   "substance_use"
+  ],
+  "resource": {
+   "resourceType": "Condition",
+   "code": {
+    "coding": [
+     {
+      "system": "urn:oid:2.16.840.1.113883.6.90",
+      "code": "F10.239",
+      "display": "Condition 2"
+     }
+    ]
+   }
+  }
+ },
+ {
+  "id": "sd1-r003",
+  "kind": "resource",
+  "stratum": "resource",
+  "categories": [
+   "mental_health"
+  ],
+  "resource": {
+   "resourceType": "Condition",
+   "code": {
+    "coding": [
+     {
+      "system": "http://hl7.org/fhir/sid/icd-10-cm",
+      "code": "F31.9",
+      "display": "Condition 3"
+     }
+    ]
+   }
+  }
+ },
+ {
+  "id": "sd1-r004",
+  "kind": "resource",
+  "stratum": "resource",
+  "categories": [
+   "mental_health"
+  ],
+  "resource": {
+   "resourceType": "Condition",
+   "code": {
+    "coding": [
+     {
+      "system": "http://hl7.org/fhir/sid/icd-10-cm",
+      "code": "R45.851",
+      "display": "Condition 4"
+     }
+    ]
+   }
+  }
+ },
+ {
+  "id": "sd1-r005",
+  "kind": "resource",
+  "stratum": "resource",
+  "categories": [
+   "hiv"
+  ],
+  "resource": {
+   "resourceType": "Condition",
+   "code": {
+    "coding": [
+     {
+      "system": "http://hl7.org/fhir/sid/icd-10-cm",
+      "code": "B20",
+      "display": "Condition 5"
+     }
+    ]
+   }
+  }
+ },
+ {
+  "id": "sd1-r006",
+  "kind": "resource",
+  "stratum": "resource",
+  "categories": [
+   "sexual_health"
+  ],
+  "resource": {
+   "resourceType": "Condition",
+   "code": {
+    "coding": [
+     {
+      "system": "http://hl7.org/fhir/sid/icd-10-cm",
+      "code": "A54.9",
+      "display": "Condition 6"
+     }
+    ]
+   }
+  }
+ },
+ {
+  "id": "sd1-r007",
+  "kind": "resource",
+  "stratum": "resource",
+  "categories": [
+   "reproductive_health"
+  ],
+  "resource": {
+   "resourceType": "Condition",
+   "code": {
+    "coding": [
+     {
+      "system": "http://hl7.org/fhir/sid/icd-10-cm",
+      "code": "Z30.011",
+      "display": "Condition 7"
+     }
+    ]
+   }
+  }
+ },
+ {
+  "id": "sd1-r008",
+  "kind": "resource",
+  "stratum": "resource",
+  "categories": [
+   "violence"
+  ],
+  "resource": {
+   "resourceType": "Condition",
+   "code": {
+    "coding": [
+     {
+      "system": "http://hl7.org/fhir/sid/icd-10-cm",
+      "code": "T74.11XA",
+      "display": "Condition 8"
+     }
+    ]
+   }
+  }
+ },
+ {
+  "id": "sd1-r009",
+  "kind": "resource",
+  "stratum": "resource",
+  "categories": [
+   "genetic"
+  ],
+  "resource": {
+   "resourceType": "Condition",
+   "code": {
+    "coding": [
+     {
+      "system": "http://hl7.org/fhir/sid/icd-10-cm",
+      "code": "Z15.01",
+      "display": "Condition 9"
+     }
+    ]
+   }
+  }
+ },
+ {
+  "id": "sd1-r010",
+  "kind": "resource",
+  "stratum": "resource",
+  "categories": [
+   "substance_use"
+  ],
+  "resource": {
+   "resourceType": "MedicationRequest",
+   "status": "active",
+   "medicationCodeableConcept": {
+    "text": "methadone 10 mg tablet"
+   }
+  }
+ },
+ {
+  "id": "sd1-r011",
+  "kind": "resource",
+  "stratum": "resource",
+  "categories": [
+   "hiv"
+  ],
+  "resource": {
+   "resourceType": "MedicationRequest",
+   "status": "active",
+   "medicationReference": {
+    "reference": "Medication/m1",
+    "display": "Biktarvy 50-200-25 mg tablet"
+   }
+  }
+ },
+ {
+  "id": "sd1-r012",
+  "kind": "resource",
+  "stratum": "resource",
+  "categories": [
+   "substance_use"
+  ],
+  "resource": {
+   "resourceType": "Observation",
+   "meta": {
+    "security": [
+     {
+      "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+      "code": "ETH"
+     }
+    ]
+   },
+   "code": {
+    "text": "Urine screen"
+   },
+   "valueString": "see report"
+  }
+ },
+ {
+  "id": "sd1-r013",
+  "kind": "resource",
+  "stratum": "resource",
+  "categories": [
+   "protected"
+  ],
+  "resource": {
+   "resourceType": "Encounter",
+   "meta": {
+    "security": [
+     {
+      "system": "http://terminology.hl7.org/CodeSystem/v3-Confidentiality",
+      "code": "R"
+     }
+    ]
+   },
+   "type": [
+    {
+     "text": "Office visit"
+    }
+   ]
+  }
+ },
+ {
+  "id": "sd1-r014",
+  "kind": "resource",
+  "stratum": "resource",
+  "categories": [
+   "mental_health"
+  ],
+  "resource": {
+   "resourceType": "Encounter",
+   "type": [
+    {
+     "text": "Psychiatry follow-up"
+    }
+   ]
+  }
+ },
+ {
+  "id": "sd1-r015",
+  "kind": "resource",
+  "stratum": "resource",
+  "categories": [
+   "substance_use"
+  ],
+  "resource": {
+   "resourceType": "Condition",
+   "code": {
+    "coding": [
+     {
+      "system": "http://snomed.info/sct",
+      "code": "75544000",
+      "display": "Opioid dependence"
+     }
+    ]
+   }
+  }
+ },
+ {
+  "id": "sd1-r016",
+  "kind": "resource",
+  "stratum": "resource_negative",
+  "categories": [],
+  "resource": {
+   "resourceType": "Condition",
+   "code": {
+    "coding": [
+     {
+      "system": "http://hl7.org/fhir/sid/icd-10-cm",
+      "code": "F17.210",
+      "display": "Nicotine dependence, cigarettes, uncomplicated"
+     }
+    ]
+   }
+  }
+ },
+ {
+  "id": "sd1-r017",
+  "kind": "resource",
+  "stratum": "resource_negative",
+  "categories": [],
+  "resource": {
+   "resourceType": "Condition",
+   "code": {
+    "coding": [
+     {
+      "system": "http://hl7.org/fhir/sid/icd-10-cm",
+      "code": "E11.9",
+      "display": "Type 2 diabetes mellitus without complications"
+     }
+    ]
+   }
+  }
+ },
+ {
+  "id": "sd1-r018",
+  "kind": "resource",
+  "stratum": "resource_negative",
+  "categories": [],
+  "resource": {
+   "resourceType": "MedicationRequest",
+   "status": "active",
+   "medicationCodeableConcept": {
+    "text": "lisinopril 10 mg tablet"
+   }
+  }
+ },
+ {
+  "id": "sd1-r019",
+  "kind": "resource",
+  "stratum": "resource_negative",
+  "categories": [],
+  "resource": {
+   "resourceType": "Observation",
+   "code": {
+    "text": "Blood pressure"
+   },
+   "valueString": "128/82"
+  }
+ },
+ {
+  "id": "sd1-r020",
+  "kind": "resource",
+  "stratum": "resource_negative",
+  "categories": [],
+  "resource": {
+   "resourceType": "Condition",
+   "code": {
+    "coding": [
+     {
+      "system": "http://hl7.org/fhir/sid/icd-10-cm",
+      "code": "I10",
+      "display": "Essential hypertension"
+     }
+    ]
+   },
+   "meta": {
+    "security": [
+     {
+      "system": "http://terminology.hl7.org/CodeSystem/v3-Confidentiality",
+      "code": "N"
+     }
+    ]
+   }
+  }
+ },
+ {
+  "id": "sd1-r021",
+  "kind": "resource",
+  "stratum": "resource_negative",
+  "categories": [],
+  "resource": {
+   "resourceType": "AllergyIntolerance",
+   "code": {
+    "text": "Penicillin"
+   },
+   "reaction": [
+    {
+     "description": "rash"
+    }
+   ]
+  }
+ },
+ {
+  "id": "sd1-r022",
+  "kind": "resource",
+  "stratum": "resource_negative",
+  "categories": [],
+  "resource": {
+   "resourceType": "Condition",
+   "code": {
+    "coding": [
+     {
+      "system": "http://hl7.org/fhir/sid/icd-10-cm",
+      "code": "Z3A.20",
+      "display": "20 weeks gestation of pregnancy"
+     }
+    ]
+   }
+  }
+ }
+]
