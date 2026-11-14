@@ -553,6 +553,52 @@
       "title": "Routing",
       "type": "object"
     },
+    "Sensitivity": {
+      "additionalProperties": false,
+      "description": "Sensitive categories of health information this office tracks (ADR 038).",
+      "properties": {
+        "categories": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Categories",
+          "type": "array"
+        },
+        "never_external": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Never External"
+        },
+        "value_sets": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Value Sets"
+        }
+      },
+      "required": [
+        "categories"
+      ],
+      "title": "Sensitivity",
+      "type": "object"
+    },
     "SignIn": {
       "additionalProperties": false,
       "description": "How people sign in to the chat API (ADR 028). demo: the request says who and which role (one\nmachine only). oidc: an access token from the organization's identity provider; the environment\nvariable GOVERNED_SIGN_IN overrides the mode.",
@@ -836,6 +882,17 @@
     "rules": {
       "title": "Rules",
       "type": "string"
+    },
+    "sensitivity": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Sensitivity"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
     },
     "sign_in": {
       "anyOf": [

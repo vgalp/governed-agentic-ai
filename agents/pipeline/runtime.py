@@ -24,6 +24,7 @@ class Runtime:
     guards: dict = field(default_factory=dict)  # which models check the question, the answer, the pages
     faithfulness: object = None  # guardrails.faithfulness.FaithfulnessConfig or None
     agent_model: dict | None = None  # the input agent's model (profiles with one)
+    sensitive: Callable | None = None  # text -> the sensitive categories this office tracks (ADR 038), or None
 
     @property
     def decision_category(self) -> str:
@@ -49,4 +50,14 @@ def build(profile: Profile, producer, audit, agent_name: str = "planner") -> Run
         "judge": cfg.judge["name"] if cfg else None,
         "input_agent": agent_model["name"] if agent_model else None,
     }
-    return Runtime(profile, producer, audit, chat, call_tool, mask, decide, agent_name, guards, cfg, agent_model)
+    return Runtime(profile, producer, audit, chat, call_tool, mask, decide, agent_name, guards, cfg, agent_model,
+                   sensitive_reader(profile))
+
+
+def sensitive_reader(profile: Profile) -> Callable | None:
+    """text -> the sensitive categories this office tracks, or None when the profile tracks none."""
+    settings = profile.sensitivity
+    if settings is None:
+        return None
+    detector = settings.detector()
+    return lambda text: settings.tracked(detector.of_text(text))

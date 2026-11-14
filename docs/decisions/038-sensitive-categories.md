@@ -1,6 +1,6 @@
 # 038: Sensitive categories of health information
 
-Status: Accepted · Date: 2026-11-14 · Step 1 of 3 built (detection and its measurement). Nothing is enforced yet
+Status: Accepted · Date: 2026-11-14 · Steps 1 and 2 of 3 built (detection, and enforcement in the four clinic profiles). The text model is not built
 
 ## Context
 A hospital that connects an AI assistant to its records has two fears the pipeline does not yet
@@ -44,20 +44,31 @@ a FHIR resource or a text falls in. It decides nothing.
   `eval/run_sensitivity.py`): 126 synthetic rows, 104 texts and 22 FHIR resources, split by whether
   the text names the category, only implies it, or only looks sensitive.
 
-**Step 2 (not built): act on it.**
-- Each record a tool returns carries its categories. The gateway drops the records of a category the
-  role may not see, as it does for data classes now, with the decision made by OPA
-  (`roles.<role>.sensitive_categories` in the profile).
-- The reply says that some records are not shown for this role. It does not say which category:
-  naming it would disclose it.
-- A tool whose own text is the answer (the medication review) is not shown in part: with a record
-  withheld, a fixed reply sends the person to a clinician. A medication review that silently leaves
-  out a medication is worse than none.
-- The router is told the categories of the question and of the notes. A category the profile lists
-  under `never_external_categories` keeps the request on the local model, checked in policy and
-  again in code.
-- A new audit topic records the categories and kinds of evidence of every request, and what was
-  withheld.
+**Step 2 (built): act on it.** A profile turns the layer on with a `sensitivity:` section naming the
+categories it tracks. The four clinic profiles do.
+
+- **Records are marked.** The gateway marks each record a role-filtered tool returns with its
+  categories, from the record's title and text. The record tools add what only the FHIR resource
+  shows (its security labels and ICD-10 codes), as `sensitivity` on the record. A tool can add a
+  category; it cannot remove one.
+- **A role sees only its categories.** `sensitive_categories` on a role in roles.yaml lists them; OPA
+  answers (`roles/allowed_sensitive`); the gateway withholds every record in another category. A
+  role lists none by default, so a new role sees no tracked category until it is given one. In the
+  clinic profiles, clinicians and nurses see all of them and the front desk sees none.
+- **The reply says records are not shown, and not why.** Naming the category would disclose it. The
+  sentence is added by the pipeline (`records_not_shown` in responses.yaml), not left to the model,
+  and the model is told not to guess or call the record complete.
+- **A tool's own answer is not shown in part.** The medication list, the medication review and the
+  chart brief write their answer from every record they read. If one is withheld, the gateway drops
+  that text and the person gets a fixed reply (`records_withheld`). A medication review that silently
+  leaves out a medication is worse than none.
+- **A category can be kept in the building.** The router is told the categories of the question and
+  of the notes. One listed under `never_external` (by default all of them) keeps the request on the
+  local model: decided in policy (`routing.rego`), and checked again in code whatever the policy
+  answers.
+- **The audit records categories and counts, never values:** on `audit.tool_calls`, how many records
+  were in each category and how many were withheld; on `audit.routing`, the categories of the
+  request. No new topic.
 
 **Step 3 (not built): a text model.** A small multi-label classifier for the wording the lists
 cannot know, trained with the loop of ADR 037 and added through `Detector(model=...)`. It is worth
@@ -84,8 +95,20 @@ The lists alone, on the development set (`eval/results/sensitivity_dev_v1_lists_
   used loosely ("addicted to crossword puzzles"). Lists cannot tell these apart either.
 
 ## Consequences
-- **Nothing changes for a user yet.** Step 1 adds a module, a file of lists, a scorer and tests. No
-  stage of the pipeline calls it.
+- **What changes for a user, in the clinic profiles:** a front-desk user no longer sees a visit or a
+  record that shows a tracked category, and is told some records are not shown. Clinicians and
+  nurses see what they saw before. A question about a tracked category stays on the local model even
+  when it names no one.
+- **Policy pages are not records.** Only role-filtered tools are marked, so a knowledge-base page
+  about HIV testing is still shown to everyone.
+- **The lists decide what is hidden, and the lists are weak on implied wording** (0 of 28 in the
+  first measurement). A record that implies a category without naming or coding it is shown. Until
+  step 3, this layer is a floor, not a guarantee.
+- **A direct tool's answer is all or nothing.** A nurse without a category would get no medication
+  list at all for a patient with one protected medication. The tools could instead build their
+  answer from the records the role may see; that is not built.
+- **The record tools reading a database** (clinic-assistant) send no coded evidence: the database
+  has no security labels or codes, so those records are marked by their text only.
 - **The lists are not a clinical value set.** They were written by hand to exercise the code. A
   deployment replaces `privacy/sensitivity.yaml` with its compliance team's value sets
   (`sensitivity.load(path)`), and the file is validated on load.
@@ -99,5 +122,7 @@ The lists alone, on the development set (`eval/results/sensitivity_dev_v1_lists_
   only in SNOMED is caught by its display text or not at all. Reading them needs licensed value
   sets, which a deployment has and this repository does not.
 - **English only.**
-- Not built here: steps 2 and 3; a frozen test set from someone else's text; labels written back to
-  the EHR.
+- **The OPA policies were changed and their tests extended, and must be run where OPA is installed**
+  (`opa test policies/ -v`). The Python tests replace OPA with a fake.
+- Not built here: step 3; a frozen test set from someone else's text; consent (a patient allowing a
+  disclosure); break-the-glass access; labels written back to the EHR.

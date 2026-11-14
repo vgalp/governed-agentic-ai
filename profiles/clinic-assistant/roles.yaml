@@ -22,6 +22,7 @@ roles:
     title: Clinician
     tools: [search_knowledge, search_records, reschedule_appointment, medication_review, chart_brief, drug_reference, web_research]   # may approve changes
     data_classes: [patient_details, appointments, visit_dates, visit_clinical, medications, problems, allergies, vitals, claims]
+    sensitive_categories: [substance_use, mental_health, hiv, sexual_health, reproductive_health, violence, genetic, protected]
     # The same requests are blocked for every role; only the wording changes.
     # This assistant never recommends treatment, even to clinicians.
     responses:
@@ -40,10 +41,12 @@ roles:
     title: Nurse
     tools: [search_knowledge, search_records, reschedule_appointment, chart_brief, drug_reference, web_research]   # may approve changes
     data_classes: [patient_details, appointments, visit_dates, visit_clinical, medications, problems, allergies, vitals]
+    sensitive_categories: [substance_use, mental_health, hiv, sexual_health, reproductive_health, violence, genetic, protected]
   front_desk:
     title: Front desk and billing
     tools: [search_knowledge, search_records, web_research]
     data_classes: [patient_details, appointments, visit_dates, claims]
+    # no sensitive_categories: a record that shows one (a psychiatry visit) is not shown to the front desk
   compliance:
     title: Compliance officer
     tools: [search_knowledge, web_research]          # no patient records; the audit tool comes in phase 6

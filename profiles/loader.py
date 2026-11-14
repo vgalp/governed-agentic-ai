@@ -20,6 +20,7 @@ from pathlib import Path
 
 import yaml
 
+from privacy import sensitivity as sensitive
 from profiles import schema
 from profiles.changes import Change
 from profiles.changes import parse as parse_change
@@ -93,6 +94,7 @@ class Role:
     tools: tuple[str, ...]          # tools this role may use
     data_classes: tuple[str, ...]   # kinds of record data this role may see
     responses: dict[str, str]       # fixed replies worded for this role (optional overrides)
+    sensitive_categories: tuple[str, ...] = ()   # sensitive categories this role may see (ADR 038)
 
 
 @dataclass(frozen=True)
@@ -189,6 +191,7 @@ class Profile:
     faithfulness: dict | None = None            # a second model judges answers from listed tools (ADR 022)
     sign_in: dict | None = None                 # how people sign in to the chat API (ADR 028)
     rate_limit: dict | None = None              # chat messages per person (ADR 030)
+    sensitivity: sensitive.Settings | None = None   # sensitive categories this office tracks (ADR 038)
 
     def response(self, category: str, role: str | None = None) -> str:
         """The fixed reply for a category, worded for the role if the role has its own."""
@@ -240,10 +243,13 @@ class Profile:
                 "send_external_when": r["send_external_when"],
                 "never_external_entities": list(r["never_external_entities"]),
                 "never_external_labels": list(r["never_external_labels"]),
+                # sensitive categories that keep a request on the local model (ADR 038)
+                "never_external_categories": list(self.sensitivity.never_external) if self.sensitivity else [],
             },
         }
         if self.roles:
-            data["roles"] = {k: {"tools": list(v.tools), "data_classes": list(v.data_classes)}
+            data["roles"] = {k: {"tools": list(v.tools), "data_classes": list(v.data_classes),
+                                 "sensitive_categories": list(v.sensitive_categories)}
                              for k, v in self.roles.items()}
         if self.actions:
             data["actions"] = {k: {"propose_roles": list(a.propose_roles),
@@ -649,12 +655,58 @@ def _roles(raw: dict, granted: set[str], where: str, response_keys: set[str]):
                 raise ProfileError(f"{w}: reply for '{k}', which is not a category in responses.yaml")
             if not v:
                 raise ProfileError(f"{w}: reply for '{k}' is empty")
-        roles[key] = Role((r or {}).get("title", key), tools, seen, replies)
+        roles[key] = Role((r or {}).get("title", key), tools, seen, replies,
+                          tuple((r or {}).get("sensitive_categories") or []))
     if not roles:
         raise ProfileError(f"{where}: 'roles' must define at least one role")
     if "filtered_tools" in raw:
         raise ProfileError(f"{where}: 'filtered_tools' moved to tools.yaml (role_filtered: true)")
     return roles, dict(classes)
+
+
+SENSITIVITY_RESPONSES = ("records_withheld", "records_not_shown")
+
+
+def _sensitivity(raw: dict | None, path: Path, roles: dict[str, Role], responses: dict,
+                 where: str) -> sensitive.Settings | None:
+    """profile.yaml `sensitivity:` (ADR 038): the categories this office tracks, checked against the
+    value sets, and each role's categories checked against those. A role names none by default, so
+    turning the layer on hides every tracked category until a role is given it."""
+    listed = {k: r.sensitive_categories for k, r in roles.items() if r.sensitive_categories}
+    if not raw:
+        if listed:
+            raise ProfileError(f"{where}: role '{next(iter(listed))}' lists sensitive_categories, but the "
+                               "profile has no 'sensitivity' section")
+        return None
+    w = f"{where}: sensitivity"
+    value_sets = None
+    if raw.get("value_sets"):
+        value_sets = (path / raw["value_sets"]).resolve()
+        if path.resolve() not in value_sets.parents:
+            raise ProfileError(f"{w}: value_sets points outside the profile folder")
+    try:
+        known = set(sensitive.load(value_sets or sensitive.DEFAULT).categories)
+    except sensitive.ValueSetError as e:
+        raise ProfileError(f"{w}: {e}") from e
+    categories = tuple(dict.fromkeys(raw["categories"]))
+    unknown = [c for c in categories if c not in known]
+    if unknown:
+        raise ProfileError(f"{w}: unknown categories {', '.join(unknown)} (the value sets have: "
+                           f"{', '.join(sorted(known))})")
+    never = tuple(dict.fromkeys(raw["never_external"])) if raw.get("never_external") is not None else categories
+    stray = [c for c in never if c not in categories]
+    if stray:
+        raise ProfileError(f"{w}: never_external names {', '.join(stray)}, not in categories")
+    for key, seen in listed.items():
+        stray = [c for c in seen if c not in categories]
+        if stray:
+            raise ProfileError(f"{where}: role '{key}': sensitive_categories names {', '.join(stray)}, "
+                               "not in sensitivity.categories")
+    missing = [r for r in SENSITIVITY_RESPONSES if r not in responses] if roles else []
+    if missing:
+        raise ProfileError(f"{path.name}/responses.yaml: no response for {', '.join(missing)} "
+                           "(needed because the profile has roles and tracks sensitive categories)")
+    return sensitive.Settings(categories, never, value_sets)
 
 
 def _actions(raw: dict, where: str, patterns: dict[str, re.Pattern], agents: dict[str, tuple[str, ...]],
@@ -939,6 +991,7 @@ def load_profile_from(path: Path) -> Profile:
         if unknown:
             raise ProfileError(f"{where}: privacy.local_model_sees names {', '.join(unknown)}, not in privacy.entities")
     sign_in = _sign_in(p.get("sign_in"), roles, where)
+    sensitivity = _sensitivity(p.get("sensitivity"), path, roles, responses, where)
     return Profile(
         name=name,
         title=p.get("title", name),
@@ -972,6 +1025,7 @@ def load_profile_from(path: Path) -> Profile:
         faithfulness=faithfulness or None,
         sign_in=sign_in,
         rate_limit=dict(p["rate_limit"]) if p.get("rate_limit") else None,
+        sensitivity=sensitivity,
     )
 
 

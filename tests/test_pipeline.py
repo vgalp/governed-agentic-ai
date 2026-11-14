@@ -83,7 +83,7 @@ def make_runtime(profile_name, tool_results=None, answer="A fine answer.", judge
     monkeypatch.setattr(
         stages,
         "route",
-        lambda P, mapping, used, rid, agent, role: RouteDecision(
+        lambda P, mapping, used, rid, agent, role, sensitive=(): RouteDecision(
             "local", P.routing["local_model"], local, P.routing["local_input"] == "masked", ["test"]
         ),
     )

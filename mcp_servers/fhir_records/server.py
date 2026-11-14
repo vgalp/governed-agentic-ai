@@ -22,6 +22,7 @@ from fhir.client import FhirClient, FhirError, client_from_settings
 from fhir.smart_launch import launch_client
 from fhir.transport import request_budget
 from mcp_servers.common.serve import serve
+from privacy.sensitivity import resource_tagger
 from profiles.fhir_map import FhirMap, RecordType, human_name, render
 from profiles.loader import load_profile
 
@@ -136,21 +137,26 @@ def _is_named(res: dict, query: str, dates: list) -> bool:
     return named and (dates == [None] or res.get("birthDate") in dates)
 
 
-def _record(rid, title, text, classes) -> dict:
-    return {"id": rid, "title": title, "text": text, "data_classes": classes}
+def _record(rid, title, text, classes, res: dict | None = None, tag=None) -> dict:
+    """`tag` (privacy.sensitivity.resource_tagger) adds the sensitive categories the resource's own
+    labels and codes show (ADR 038): the gateway cannot see those, only the text."""
+    record = {"id": rid, "title": title, "text": text, "data_classes": classes}
+    if tag is not None and res is not None:
+        record["sensitivity"] = tag(res)
+    return record
 
 
-def records_of_type(client: FhirClient, r: RecordType, pid: str, name: str, allowed: set[str]) -> list[dict]:
+def records_of_type(client: FhirClient, r: RecordType, pid: str, name: str, allowed: set[str], tag=None) -> list[dict]:
     detail = r.more_detail if r.more_detail and r.more_detail.data_class in allowed else None
     text = detail.text if detail else r.text
     classes = [r.data_class] + ([detail.data_class] if detail else [])
     found = r.arrange(client.search(r.resource, r.params(pid), r.limit))
     extra = {"subject": name}
     return [_record(r.source_id.make(res.get("id", "")), render(r.title, res, extra), render(text, res, extra),
-                    classes) for res in found]
+                    classes, res, tag) for res in found]
 
 
-def search(client: FhirClient | None, m: FhirMap | None, query: str, allowed_classes: list[str]) -> dict:
+def search(client: FhirClient | None, m: FhirMap | None, query: str, allowed_classes: list[str], tag=None) -> dict:
     allowed = set(allowed_classes)
     if m is None or client is None:
         return {"results": [], "note": "no FHIR records source for this profile"}
@@ -169,12 +175,12 @@ def search(client: FhirClient | None, m: FhirMap | None, query: str, allowed_cla
         if m.subject_class in allowed:
             extra = {"name": name}
             out.append(_record(m.subject_id.make(pid), render(m.subject_title, patient, extra),
-                               render(m.subject_text, patient, extra), [m.subject_class]))
+                               render(m.subject_text, patient, extra), [m.subject_class], patient, tag))
         unread = []
         for r in m.records:
             if r.data_class in allowed:                 # not allowed: never requested from the server
                 try:
-                    out += records_of_type(client, r, pid, name, allowed)
+                    out += records_of_type(client, r, pid, name, allowed, tag)
                 except FhirError as e:                  # one resource type the server refuses (not granted
                     unread.append(f"{r.name} ({e})")    # to the app yet) must not lose the others
     except FhirError as e:
@@ -202,6 +208,7 @@ if __name__ == "__main__":
                 print(f"  {finding}")
         except FhirError as e:
             print(f"FHIR records for profile {PROFILE.name}: not reachable yet ({e}); will retry on each request")
+    TAG = resource_tagger(PROFILE.sensitivity)   # None when the profile tracks no sensitive categories
     mcp = FastMCP("fhir_records", host="127.0.0.1", port=8104)
 
     @mcp.tool()
@@ -212,7 +219,7 @@ if __name__ == "__main__":
         with request_budget(MAP.server if MAP is not None else None):   # all requests together (ADR 036)
             if launch_ref and MAP is not None and MAP.launch:   # set by the gateway, never by a caller
                 try:
-                    return search(launch_client(MAP, launch_ref, PROFILE.name), MAP, query, allowed_classes)
+                    return search(launch_client(MAP, launch_ref, PROFILE.name), MAP, query, allowed_classes, TAG)
                 except FhirError as e:
                     return {"results": [], "note": str(e)}
             if CLIENT is None and MAP is not None:
@@ -220,6 +227,6 @@ if __name__ == "__main__":
                     CLIENT = client_from_settings(MAP.server)
                 except FhirError as e:
                     return {"results": [], "note": f"the record system is not set up: {e}"}
-            return search(CLIENT, MAP, query, allowed_classes)
+            return search(CLIENT, MAP, query, allowed_classes, TAG)
 
     serve(mcp)   # plain HTTP, or mutual TLS (ADR 030)

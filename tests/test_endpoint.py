@@ -452,7 +452,7 @@ def chat(endpoint):
     e, calls, audits = endpoint
     seen = {"published": [], "routes": [], "models": [], "traces": []}
 
-    def route(p, mapping, used, request_id, agent, role, allow_external=True):
+    def route(p, mapping, used, request_id, agent, role, allow_external=True, sensitive=()):
         seen["routes"].append({"used": used, "allow_external": allow_external, "entities": sorted(mapping)})
         if allow_external:
             return RouteDecision("external", "claude", {"name": "claude-x", "provider": "anthropic"}, True,

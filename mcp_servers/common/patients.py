@@ -183,17 +183,20 @@ class Source:
                 f.result()
 
     def _fhir_records(self, r, patient: Patient, allowed: set[str]) -> list[dict]:
+        from privacy.sensitivity import resource_tagger
         from profiles.fhir_map import render
 
         detail = r.more_detail if r.more_detail and r.more_detail.data_class in allowed else None
         text = detail.text if detail else r.text
         classes = [r.data_class] + ([detail.data_class] if detail else [])
+        tag = resource_tagger(self.profile.sensitivity)   # the resource's own labels and codes (ADR 038)
         return [
             {
                 "id": r.source_id.make(res.get("id", "")),
                 "title": render(r.title, res, {"subject": patient.name}),
                 "text": render(text, res, {"subject": patient.name}),
                 "data_classes": classes,
+                **({"sensitivity": tag(res)} if tag else {}),
             }
             for res in self.resources(r, patient)
         ]

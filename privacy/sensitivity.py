@@ -154,6 +154,32 @@ def load(path: Path = DEFAULT) -> ValueSets:
         raise ValueSetError(f"cannot read {path}: {e.strerror or e}") from None
 
 
+@dataclass(frozen=True)
+class Settings:
+    """A profile's use of the categories (profile.yaml `sensitivity:`): which ones this office tracks,
+    which never go to an outside model, and its own value sets file if it has one."""
+    categories: tuple[str, ...]
+    never_external: tuple[str, ...]
+    value_sets: Path | None = None
+
+    def detector(self, model: TextModel | None = None) -> Detector:
+        return Detector(load(self.value_sets or DEFAULT), model=model)
+
+    def tracked(self, found: Iterable[Finding]) -> tuple[str, ...]:
+        """The categories found that this office tracks, sorted."""
+        return tuple(c for c in categories(found) if c in self.categories)
+
+
+def resource_tagger(settings: Settings | None) -> Callable[[Mapping], list[str]] | None:
+    """For a record tool: FHIR resource -> the tracked categories its labels, codes and text show, to send
+    with the record (`sensitivity`). None when the profile tracks none, so its records are unchanged.
+    The gateway adds what the record's text shows and enforces; a tool only ever adds."""
+    if settings is None:
+        return None
+    detector = settings.detector()
+    return lambda resource: list(settings.tracked(detector.of_resource(resource)))
+
+
 class Detector:
     """Finds the sensitive categories of a text or a FHIR resource. Holds no state between calls."""
 
@@ -182,6 +208,10 @@ class Detector:
                 if probability >= self.threshold:
                     found.append(Finding(category, "model", f"{probability:.2f}"))
         return _unique(found)
+
+    def of_record(self, record: Mapping) -> list[Finding]:
+        """Categories of one record as a tool returns it: its title and text."""
+        return self.of_text(f"{record.get('title') or ''}\n{record.get('text') or ''}")
 
     def of_resource(self, resource: Mapping) -> list[Finding]:
         """Categories of one FHIR resource: its security labels, its codes, then its text."""

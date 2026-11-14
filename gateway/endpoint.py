@@ -468,8 +468,13 @@ def answer(self: "Endpoint", who: Identity, request_id: str) -> dict:
 
     # Routing: OPA policy, the profile, and the organization's administrator.
     used = [t for t, r in c.results if r.get("results")]
+    sensitive: tuple[str, ...] = ()
+    if p.sensitivity:                              # of the question, and of the records the gateway marked (ADR 038)
+        asked = p.sensitivity.tracked(p.sensitivity.detector().of_text(question))
+        sensitive = tuple(sorted({*asked, *(x for _, r in c.results for rec in r.get("results", [])
+                                           for x in rec.get("sensitivity", []))}))
     d = (self._route or route)(p, mapping, used, c.request_id, agent, who.role,
-                              allow_external=who.external_model_allowed)
+                              allow_external=who.external_model_allowed, sensitive=sensitive)
     c.trace.step("router", "route", "info", f"{d.target.capitalize()} model {d.model['name']} ({d.model['provider']}): "
                  f"{'; '.join(d.reasons)}", target=d.target, provider=d.model["provider"], sent_masked=d.send_masked)
 

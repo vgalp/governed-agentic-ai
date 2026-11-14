@@ -77,3 +77,15 @@ not_confirmed: >-
   (A second model checked this answer against the pages listed and could not
   confirm every detail from them. Please read the pages for anything that
   matters.)
+
+# Sensitive categories (ADR 038). Neither reply names the category: naming it would disclose it.
+# A tool's own answer (a medication list or review, a chart brief) uses records this role may not see.
+records_withheld: >-
+  Part of this patient's record is not shown for your role, so I can't give
+  this answer: it would be incomplete. A clinician with access to the full
+  record can help.
+
+# Added under an answer when some of the records found are not shown for this role.
+records_not_shown: >-
+  (Some of this patient's records are not shown for your role. A clinician
+  with access to the full record can help.)

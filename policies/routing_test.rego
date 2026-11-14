@@ -70,3 +70,32 @@ test_strict_profile_sends_only_without_personal_info if {
 test_missing_input_fields_are_local if {
 	routing.decision.target == "local" with input as {"profile": "p"} with data.profiles as open_profile
 }
+
+# --- sensitive categories (ADR 038) ---------------------------------------------------------------
+
+guarded_profile := {"p": {"routing": {
+	"external_allowed": true,
+	"send_external_when": "masked",
+	"never_external_entities": [],
+	"never_external_labels": [],
+	"never_external_categories": ["substance_use", "hiv"],
+}}}
+
+about(categories) := object.union(req([], []), {"sensitive_categories": categories})
+
+test_sensitive_category_stays_local if {
+	d := routing.decision with input as about(["substance_use"]) with data.profiles as guarded_profile
+	d.target == "local"
+	"is about substance_use, which never leaves this machine" in d.reasons
+}
+
+test_category_the_profile_lets_out_may_go if {
+	routing.decision.target == "external" with input as about(["genetic"]) with data.profiles as guarded_profile
+}
+
+test_no_sensitive_category_changes_nothing if {
+	routing.decision.target == "external" with input as about([]) with data.profiles as guarded_profile
+	routing.decision.target == "external" with input as req([], []) with data.profiles as guarded_profile
+	# a profile that lists no categories is not affected by a caller that sends some
+	routing.decision.target == "external" with input as about(["hiv"]) with data.profiles as open_profile
+}

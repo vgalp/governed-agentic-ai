@@ -53,3 +53,31 @@ test_profile_without_roles_uses_agent_grant if {
 test_agent_grant_still_required if {
 	not authz.allow with input as call("adhd", null, "search_records") with data.profiles as no_roles
 }
+
+# --- sensitive categories (ADR 038) ---------------------------------------------------------------
+
+sensitive := {"clinic": {"roles": {
+	"clinician": {"tools": [], "data_classes": ["medications"], "sensitive_categories": ["substance_use", "hiv"]},
+	"front_desk": {"tools": [], "data_classes": ["visit_dates"], "sensitive_categories": []},
+	"old_role": {"tools": [], "data_classes": ["visit_dates"]},
+}}}
+
+test_role_sees_only_its_sensitive_categories if {
+	roles.allowed_sensitive == ["substance_use", "hiv"] with input as {"profile": "clinic", "role": "clinician"}
+		with data.profiles as sensitive
+}
+
+test_role_that_lists_none_sees_no_sensitive_category if {
+	roles.allowed_sensitive == [] with input as {"profile": "clinic", "role": "front_desk"}
+		with data.profiles as sensitive
+	roles.allowed_sensitive == [] with input as {"profile": "clinic", "role": "old_role"}
+		with data.profiles as sensitive
+}
+
+test_unknown_or_missing_role_sees_no_sensitive_category if {
+	roles.allowed_sensitive == [] with input as {"profile": "clinic", "role": "visitor"}
+		with data.profiles as sensitive
+	roles.allowed_sensitive == [] with input as {"profile": "clinic"} with data.profiles as sensitive
+	roles.allowed_sensitive == [] with input as {"profile": "other", "role": "clinician"}
+		with data.profiles as sensitive
+}

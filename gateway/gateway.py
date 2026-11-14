@@ -11,6 +11,11 @@ and for role-filtered tools the gateway asks OPA which data classes the role may
 (policies/roles.rego), passes them to the tool, and drops any returned record that
 contains another class. It fails closed: a record without data classes is dropped.
 
+In a profile that tracks sensitive categories of health information (ADR 038), each record
+from a role-filtered tool is also marked with its categories, and records in a category the
+role may not see are withheld. A tool's own answer text is withheld with them. The audit
+records the categories and the counts.
+
 Tenant-scoped tools (tools.yaml tenant_scoped: true) hold several customers' data. The
 caller's tenant comes from who the caller is (the outside endpoint's auth check), never
 from the request: the gateway overwrites any tenant_id in the arguments, OPA refuses the
@@ -19,6 +24,7 @@ call without a tenant, and any returned record for another tenant, or with none,
 
 import asyncio
 import json
+from collections import Counter
 from datetime import timedelta
 
 from mcp import ClientSession
@@ -70,6 +76,40 @@ def filter_results(results: list[dict], allowed: list[str]) -> tuple[list[dict],
     ok = set(allowed)
     kept = [r for r in results if r.get("data_classes") and set(r["data_classes"]) <= ok]
     return kept, len(results) - len(kept)
+
+
+def allowed_sensitive(profile: Profile, role: str | None) -> list[str]:
+    result = decide(profile, "roles/allowed_sensitive", {"profile": profile.name, "role": role})
+    return list(result or [])
+
+
+def tag_sensitive(results: list[dict], profile: Profile) -> tuple[list[dict], Counter]:
+    """Each record with the sensitive categories this office tracks (ADR 038): what its title and text
+    show, added to what the tool found in the record's codes and labels. A tool can add a category,
+    never remove one. Returns the records and how many are in each category."""
+    settings = profile.sensitivity
+    detector = settings.detector()
+    tagged, counts = [], Counter()
+    for r in results:
+        claimed = r.get("sensitivity") if isinstance(r.get("sensitivity"), list) else []
+        found = sorted(set(settings.tracked(detector.of_record(r))) | {c for c in claimed if c in settings.categories})
+        tagged.append({**r, "sensitivity": found})
+        counts.update(found)
+    return tagged, counts
+
+
+def filter_sensitive(results: list[dict], allowed: list[str]) -> tuple[list[dict], Counter]:
+    """Keep only records whose sensitive categories the role may all see. Returns the records kept and,
+    by category, how many were withheld (a record in two categories counts under each it lacks)."""
+    ok = set(allowed)
+    kept, withheld = [], Counter()
+    for r in results:
+        missing = [c for c in r.get("sensitivity", []) if c not in ok]
+        if missing:
+            withheld.update(missing)
+        else:
+            kept.append(r)
+    return kept, withheld
 
 
 DEFAULT_TOOL_TIMEOUT = 30.0   # seconds; a tool may set its own in tools.yaml (timeout:)
@@ -177,6 +217,21 @@ def call_tool(agent: str, tool: str, args: dict, request_id: str,
         kept, dropped = tenant_filter(result.get("results", []), tenant)
         result = {**result, "results": kept}
         event["dropped_other_tenant"] = dropped    # should always be 0; >0 means the tool leaked
+    if filtered and profile.sensitivity:
+        # Sensitive categories (ADR 038): every record is marked with its categories, and a role sees
+        # only the categories policy gives it. The audit records categories and counts, never values.
+        tagged, found = tag_sensitive(result.get("results", []), profile)
+        result = {**result, "results": tagged}
+        event["sensitive_categories"] = dict(sorted(found.items()))
+        if profile.roles and found:                # nothing marked: nothing to ask policy about
+            kept, withheld = filter_sensitive(tagged, allowed_sensitive(profile, role))
+            if withheld:
+                # A tool's own answer text was written from records now withheld: it cannot be shown
+                # in part (a medication review that leaves a medication out is worse than none).
+                had_answer = "answer" in result
+                result = {k: v for k, v in result.items() if k != "answer"}
+                result.update(results=kept, withheld_sensitive=len(tagged) - len(kept), answer_withheld=had_answer)
+                event["withheld_sensitive"] = dict(sorted(withheld.items()))
     # Text from the tool's sources may try to instruct the AI (prompt injection): withheld here,
     # before any model or outside assistant reads it (guardrails/injection.py, ADR 016).
     result, injection = check_result(result, tool)

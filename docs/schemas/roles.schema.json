@@ -19,6 +19,14 @@
           "title": "Responses",
           "type": "object"
         },
+        "sensitive_categories": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Sensitive Categories",
+          "type": "array"
+        },
         "title": {
           "title": "Title",
           "type": "string"

@@ -31,6 +31,7 @@ from mcp.server.fastmcp import FastMCP
 
 from mcp_servers.common.patients import NotFound, Patient, Source
 from mcp_servers.common.serve import serve
+from privacy.sensitivity import resource_tagger
 from profiles.loader import Profile, load_profile
 
 DAILYMED = "https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid={set_id}"
@@ -178,6 +179,7 @@ def medications_of(src: Source, cfg: Config, patient: Patient) -> list[dict]:
         for row in src.rows(r, patient, {"name": cfg.drug_column}):
             meds.setdefault(row["name"], {"id": row["_id"], "name": row["name"]})
         return list(meds.values())
+    tag = resource_tagger(src.profile.sensitivity)   # the resource's own labels and codes (ADR 038)
     for row in src.rows(r, patient, {}):
         res = row["_resource"]
         concept = res.get("medicationCodeableConcept")
@@ -190,7 +192,8 @@ def medications_of(src: Source, cfg: Config, patient: Patient) -> list[dict]:
         name = (concept or {}).get("text") or (res.get("medicationReference") or {}).get("display") or \
             next((c.get("display") for c in (concept or {}).get("coding") or [] if c.get("display")), None)
         if name:
-            meds.setdefault(name, {"id": row["_id"], "name": name, "rxcui": _rxcui(concept)})
+            meds.setdefault(name, {"id": row["_id"], "name": name, "rxcui": _rxcui(concept),
+                                   **({"sensitivity": tag(res)} if tag else {})})
     return list(meds.values())
 
 
@@ -207,7 +210,7 @@ def medication_list(db_path: Path | None, profile: Profile, cfg: Config | None, 
         if client is None:
             return {"results": [], "answer": "The record system is not set up, so nothing was looked up."}
         from mcp_servers.fhir_records.server import search as records_search
-        out = records_search(client, profile.fhir_map, query, [cfg.data_class])
+        out = records_search(client, profile.fhir_map, query, [cfg.data_class], resource_tagger(profile.sensitivity))
     else:
         from mcp_servers.records.server import search as db_search
         out = db_search(db_path, query, [cfg.data_class], profile.records_map)
@@ -252,8 +255,8 @@ def review(db_path: Path | None, profile: Profile, cfg: Config | None, query: st
         return {"results": [], "answer": "The record system did not answer, so nothing was reviewed: "
                                          + "; ".join(src.unread.values())}
     dc = [cfg.data_class]
-    results = [{"id": m["id"], "title": "Current medication", "text": f"{name}: {m['name']}", "data_classes": dc}
-               for m in meds]
+    results = [{"id": m["id"], "title": "Current medication", "text": f"{name}: {m['name']}", "data_classes": dc,
+                **({"sensitivity": m["sensitivity"]} if "sensitivity" in m else {})} for m in meds]
     missing = [m for m in meds if not ingredients_of(m["name"], cfg.labels, m.get("rxcui"))
                or any(i not in (cfg.labels.get("ingredients") or {})
                       for i in ingredients_of(m["name"], cfg.labels, m.get("rxcui")))]

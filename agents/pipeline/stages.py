@@ -388,6 +388,11 @@ def call_tools(rt: Runtime, r: Request) -> Outcome | None:
         summary = tool_summary(result, found, r, P)
         if tool in P.role_filtered_tools and r.access and r.access["restricted"]:
             summary += f"; not fetched for this role: {', '.join(r.access['restricted'])}"
+        if result.get("withheld_sensitive"):  # the gateway withheld them (ADR 038); the category is in the audit only
+            r.withheld += result["withheld_sensitive"]
+            summary += f"; {result['withheld_sensitive']} record(s) in a protected category not shown for this role"
+            if result.get("answer_withheld") and r.answer_withheld is None:
+                r.answer_withheld = tool
         t.step(lane, tool, "pass" if found else "info", summary, returned=len(found))
         if found:
             r.tools_used.append(tool)  # only tools that returned data count for routing
@@ -406,6 +411,18 @@ def settle_tools(rt: Runtime, r: Request) -> Outcome | None:
     (on_empty), a tool this role may not use, or a tool whose text is the answer (answer: direct)."""
     P = rt.profile
     empty = next((x for x in r.triggered if P.tools[x].on_empty and x in r.empty_notes), None)
+    if r.withheld and not r.direct and (r.answer_withheld or empty):
+        # A tool's own answer was written from records this role may not see, or every record it found
+        # is one: the answer is not shown in part, and "nothing found" would be untrue (ADR 038).
+        tool = r.answer_withheld or empty
+        return Outcome(
+            P.response("records_withheld", r.role),
+            [],
+            {"stage": "access", "layer": "sensitivity", "category": "records_withheld"},
+            log=f"Tool {tool}: records in a protected category not shown for role {r.role}: {r.request_id}",
+            trace_step=("intake", "reply", "info",
+                        f"{tool}'s answer uses record(s) this role may not see; fixed reply sent, no model asked", {}),
+        )
     if empty and not r.direct:
         note = (r.empty_notes.get(empty) or "nothing could be read").rstrip(".")
         text = P.response(P.tools[empty].on_empty, r.role).format(query=r.message, note=note)
@@ -467,6 +484,11 @@ def settle_tools(rt: Runtime, r: Request) -> Outcome | None:
             f"\n\nAccess: the person asking is {r.access['role_title']}. Their role may not see: {hidden}. "
             "If they ask about these, say their role does not allow it and suggest who on staff could help. "
             "Do not guess."
+        )
+    if r.withheld:
+        r.notes_text += (
+            "\n\nSome of this person's records are not shown for the asker's role and are not in the notes above. "
+            "Do not guess what they contain, and do not say the record is complete."
         )
     return None
 
@@ -594,7 +616,9 @@ def answer(rt: Runtime, r: Request) -> Outcome | None:
     """Route to a model (OPA, audited) and ask it; an external model that fails is followed by the
     profile's fallbacks, then the local model. External models only ever get masked text."""
     P, t = rt.profile, r.trace
-    decision = route(P, r.mapping, r.tools_used, r.request_id, rt.agent_name, r.role)
+    if rt.sensitive is not None:  # of the question, and of the records the gateway marked (ADR 038)
+        r.sensitive = tuple(sorted({*rt.sensitive(r.message), *(c for n in r.notes for c in n.get("sensitivity", []))}))
+    decision = route(P, r.mapping, r.tools_used, r.request_id, rt.agent_name, r.role, sensitive=r.sensitive)
     t.step(
         "router",
         "route",
@@ -697,8 +721,10 @@ def check_answer(rt: Runtime, r: Request) -> Outcome | None:
     audit_guardrail(rt, r, "output", r.out_layer, r.out_check)
     if r.out_check.allowed:
         sources = [with_url(n) for n in r.notes]
+        # Said by the pipeline, not left to the model: the person must know the answer is not the whole record.
+        not_shown = f"\n\n{rt.profile.response('records_not_shown', r.role)}" if r.withheld else ""
         return Outcome(
-            r.restored_answer,
+            r.restored_answer + not_shown,
             sources,
             None,
             r.route_info,

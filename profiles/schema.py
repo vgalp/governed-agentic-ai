@@ -147,6 +147,14 @@ class SignIn(Strict):
     leeway_seconds: int = Field(default=30, ge=0, le=300)
 
 
+class Sensitivity(Strict):
+    """Sensitive categories of health information this office tracks (ADR 038)."""
+
+    categories: list[str] = Field(min_length=1)   # names from the value sets file
+    never_external: list[str] | None = None       # never sent to an outside model; default: all of them
+    value_sets: str | None = None                 # the office's own lists, a file in the profile folder
+
+
 class RateLimit(Strict):
     """Chat messages one person may send (ADR 030): `burst` at once, then `per_minute` a minute."""
 
@@ -183,6 +191,7 @@ class ProfileFile(Strict):
     examples: list[str] = []
     sign_in: SignIn | None = None
     rate_limit: RateLimit | None = None
+    sensitivity: Sensitivity | None = None
 
 
 # --- tools.yaml ---------------------------------------------------------------------------------
@@ -224,6 +233,7 @@ class RoleSpec(Strict):
     title: str
     tools: list[str] = []
     data_classes: list[str] = []
+    sensitive_categories: list[str] = []   # sensitive categories this role may see (ADR 038); default none
     responses: dict[str, str] = {}
 
 

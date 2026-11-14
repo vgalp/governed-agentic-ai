@@ -83,6 +83,14 @@ privacy:
 
 knowledge_base: data/knowledge_base.json
 
+# Sensitive categories of health information this office tracks (ADR 038). Each record is marked with
+# its categories; a role sees only the categories roles.yaml gives it, and a question or record in a
+# never_external category stays on the local model. The lists are privacy/sensitivity.yaml: a starting
+# set for development, to be replaced by the compliance team's own (value_sets: <file in this folder>).
+sensitivity:
+  categories: [substance_use, mental_health, hiv, sexual_health, reproductive_health, violence, genetic, protected]
+  # never_external: every category above, unless listed here
+
 agents:
   planner:
     tools: [search_knowledge, search_records, medication_review, medication_list, chart_brief, drug_reference, web_research]   # review before list

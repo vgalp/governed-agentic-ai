@@ -8,7 +8,8 @@ audited on audit.routing.
 Whatever OPA returns, this code also enforces:
   1. an external model only ever receives masked text;
   2. a profile with external_allowed: false never uses an external model;
-  3. if OPA cannot be reached, the request goes to the local model (fail safe).
+  3. if OPA cannot be reached, the request goes to the local model (fail safe);
+  4. a request in a sensitive category the profile never sends out stays local (ADR 038).
 
 An organization served through the governed endpoint (ADR 015) can also keep its requests
 local whatever the profile allows: its administrator's setting arrives with the caller's
@@ -86,7 +87,9 @@ ADMIN_OFF = "the organization's administrator has not allowed outside AI models"
 
 
 def decide_route(profile: Profile, entities: list[str], labels: list[str],
-                 allow_external: bool = True) -> RouteDecision:
+                 allow_external: bool = True, sensitive: tuple[str, ...] = ()) -> RouteDecision:
+    """`sensitive`: the sensitive categories of the question and its notes (ADR 038); empty when the
+    profile tracks none."""
     r = profile.routing
     local = local_decision(profile)
     if not allow_external:
@@ -94,13 +97,16 @@ def decide_route(profile: Profile, entities: list[str], labels: list[str],
         return local
     externals = available_externals(profile)
     external_available = bool(externals)
+    facts = {
+        "profile": profile.name,
+        "entity_types": entities,
+        "context_labels": labels,
+        "external_available": external_available,
+    }
+    if profile.sensitivity:
+        facts["sensitive_categories"] = sorted(sensitive)
     try:
-        result = decide(profile, "routing/decision", {
-            "profile": profile.name,
-            "entity_types": entities,
-            "context_labels": labels,
-            "external_available": external_available,
-        }) or {}
+        result = decide(profile, "routing/decision", facts) or {}
     except requests.RequestException:
         local.reasons = ["routing policy unreachable: local model (fail safe)"]
         return local
@@ -117,6 +123,10 @@ def decide_route(profile: Profile, entities: list[str], labels: list[str],
     if blocked:
         local.reasons = reasons + [f"policy chose external, overridden: uses {', '.join(blocked)} data"]
         return local
+    kept_in = sorted(set(sensitive) & set(profile.sensitivity.never_external)) if profile.sensitivity else []
+    if kept_in:
+        local.reasons = reasons + [f"policy chose external, overridden: is about {', '.join(kept_in)}"]
+        return local
     key = externals[0]
     if key != r["external_model"]:
         reasons.append(f"{r['external_model']} has no API key set: using {key}")
@@ -125,7 +135,8 @@ def decide_route(profile: Profile, entities: list[str], labels: list[str],
 
 def audit_route(profile: Profile, d: RouteDecision, request_id: str, agent: str,
                 role: str | None = None, entities: list[str] | None = None,
-                labels: list[str] | None = None, fallback: bool = False) -> None:
+                labels: list[str] | None = None, fallback: bool = False,
+                sensitive: tuple[str, ...] = ()) -> None:
     event = {
         "request_id": request_id,
         "profile": profile.name,
@@ -143,13 +154,16 @@ def audit_route(profile: Profile, d: RouteDecision, request_id: str, agent: str,
     else:
         event["entity_types"] = entities or []      # kinds only, never values
         event["context_labels"] = labels or []
+        if profile.sensitivity:
+            event["sensitive_categories"] = sorted(sensitive)   # categories only, never what was said
     get_audit_chain(agent).emit("audit.routing", event)
 
 
 def route(profile: Profile, mapping: dict[str, str], tools_used: list[str],
-          request_id: str, agent: str, role: str | None = None, allow_external: bool = True) -> RouteDecision:
+          request_id: str, agent: str, role: str | None = None, allow_external: bool = True,
+          sensitive: tuple[str, ...] = ()) -> RouteDecision:
     entities = entity_types(mapping)
     labels = context_labels(profile, tools_used)
-    d = decide_route(profile, entities, labels, allow_external)
-    audit_route(profile, d, request_id, agent, role, entities, labels)
+    d = decide_route(profile, entities, labels, allow_external, sensitive)
+    audit_route(profile, d, request_id, agent, role, entities, labels, sensitive=sensitive)
     return d

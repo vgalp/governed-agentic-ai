@@ -41,6 +41,9 @@ class Request:
     denied_for_role: str | None = None
     tool_notes: list[str] = field(default_factory=list)  # for the model: why records were not found
     empty_notes: dict = field(default_factory=dict)  # tool -> note, for tools that returned nothing
+    withheld: int = 0  # records not shown: in a sensitive category this role may not see (ADR 038)
+    answer_withheld: str | None = None  # the tool whose own answer text was withheld with them
+    sensitive: tuple = ()  # sensitive categories of the question and the notes, for routing
     notes_text: str = ""
     # answer
     decision: RouteDecision | None = None

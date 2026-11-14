@@ -6,14 +6,16 @@ package routing
 #   profile               profile name
 #   entity_types          kinds of personal information found and masked, e.g. ["PERSON"]
 #   context_labels        labels of the data tools returned, e.g. ["approved_content"]
+#   sensitive_categories  sensitive categories of the question and the notes (ADR 038),
+#                         e.g. ["substance_use"]; absent when the profile tracks none
 #   external_available    an external model is configured and has its credentials
 #
 # Settings come from the profile (routing section), loaded by the gateway into
 # data.profiles.<name>.routing. Anything missing or unknown means local.
 #
-# The router enforces two rules in code as well, whatever this policy returns:
-# external models only ever receive masked text, and a profile with
-# external_allowed: false never uses one.
+# The router enforces three rules in code as well, whatever this policy returns:
+# external models only ever receive masked text, a profile with external_allowed: false
+# never uses one, and a request in a never_external category stays local.
 
 r := data.profiles[input.profile].routing
 
@@ -32,6 +34,11 @@ local_reasons contains sprintf("contains %s, which never leaves this machine", [
 local_reasons contains sprintf("uses %s data, which never leaves this machine", [l]) if {
 	some l in input.context_labels
 	l in r.never_external_labels
+}
+
+local_reasons contains sprintf("is about %s, which never leaves this machine", [c]) if {
+	some c in input.sensitive_categories
+	c in r.never_external_categories
 }
 
 local_reasons contains "contains personal information" if {
