@@ -1,6 +1,6 @@
 # 038: Sensitive categories of health information
 
-Status: Accepted · Date: 2026-11-14 · Steps 1 and 2 of 3 built (detection, and enforcement in the four clinic profiles). The text model is not built
+Status: Accepted · Date: 2026-11-14 · Steps 1 and 2 of 3 built (detection, and enforcement in the four clinic profiles). Step 3: a local language model can be measured as the text reader; it is not used by the pipeline
 
 ## Context
 A hospital that connects an AI assistant to its records has two fears the pipeline does not yet
@@ -70,12 +70,24 @@ categories it tracks. The four clinic profiles do.
   were in each category and how many were withheld; on `audit.routing`, the categories of the
   request. No new topic.
 
-**Step 3 (not built): a text model.** A small multi-label classifier for the wording the lists
-cannot know, trained with the loop of ADR 037 and added through `Detector(model=...)`. It is worth
-building only if it beats the lists on text neither it nor its author has seen.
+**Step 3 (begun): a text model.** For the wording the lists cannot know.
+
+- **Built: a local language model as the reader, for measuring** (`privacy/sensitivity_model.py`,
+  `eval/run_sensitivity.py --model qwen2.5:7b`). It is given each category's one-sentence
+  description from the value sets and four rules: implied wording counts; the text must be about a
+  particular person; a denied finding does not count; a word in another sense does not count. It
+  answers with category names. Local only: this is the text the rules keep in the building.
+- **It is not wired into the pipeline.** A call takes about a second, which suits a question (one
+  call, for routing) and not a chart (a call per record). Its numbers on the development set decide
+  the next move:
+  - good on implied wording, few false marks: use it for questions, and train a small classifier
+    from its labels for records (the loop of ADR 037);
+  - poor: the classifier needs frontier-written data from the start, as the guard did.
+- **Not built:** the classifier, and a frozen test set from someone else's text. No model is turned
+  on for enforcement until it has been scored on that.
 
 ## First measurement
-The lists alone, on the development set (`eval/results/sensitivity_dev_v1_lists_0ee7147255df.md`):
+The lists alone, on the development set (`eval/results/sensitivity_dev_v1_lists_b4f10f83f0ef.md`):
 
 | | Caught |
 |---|---|

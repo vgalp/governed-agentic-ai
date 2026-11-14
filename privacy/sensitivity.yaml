@@ -6,6 +6,7 @@
 # to the records of covered programs, not to every mention of a substance).
 #
 # For each category:
+#   description      what counts, in a sentence: shown to a text model that reads for the category.
 #   hl7_labels       security labels the source system put on a record (meta.security), from
 #                    http://terminology.hl7.org/CodeSystem/v3-ActCode. A label is trusted as it is.
 #   confidentiality  codes from http://terminology.hl7.org/CodeSystem/v3-Confidentiality.
@@ -22,6 +23,7 @@ version: 1
 categories:
   substance_use:
     title: Substance use and its treatment
+    description: 'Problem use of alcohol or drugs, and its treatment.'
     hl7_labels: [ETH, ETHUD, OPIOIDUD, SUD, BH]
     # F17 (nicotine) is left out. K70 is alcoholic liver disease.
     icd10: [F10, F11, F12, F13, F14, F15, F16, F18, F19, K70, O99.31, O99.32, Z71.41, Z71.51]
@@ -51,6 +53,7 @@ categories:
 
   mental_health:
     title: Mental health
+    description: 'Mental illness, suicidal thoughts or self-harm, and their treatment.'
     hl7_labels: [PSY, PSYTHPN, MH, EMOTDIS, BH]
     # F0x (dementia and other organic conditions), F7x and F8x (intellectual and developmental)
     # are left out. X71-X83 are intentional self-harm; Z91.5 is a history of it.
@@ -87,6 +90,7 @@ categories:
 
   hiv:
     title: HIV status, testing and treatment
+    description: 'HIV status, testing, prevention and treatment.'
     hl7_labels: [HIV]
     icd10: [B20, B97.35, O98.7, R75, Z11.4, Z20.6, Z21, Z71.7]
     # Left out: tenofovir and lamivudine alone (hepatitis B), ritonavir (also in a COVID-19 treatment).
@@ -102,6 +106,7 @@ categories:
 
   sexual_health:
     title: Sexually transmitted infections
+    description: 'Sexually transmitted infections: exposure, testing, diagnosis and treatment.'
     hl7_labels: [STD]
     icd10: [A50, A51, A52, A53, A54, A55, A56, A57, A58, A59, A60, A63, A64, Z11.3, Z20.2, Z72.5]
     phrases:
@@ -115,6 +120,7 @@ categories:
 
   reproductive_health:
     title: Reproductive health
+    description: 'Abortion, miscarriage, contraception and fertility treatment.'
     hl7_labels: [SEX, PREGNANT]
     # Pregnancy in general (O09-O9A, Z34, Z3A) is left out; add it where the law in force covers it.
     icd10: [O00, O01, O02, O03, O04, O07, O08, Z30, Z31, Z32, Z33, Z64.0]
@@ -135,6 +141,7 @@ categories:
 
   violence:
     title: Abuse, assault and domestic violence
+    description: 'Abuse, assault, domestic violence and neglect, of an adult or a child.'
     hl7_labels: [SDV, MST, VIO]
     # T74 and T76 are confirmed and suspected abuse or neglect; Z69 is care for a victim or perpetrator.
     icd10: [T74, T76, Z69, Z04.4, Z62.81, Z91.41, O9A.3, O9A.4, O9A.5, Y07]
@@ -151,6 +158,7 @@ categories:
 
   genetic:
     title: Genetic information
+    description: 'Genetic test results, carrier status and hereditary disease risk.'
     hl7_labels: [GDIS, SCA, SICKLE]
     # Z14 is carrier status, Z15 genetic susceptibility, G10 Huntington's disease.
     icd10: [Z13.7, Z14, Z15, Z84.81, G10]
@@ -164,6 +172,7 @@ categories:
 
   protected:
     title: Marked restricted by the source system
+    description: 'Marked restricted by the record system, for a reason this file does not know.'
     # Labels this file does not sort into a category above. The source system said "restricted":
     # that is honoured without knowing why.
     hl7_labels: [TBOO, SPI, COGN, DVD]

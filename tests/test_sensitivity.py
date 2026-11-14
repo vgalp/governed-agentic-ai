@@ -181,3 +181,64 @@ def test_scoring_counts_by_stratum_and_refuses_a_row_that_contradicts_itself(tmp
     path.write_text(json.dumps({**rows[0], "stratum": "plain"}))
     with pytest.raises(ValueError, match="does not fit"):
         run_sensitivity.run(dataset=path)
+
+
+# --- a language model as the reader (step 3) ----------------------------------------------------------------
+
+def test_the_model_is_told_the_readable_categories_and_the_rules():
+    from privacy import sensitivity_model as sm
+    sets = sensitivity.load()
+    system, user = sm.messages_for("on methadone", sets)
+    assert "- substance_use: Problem use of alcohol or drugs" in system["content"]
+    assert "- protected:" not in system["content"]                 # a label on a record: nothing to read for
+    assert "about no one" in system["content"] and user["content"] == "Text:\non methadone"
+    assert set(sm.readable_categories(sets)) == set(sets.categories) - {"protected"}
+
+
+@pytest.mark.parametrize("reply, expected", [
+    ('{"categories": ["hiv", "substance_use"]}', ["hiv", "substance_use"]),
+    ('```json\n{"categories": ["hiv"]}\n```', ["hiv"]),
+    ('Sure. {"categories": []} Hope that helps.', []),
+    ('{"categories": ["hiv", "astrology", "hiv", 7]}', ["hiv"]),    # invented names and repeats are dropped
+    ("[]", []),                                                     # how a local model says "none"
+    ("{}", []),
+    ('["hiv"]', ["hiv"]),
+    ('{"labels": ["hiv"]}', None),                                  # another shape: not guessed
+    ('{"categories": "hiv"}', None),
+    ("I think this is about HIV.", None),
+    ("", None),
+])
+def test_a_models_reply_is_read_leniently_and_never_guessed(reply, expected):
+    from privacy import sensitivity_model as sm
+    assert sm.parse(reply, {"hiv", "substance_use"}) == expected
+
+
+def test_a_reader_adds_implied_wording_and_counts_what_it_could_not_read():
+    from privacy import sensitivity_model as sm
+    sets = sensitivity.load()
+    replies = iter(['{"categories": ["substance_use"]}', "no idea", '{"categories": ["mental_health"]}'])
+    ticks = iter(range(100))
+    reader = sm.LlmReader(lambda messages: next(replies), sets, clock=lambda: next(ticks))
+    d = Detector(sets, model=reader)
+    assert d.of_text("He finishes a fifth of vodka most nights.") == [Finding("substance_use", "model", "1.00")]
+    assert d.of_text("On methadone.") == [Finding("substance_use", "medication", "methadone")]   # unreadable: lists hold
+    alone = Detector(sets, model=reader, lists=False)
+    assert cats(alone.of_text("On methadone, low mood.")) == ("mental_health",)                  # the model only
+    assert (reader.calls, reader.unreadable, reader.seconds) == (3, 1, [1, 1, 1])
+    with pytest.raises(ValueError, match="a text model is needed"):
+        Detector(sets, lists=False)
+
+
+def test_the_scorer_measures_a_model_with_or_without_the_lists(tmp_path):
+    rows = [{"id": "a", "kind": "text", "stratum": "implicit", "categories": ["hiv"], "text": "his counts are good"},
+            {"id": "b", "kind": "text", "stratum": "explicit", "categories": ["hiv"], "text": "HIV positive"}]
+    path = tmp_path / "set.jsonl"
+    path.write_text("\n".join(json.dumps(r) for r in rows))
+    seen = []
+
+    def model(text):
+        return {"hiv": 1.0} if "counts" in text else {}
+    both = run_sensitivity.run(dataset=path, model=model, name="lists+m", progress=lambda n, t: seen.append((n, t)))
+    assert both["summary"]["exactly_right"] == 2 and both["detector"] == "lists+m" and seen == [(1, 2), (2, 2)]
+    alone = run_sensitivity.run(dataset=path, model=model, name="m", lists=False)
+    assert alone["summary"]["per_category"]["hiv"]["caught"] == {"implicit": 1, "explicit": 0}

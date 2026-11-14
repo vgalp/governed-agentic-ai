@@ -2,6 +2,8 @@
 
     uv run python -m eval.run_sensitivity                       # the lists alone: the baseline
     uv run python -m eval.run_sensitivity --sets my_sets.yaml   # a deployment's own value sets
+    uv run python -m eval.run_sensitivity --model qwen2.5:7b    # the lists and a local model (Ollama running)
+    uv run python -m eval.run_sensitivity --model qwen2.5:7b --model-only   # the model without the lists
 
 The set (described in eval/datasets/sensitivity_dev_v1_protocol.md) holds synthetic text
 (sensitivity_dev_v1.jsonl) and FHIR resources (sensitivity_dev_v1_resources.json), each with the
@@ -22,6 +24,8 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
+import statistics
 from collections import Counter
 from datetime import datetime
 from pathlib import Path
@@ -108,11 +112,18 @@ def table(result: dict, titles: dict[str, str]) -> str:
     return "\n".join(lines)
 
 
-def run(sets_path: Path = sensitivity.DEFAULT, dataset: Path = DEV, model=None, name: str = "lists") -> dict:
+def run(sets_path: Path = sensitivity.DEFAULT, dataset: Path = DEV, model=None, name: str = "lists",
+        lists: bool = True, progress=None) -> dict:
+    """`model`: a text model (privacy.sensitivity_model) added to the lists, or measured alone with
+    lists=False. `progress(done, total)` is called as rows finish: a model takes a second a row."""
     sets = sensitivity.load(sets_path)
-    detector = sensitivity.Detector(sets, model=model)
+    detector = sensitivity.Detector(sets, model=model, lists=lists)
     rows = read_rows(dataset, set(sets.categories))
-    findings = [predict(detector, r) for r in rows]
+    findings = []
+    for n, r in enumerate(rows, 1):
+        findings.append(predict(detector, r))
+        if progress:
+            progress(n, len(rows))
     predictions = [sensitivity.categories(f) for f in findings]
     result = score(rows, predictions, list(sets.categories))
     return {"dataset": dataset.name, "detector": name, "value_sets_sha256": sets.sha256,
@@ -128,11 +139,32 @@ def main() -> None:
     ap.add_argument("--sets", type=Path, default=sensitivity.DEFAULT, help="value sets file")
     ap.add_argument("--dataset", type=Path, default=DEV)
     ap.add_argument("--no-save", action="store_true", help="print only")
+    ap.add_argument("--model", help="a local model served by Ollama, e.g. qwen2.5:7b, read with the lists")
+    ap.add_argument("--model-only", action="store_true", help="with --model: the model without the lists")
     args = ap.parse_args()
-    out = run(args.sets, args.dataset)
+    if args.model_only and not args.model:
+        ap.error("--model-only needs --model")
+    reader, name = None, "lists"
+    if args.model:
+        from privacy import sensitivity_model
+        reader = sensitivity_model.local_reader(args.model, sensitivity.load(args.sets))
+        tag = re.sub(r"[^A-Za-z0-9.]+", "-", args.model)
+        name = tag if args.model_only else f"lists+{tag}"
+
+    def progress(done: int, total: int) -> None:
+        if reader is not None and (done % 20 == 0 or done == total):
+            print(f"  {done}/{total} rows", flush=True)
+    out = run(args.sets, args.dataset, reader, name, lists=not args.model_only, progress=progress)
+    if reader is not None and reader.calls:
+        out["model"] = {"name": args.model, "calls": reader.calls, "unreadable": reader.unreadable,
+                        "median_seconds": round(statistics.median(reader.seconds), 2)}
     md = (f"# Sensitive categories: {out['detector']} on {out['dataset']}\n\n"
           f"Development set, rerunnable. Value sets {out['value_sets_sha256'][:12]}. {out['run_at']}.\n\n"
           + table(out["summary"], out["titles"]) + "\n")
+    if "model" in out:
+        m = out["model"]
+        md += (f"\nModel {m['name']}: {m['calls']} calls, median {m['median_seconds']} s each, "
+               f"{m['unreadable']} replies that could not be read.\n")
     print(md)
     wrong = [p for p in out["predictions"] if p["expected"] != p["got"]]
     print(f"{len(wrong)} rows not exactly right:")

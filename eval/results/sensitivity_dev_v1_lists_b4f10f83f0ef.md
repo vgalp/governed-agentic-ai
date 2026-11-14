@@ -1,6 +1,6 @@
 # Sensitive categories: lists on sensitivity_dev_v1.jsonl
 
-Development set, rerunnable. Value sets 0ee7147255df. 2026-11-14T00:53:18-05:00.
+Development set, rerunnable. Value sets b4f10f83f0ef. 2026-11-14T02:43:11-05:00.
 
 | Category | Explicit wording caught | Implied only caught | Coded resources caught | Marked on rows without it |
 |---|---|---|---|---|

@@ -1,0 +1,1582 @@
+{
+ "dataset": "sensitivity_dev_v1.jsonl",
+ "detector": "lists",
+ "value_sets_sha256": "b4f10f83f0ef8281750f9f3f9c0e4ea23df00a5b35592cbe104d86465eb8bcac",
+ "run_at": "2026-11-14T02:43:11-05:00",
+ "summary": {
+  "rows": 126,
+  "exactly_right": 91,
+  "per_category": {
+   "substance_use": {
+    "caught": {
+     "explicit": 6,
+     "implicit": 0,
+     "resource": 5
+    },
+    "total": {
+     "explicit": 6,
+     "implicit": 4,
+     "resource": 5
+    },
+    "marked_without_it": 2,
+    "rows_without_it": 111
+   },
+   "mental_health": {
+    "caught": {
+     "explicit": 6,
+     "implicit": 0,
+     "resource": 3
+    },
+    "total": {
+     "explicit": 6,
+     "implicit": 4,
+     "resource": 3
+    },
+    "marked_without_it": 2,
+    "rows_without_it": 113
+   },
+   "hiv": {
+    "caught": {
+     "explicit": 6,
+     "implicit": 0,
+     "resource": 2
+    },
+    "total": {
+     "explicit": 6,
+     "implicit": 4,
+     "resource": 2
+    },
+    "marked_without_it": 0,
+    "rows_without_it": 114
+   },
+   "sexual_health": {
+    "caught": {
+     "explicit": 6,
+     "implicit": 0,
+     "resource": 1
+    },
+    "total": {
+     "explicit": 6,
+     "implicit": 4,
+     "resource": 1
+    },
+    "marked_without_it": 1,
+    "rows_without_it": 115
+   },
+   "reproductive_health": {
+    "caught": {
+     "explicit": 6,
+     "implicit": 0,
+     "resource": 1
+    },
+    "total": {
+     "explicit": 6,
+     "implicit": 4,
+     "resource": 1
+    },
+    "marked_without_it": 1,
+    "rows_without_it": 115
+   },
+   "violence": {
+    "caught": {
+     "explicit": 6,
+     "implicit": 0,
+     "resource": 1
+    },
+    "total": {
+     "explicit": 6,
+     "implicit": 4,
+     "resource": 1
+    },
+    "marked_without_it": 1,
+    "rows_without_it": 115
+   },
+   "genetic": {
+    "caught": {
+     "explicit": 6,
+     "implicit": 0,
+     "resource": 1
+    },
+    "total": {
+     "explicit": 6,
+     "implicit": 4,
+     "resource": 1
+    },
+    "marked_without_it": 0,
+    "rows_without_it": 115
+   },
+   "protected": {
+    "caught": {
+     "resource": 1
+    },
+    "total": {
+     "resource": 1
+    },
+    "marked_without_it": 0,
+    "rows_without_it": 125
+   }
+  },
+  "negatives": {
+   "hard_negative": {
+    "marked": 7,
+    "total": 24
+   },
+   "plain": {
+    "marked": 0,
+    "total": 10
+   },
+   "resource_negative": {
+    "marked": 0,
+    "total": 7
+   }
+  }
+ },
+ "titles": {
+  "substance_use": "Substance use and its treatment",
+  "mental_health": "Mental health",
+  "hiv": "HIV status, testing and treatment",
+  "sexual_health": "Sexually transmitted infections",
+  "reproductive_health": "Reproductive health",
+  "violence": "Abuse, assault and domestic violence",
+  "genetic": "Genetic information",
+  "protected": "Marked restricted by the source system"
+ },
+ "predictions": [
+  {
+   "id": "sd1-t001",
+   "stratum": "explicit",
+   "expected": [
+    "substance_use"
+   ],
+   "got": [
+    "substance_use"
+   ],
+   "evidence": {
+    "substance_use": [
+     "text"
+    ]
+   }
+  },
+  {
+   "id": "sd1-t002",
+   "stratum": "explicit",
+   "expected": [
+    "substance_use"
+   ],
+   "got": [
+    "substance_use"
+   ],
+   "evidence": {
+    "substance_use": [
+     "text"
+    ]
+   }
+  },
+  {
+   "id": "sd1-t003",
+   "stratum": "explicit",
+   "expected": [
+    "substance_use"
+   ],
+   "got": [
+    "substance_use"
+   ],
+   "evidence": {
+    "substance_use": [
+     "medication"
+    ]
+   }
+  },
+  {
+   "id": "sd1-t004",
+   "stratum": "explicit",
+   "expected": [
+    "substance_use"
+   ],
+   "got": [
+    "substance_use"
+   ],
+   "evidence": {
+    "substance_use": [
+     "text"
+    ]
+   }
+  },
+  {
+   "id": "sd1-t005",
+   "stratum": "explicit",
+   "expected": [
+    "substance_use"
+   ],
+   "got": [
+    "substance_use"
+   ],
+   "evidence": {
+    "substance_use": [
+     "text"
+    ]
+   }
+  },
+  {
+   "id": "sd1-t006",
+   "stratum": "explicit",
+   "expected": [
+    "substance_use"
+   ],
+   "got": [
+    "substance_use"
+   ],
+   "evidence": {
+    "substance_use": [
+     "medication"
+    ]
+   }
+  },
+  {
+   "id": "sd1-t007",
+   "stratum": "implicit",
+   "expected": [
+    "substance_use"
+   ],
+   "got": [],
+   "evidence": {}
+  },
+  {
+   "id": "sd1-t008",
+   "stratum": "implicit",
+   "expected": [
+    "substance_use"
+   ],
+   "got": [],
+   "evidence": {}
+  },
+  {
+   "id": "sd1-t009",
+   "stratum": "implicit",
+   "expected": [
+    "substance_use"
+   ],
+   "got": [],
+   "evidence": {}
+  },
+  {
+   "id": "sd1-t010",
+   "stratum": "implicit",
+   "expected": [
+    "substance_use"
+   ],
+   "got": [],
+   "evidence": {}
+  },
+  {
+   "id": "sd1-t011",
+   "stratum": "explicit",
+   "expected": [
+    "mental_health"
+   ],
+   "got": [
+    "mental_health"
+   ],
+   "evidence": {
+    "mental_health": [
+     "text"
+    ]
+   }
+  },
+  {
+   "id": "sd1-t012",
+   "stratum": "explicit",
+   "expected": [
+    "mental_health"
+   ],
+   "got": [
+    "mental_health"
+   ],
+   "evidence": {
+    "mental_health": [
+     "text"
+    ]
+   }
+  },
+  {
+   "id": "sd1-t013",
+   "stratum": "explicit",
+   "expected": [
+    "mental_health"
+   ],
+   "got": [
+    "mental_health"
+   ],
+   "evidence": {
+    "mental_health": [
+     "text"
+    ]
+   }
+  },
+  {
+   "id": "sd1-t014",
+   "stratum": "explicit",
+   "expected": [
+    "mental_health"
+   ],
+   "got": [
+    "mental_health"
+   ],
+   "evidence": {
+    "mental_health": [
+     "medication"
+    ]
+   }
+  },
+  {
+   "id": "sd1-t015",
+   "stratum": "explicit",
+   "expected": [
+    "mental_health"
+   ],
+   "got": [
+    "mental_health"
+   ],
+   "evidence": {
+    "mental_health": [
+     "text"
+    ]
+   }
+  },
+  {
+   "id": "sd1-t016",
+   "stratum": "explicit",
+   "expected": [
+    "mental_health"
+   ],
+   "got": [
+    "mental_health"
+   ],
+   "evidence": {
+    "mental_health": [
+     "text"
+    ]
+   }
+  },
+  {
+   "id": "sd1-t017",
+   "stratum": "implicit",
+   "expected": [
+    "mental_health"
+   ],
+   "got": [],
+   "evidence": {}
+  },
+  {
+   "id": "sd1-t018",
+   "stratum": "implicit",
+   "expected": [
+    "mental_health"
+   ],
+   "got": [],
+   "evidence": {}
+  },
+  {
+   "id": "sd1-t019",
+   "stratum": "implicit",
+   "expected": [
+    "mental_health"
+   ],
+   "got": [],
+   "evidence": {}
+  },
+  {
+   "id": "sd1-t020",
+   "stratum": "implicit",
+   "expected": [
+    "mental_health"
+   ],
+   "got": [],
+   "evidence": {}
+  },
+  {
+   "id": "sd1-t021",
+   "stratum": "explicit",
+   "expected": [
+    "hiv"
+   ],
+   "got": [
+    "hiv"
+   ],
+   "evidence": {
+    "hiv": [
+     "text"
+    ]
+   }
+  },
+  {
+   "id": "sd1-t022",
+   "stratum": "explicit",
+   "expected": [
+    "hiv"
+   ],
+   "got": [
+    "hiv"
+   ],
+   "evidence": {
+    "hiv": [
+     "medication"
+    ]
+   }
+  },
+  {
+   "id": "sd1-t023",
+   "stratum": "explicit",
+   "expected": [
+    "hiv"
+   ],
+   "got": [
+    "hiv"
+   ],
+   "evidence": {
+    "hiv": [
+     "text"
+    ]
+   }
+  },
+  {
+   "id": "sd1-t024",
+   "stratum": "explicit",
+   "expected": [
+    "hiv"
+   ],
+   "got": [
+    "hiv"
+   ],
+   "evidence": {
+    "hiv": [
+     "text"
+    ]
+   }
+  },
+  {
+   "id": "sd1-t025",
+   "stratum": "explicit",
+   "expected": [
+    "hiv"
+   ],
+   "got": [
+    "hiv"
+   ],
+   "evidence": {
+    "hiv": [
+     "text"
+    ]
+   }
+  },
+  {
+   "id": "sd1-t026",
+   "stratum": "explicit",
+   "expected": [
+    "hiv"
+   ],
+   "got": [
+    "hiv"
+   ],
+   "evidence": {
+    "hiv": [
+     "medication"
+    ]
+   }
+  },
+  {
+   "id": "sd1-t027",
+   "stratum": "implicit",
+   "expected": [
+    "hiv"
+   ],
+   "got": [],
+   "evidence": {}
+  },
+  {
+   "id": "sd1-t028",
+   "stratum": "implicit",
+   "expected": [
+    "hiv"
+   ],
+   "got": [],
+   "evidence": {}
+  },
+  {
+   "id": "sd1-t029",
+   "stratum": "implicit",
+   "expected": [
+    "hiv"
+   ],
+   "got": [],
+   "evidence": {}
+  },
+  {
+   "id": "sd1-t030",
+   "stratum": "implicit",
+   "expected": [
+    "hiv"
+   ],
+   "got": [],
+   "evidence": {}
+  },
+  {
+   "id": "sd1-t031",
+   "stratum": "explicit",
+   "expected": [
+    "sexual_health"
+   ],
+   "got": [
+    "sexual_health"
+   ],
+   "evidence": {
+    "sexual_health": [
+     "text"
+    ]
+   }
+  },
+  {
+   "id": "sd1-t032",
+   "stratum": "explicit",
+   "expected": [
+    "sexual_health"
+   ],
+   "got": [
+    "sexual_health"
+   ],
+   "evidence": {
+    "sexual_health": [
+     "text"
+    ]
+   }
+  },
+  {
+   "id": "sd1-t033",
+   "stratum": "explicit",
+   "expected": [
+    "sexual_health"
+   ],
+   "got": [
+    "sexual_health"
+   ],
+   "evidence": {
+    "sexual_health": [
+     "text"
+    ]
+   }
+  },
+  {
+   "id": "sd1-t034",
+   "stratum": "explicit",
+   "expected": [
+    "sexual_health"
+   ],
+   "got": [
+    "sexual_health"
+   ],
+   "evidence": {
+    "sexual_health": [
+     "text"
+    ]
+   }
+  },
+  {
+   "id": "sd1-t035",
+   "stratum": "explicit",
+   "expected": [
+    "sexual_health"
+   ],
+   "got": [
+    "sexual_health"
+   ],
+   "evidence": {
+    "sexual_health": [
+     "text"
+    ]
+   }
+  },
+  {
+   "id": "sd1-t036",
+   "stratum": "explicit",
+   "expected": [
+    "sexual_health"
+   ],
+   "got": [
+    "sexual_health"
+   ],
+   "evidence": {
+    "sexual_health": [
+     "text"
+    ]
+   }
+  },
+  {
+   "id": "sd1-t037",
+   "stratum": "implicit",
+   "expected": [
+    "sexual_health"
+   ],
+   "got": [],
+   "evidence": {}
+  },
+  {
+   "id": "sd1-t038",
+   "stratum": "implicit",
+   "expected": [
+    "sexual_health"
+   ],
+   "got": [],
+   "evidence": {}
+  },
+  {
+   "id": "sd1-t039",
+   "stratum": "implicit",
+   "expected": [
+    "sexual_health"
+   ],
+   "got": [],
+   "evidence": {}
+  },
+  {
+   "id": "sd1-t040",
+   "stratum": "implicit",
+   "expected": [
+    "sexual_health"
+   ],
+   "got": [],
+   "evidence": {}
+  },
+  {
+   "id": "sd1-t041",
+   "stratum": "explicit",
+   "expected": [
+    "reproductive_health"
+   ],
+   "got": [
+    "reproductive_health"
+   ],
+   "evidence": {
+    "reproductive_health": [
+     "text"
+    ]
+   }
+  },
+  {
+   "id": "sd1-t042",
+   "stratum": "explicit",
+   "expected": [
+    "reproductive_health"
+   ],
+   "got": [
+    "reproductive_health"
+   ],
+   "evidence": {
+    "reproductive_health": [
+     "text"
+    ]
+   }
+  },
+  {
+   "id": "sd1-t043",
+   "stratum": "explicit",
+   "expected": [
+    "reproductive_health"
+   ],
+   "got": [
+    "reproductive_health"
+   ],
+   "evidence": {
+    "reproductive_health": [
+     "text"
+    ]
+   }
+  },
+  {
+   "id": "sd1-t044",
+   "stratum": "explicit",
+   "expected": [
+    "reproductive_health"
+   ],
+   "got": [
+    "reproductive_health"
+   ],
+   "evidence": {
+    "reproductive_health": [
+     "text"
+    ]
+   }
+  },
+  {
+   "id": "sd1-t045",
+   "stratum": "explicit",
+   "expected": [
+    "reproductive_health"
+   ],
+   "got": [
+    "reproductive_health"
+   ],
+   "evidence": {
+    "reproductive_health": [
+     "text"
+    ]
+   }
+  },
+  {
+   "id": "sd1-t046",
+   "stratum": "explicit",
+   "expected": [
+    "reproductive_health"
+   ],
+   "got": [
+    "reproductive_health"
+   ],
+   "evidence": {
+    "reproductive_health": [
+     "medication"
+    ]
+   }
+  },
+  {
+   "id": "sd1-t047",
+   "stratum": "implicit",
+   "expected": [
+    "reproductive_health"
+   ],
+   "got": [],
+   "evidence": {}
+  },
+  {
+   "id": "sd1-t048",
+   "stratum": "implicit",
+   "expected": [
+    "reproductive_health"
+   ],
+   "got": [],
+   "evidence": {}
+  },
+  {
+   "id": "sd1-t049",
+   "stratum": "implicit",
+   "expected": [
+    "reproductive_health"
+   ],
+   "got": [],
+   "evidence": {}
+  },
+  {
+   "id": "sd1-t050",
+   "stratum": "implicit",
+   "expected": [
+    "reproductive_health"
+   ],
+   "got": [],
+   "evidence": {}
+  },
+  {
+   "id": "sd1-t051",
+   "stratum": "explicit",
+   "expected": [
+    "violence"
+   ],
+   "got": [
+    "violence"
+   ],
+   "evidence": {
+    "violence": [
+     "text"
+    ]
+   }
+  },
+  {
+   "id": "sd1-t052",
+   "stratum": "explicit",
+   "expected": [
+    "violence"
+   ],
+   "got": [
+    "violence"
+   ],
+   "evidence": {
+    "violence": [
+     "text"
+    ]
+   }
+  },
+  {
+   "id": "sd1-t053",
+   "stratum": "explicit",
+   "expected": [
+    "violence"
+   ],
+   "got": [
+    "violence"
+   ],
+   "evidence": {
+    "violence": [
+     "text"
+    ]
+   }
+  },
+  {
+   "id": "sd1-t054",
+   "stratum": "explicit",
+   "expected": [
+    "violence"
+   ],
+   "got": [
+    "violence"
+   ],
+   "evidence": {
+    "violence": [
+     "text"
+    ]
+   }
+  },
+  {
+   "id": "sd1-t055",
+   "stratum": "explicit",
+   "expected": [
+    "violence"
+   ],
+   "got": [
+    "violence"
+   ],
+   "evidence": {
+    "violence": [
+     "text"
+    ]
+   }
+  },
+  {
+   "id": "sd1-t056",
+   "stratum": "explicit",
+   "expected": [
+    "violence"
+   ],
+   "got": [
+    "violence"
+   ],
+   "evidence": {
+    "violence": [
+     "text"
+    ]
+   }
+  },
+  {
+   "id": "sd1-t057",
+   "stratum": "implicit",
+   "expected": [
+    "violence"
+   ],
+   "got": [],
+   "evidence": {}
+  },
+  {
+   "id": "sd1-t058",
+   "stratum": "implicit",
+   "expected": [
+    "violence"
+   ],
+   "got": [],
+   "evidence": {}
+  },
+  {
+   "id": "sd1-t059",
+   "stratum": "implicit",
+   "expected": [
+    "violence"
+   ],
+   "got": [],
+   "evidence": {}
+  },
+  {
+   "id": "sd1-t060",
+   "stratum": "implicit",
+   "expected": [
+    "violence"
+   ],
+   "got": [],
+   "evidence": {}
+  },
+  {
+   "id": "sd1-t061",
+   "stratum": "explicit",
+   "expected": [
+    "genetic"
+   ],
+   "got": [
+    "genetic"
+   ],
+   "evidence": {
+    "genetic": [
+     "text"
+    ]
+   }
+  },
+  {
+   "id": "sd1-t062",
+   "stratum": "explicit",
+   "expected": [
+    "genetic"
+   ],
+   "got": [
+    "genetic"
+   ],
+   "evidence": {
+    "genetic": [
+     "text"
+    ]
+   }
+  },
+  {
+   "id": "sd1-t063",
+   "stratum": "explicit",
+   "expected": [
+    "genetic"
+   ],
+   "got": [
+    "genetic"
+   ],
+   "evidence": {
+    "genetic": [
+     "text"
+    ]
+   }
+  },
+  {
+   "id": "sd1-t064",
+   "stratum": "explicit",
+   "expected": [
+    "genetic"
+   ],
+   "got": [
+    "genetic"
+   ],
+   "evidence": {
+    "genetic": [
+     "text"
+    ]
+   }
+  },
+  {
+   "id": "sd1-t065",
+   "stratum": "explicit",
+   "expected": [
+    "genetic"
+   ],
+   "got": [
+    "genetic"
+   ],
+   "evidence": {
+    "genetic": [
+     "text"
+    ]
+   }
+  },
+  {
+   "id": "sd1-t066",
+   "stratum": "explicit",
+   "expected": [
+    "genetic"
+   ],
+   "got": [
+    "genetic"
+   ],
+   "evidence": {
+    "genetic": [
+     "text"
+    ]
+   }
+  },
+  {
+   "id": "sd1-t067",
+   "stratum": "implicit",
+   "expected": [
+    "genetic"
+   ],
+   "got": [],
+   "evidence": {}
+  },
+  {
+   "id": "sd1-t068",
+   "stratum": "implicit",
+   "expected": [
+    "genetic"
+   ],
+   "got": [],
+   "evidence": {}
+  },
+  {
+   "id": "sd1-t069",
+   "stratum": "implicit",
+   "expected": [
+    "genetic"
+   ],
+   "got": [],
+   "evidence": {}
+  },
+  {
+   "id": "sd1-t070",
+   "stratum": "implicit",
+   "expected": [
+    "genetic"
+   ],
+   "got": [],
+   "evidence": {}
+  },
+  {
+   "id": "sd1-t071",
+   "stratum": "hard_negative",
+   "expected": [],
+   "got": [],
+   "evidence": {}
+  },
+  {
+   "id": "sd1-t072",
+   "stratum": "hard_negative",
+   "expected": [],
+   "got": [],
+   "evidence": {}
+  },
+  {
+   "id": "sd1-t073",
+   "stratum": "hard_negative",
+   "expected": [],
+   "got": [],
+   "evidence": {}
+  },
+  {
+   "id": "sd1-t074",
+   "stratum": "hard_negative",
+   "expected": [],
+   "got": [],
+   "evidence": {}
+  },
+  {
+   "id": "sd1-t075",
+   "stratum": "hard_negative",
+   "expected": [],
+   "got": [],
+   "evidence": {}
+  },
+  {
+   "id": "sd1-t076",
+   "stratum": "hard_negative",
+   "expected": [],
+   "got": [],
+   "evidence": {}
+  },
+  {
+   "id": "sd1-t077",
+   "stratum": "hard_negative",
+   "expected": [],
+   "got": [],
+   "evidence": {}
+  },
+  {
+   "id": "sd1-t078",
+   "stratum": "hard_negative",
+   "expected": [],
+   "got": [
+    "substance_use"
+   ],
+   "evidence": {
+    "substance_use": [
+     "text"
+    ]
+   }
+  },
+  {
+   "id": "sd1-t079",
+   "stratum": "hard_negative",
+   "expected": [],
+   "got": [],
+   "evidence": {}
+  },
+  {
+   "id": "sd1-t080",
+   "stratum": "hard_negative",
+   "expected": [],
+   "got": [],
+   "evidence": {}
+  },
+  {
+   "id": "sd1-t081",
+   "stratum": "hard_negative",
+   "expected": [],
+   "got": [],
+   "evidence": {}
+  },
+  {
+   "id": "sd1-t082",
+   "stratum": "hard_negative",
+   "expected": [],
+   "got": [],
+   "evidence": {}
+  },
+  {
+   "id": "sd1-t083",
+   "stratum": "hard_negative",
+   "expected": [],
+   "got": [],
+   "evidence": {}
+  },
+  {
+   "id": "sd1-t084",
+   "stratum": "hard_negative",
+   "expected": [],
+   "got": [],
+   "evidence": {}
+  },
+  {
+   "id": "sd1-t085",
+   "stratum": "hard_negative",
+   "expected": [],
+   "got": [],
+   "evidence": {}
+  },
+  {
+   "id": "sd1-t086",
+   "stratum": "hard_negative",
+   "expected": [],
+   "got": [
+    "mental_health"
+   ],
+   "evidence": {
+    "mental_health": [
+     "text"
+    ]
+   }
+  },
+  {
+   "id": "sd1-t087",
+   "stratum": "hard_negative",
+   "expected": [],
+   "got": [],
+   "evidence": {}
+  },
+  {
+   "id": "sd1-t088",
+   "stratum": "hard_negative",
+   "expected": [],
+   "got": [],
+   "evidence": {}
+  },
+  {
+   "id": "sd1-t089",
+   "stratum": "hard_negative",
+   "expected": [],
+   "got": [
+    "mental_health"
+   ],
+   "evidence": {
+    "mental_health": [
+     "text"
+    ]
+   }
+  },
+  {
+   "id": "sd1-t090",
+   "stratum": "hard_negative",
+   "expected": [],
+   "got": [
+    "sexual_health"
+   ],
+   "evidence": {
+    "sexual_health": [
+     "text"
+    ]
+   }
+  },
+  {
+   "id": "sd1-t091",
+   "stratum": "hard_negative",
+   "expected": [],
+   "got": [
+    "reproductive_health"
+   ],
+   "evidence": {
+    "reproductive_health": [
+     "text"
+    ]
+   }
+  },
+  {
+   "id": "sd1-t092",
+   "stratum": "hard_negative",
+   "expected": [],
+   "got": [
+    "substance_use"
+   ],
+   "evidence": {
+    "substance_use": [
+     "text"
+    ]
+   }
+  },
+  {
+   "id": "sd1-t093",
+   "stratum": "hard_negative",
+   "expected": [],
+   "got": [],
+   "evidence": {}
+  },
+  {
+   "id": "sd1-t094",
+   "stratum": "hard_negative",
+   "expected": [],
+   "got": [
+    "violence"
+   ],
+   "evidence": {
+    "violence": [
+     "text"
+    ]
+   }
+  },
+  {
+   "id": "sd1-t095",
+   "stratum": "plain",
+   "expected": [],
+   "got": [],
+   "evidence": {}
+  },
+  {
+   "id": "sd1-t096",
+   "stratum": "plain",
+   "expected": [],
+   "got": [],
+   "evidence": {}
+  },
+  {
+   "id": "sd1-t097",
+   "stratum": "plain",
+   "expected": [],
+   "got": [],
+   "evidence": {}
+  },
+  {
+   "id": "sd1-t098",
+   "stratum": "plain",
+   "expected": [],
+   "got": [],
+   "evidence": {}
+  },
+  {
+   "id": "sd1-t099",
+   "stratum": "plain",
+   "expected": [],
+   "got": [],
+   "evidence": {}
+  },
+  {
+   "id": "sd1-t100",
+   "stratum": "plain",
+   "expected": [],
+   "got": [],
+   "evidence": {}
+  },
+  {
+   "id": "sd1-t101",
+   "stratum": "plain",
+   "expected": [],
+   "got": [],
+   "evidence": {}
+  },
+  {
+   "id": "sd1-t102",
+   "stratum": "plain",
+   "expected": [],
+   "got": [],
+   "evidence": {}
+  },
+  {
+   "id": "sd1-t103",
+   "stratum": "plain",
+   "expected": [],
+   "got": [],
+   "evidence": {}
+  },
+  {
+   "id": "sd1-t104",
+   "stratum": "plain",
+   "expected": [],
+   "got": [],
+   "evidence": {}
+  },
+  {
+   "id": "sd1-r001",
+   "stratum": "resource",
+   "expected": [
+    "substance_use"
+   ],
+   "got": [
+    "substance_use"
+   ],
+   "evidence": {
+    "substance_use": [
+     "code"
+    ]
+   }
+  },
+  {
+   "id": "sd1-r002",
+   "stratum": "resource",
+   "expected": [
+    "substance_use"
+   ],
+   "got": [
+    "substance_use"
+   ],
+   "evidence": {
+    "substance_use": [
+     "code"
+    ]
+   }
+  },
+  {
+   "id": "sd1-r003",
+   "stratum": "resource",
+   "expected": [
+    "mental_health"
+   ],
+   "got": [
+    "mental_health"
+   ],
+   "evidence": {
+    "mental_health": [
+     "code"
+    ]
+   }
+  },
+  {
+   "id": "sd1-r004",
+   "stratum": "resource",
+   "expected": [
+    "mental_health"
+   ],
+   "got": [
+    "mental_health"
+   ],
+   "evidence": {
+    "mental_health": [
+     "code"
+    ]
+   }
+  },
+  {
+   "id": "sd1-r005",
+   "stratum": "resource",
+   "expected": [
+    "hiv"
+   ],
+   "got": [
+    "hiv"
+   ],
+   "evidence": {
+    "hiv": [
+     "code"
+    ]
+   }
+  },
+  {
+   "id": "sd1-r006",
+   "stratum": "resource",
+   "expected": [
+    "sexual_health"
+   ],
+   "got": [
+    "sexual_health"
+   ],
+   "evidence": {
+    "sexual_health": [
+     "code"
+    ]
+   }
+  },
+  {
+   "id": "sd1-r007",
+   "stratum": "resource",
+   "expected": [
+    "reproductive_health"
+   ],
+   "got": [
+    "reproductive_health"
+   ],
+   "evidence": {
+    "reproductive_health": [
+     "code"
+    ]
+   }
+  },
+  {
+   "id": "sd1-r008",
+   "stratum": "resource",
+   "expected": [
+    "violence"
+   ],
+   "got": [
+    "violence"
+   ],
+   "evidence": {
+    "violence": [
+     "code"
+    ]
+   }
+  },
+  {
+   "id": "sd1-r009",
+   "stratum": "resource",
+   "expected": [
+    "genetic"
+   ],
+   "got": [
+    "genetic"
+   ],
+   "evidence": {
+    "genetic": [
+     "code"
+    ]
+   }
+  },
+  {
+   "id": "sd1-r010",
+   "stratum": "resource",
+   "expected": [
+    "substance_use"
+   ],
+   "got": [
+    "substance_use"
+   ],
+   "evidence": {
+    "substance_use": [
+     "medication"
+    ]
+   }
+  },
+  {
+   "id": "sd1-r011",
+   "stratum": "resource",
+   "expected": [
+    "hiv"
+   ],
+   "got": [
+    "hiv"
+   ],
+   "evidence": {
+    "hiv": [
+     "medication"
+    ]
+   }
+  },
+  {
+   "id": "sd1-r012",
+   "stratum": "resource",
+   "expected": [
+    "substance_use"
+   ],
+   "got": [
+    "substance_use"
+   ],
+   "evidence": {
+    "substance_use": [
+     "label"
+    ]
+   }
+  },
+  {
+   "id": "sd1-r013",
+   "stratum": "resource",
+   "expected": [
+    "protected"
+   ],
+   "got": [
+    "protected"
+   ],
+   "evidence": {
+    "protected": [
+     "label"
+    ]
+   }
+  },
+  {
+   "id": "sd1-r014",
+   "stratum": "resource",
+   "expected": [
+    "mental_health"
+   ],
+   "got": [
+    "mental_health"
+   ],
+   "evidence": {
+    "mental_health": [
+     "text"
+    ]
+   }
+  },
+  {
+   "id": "sd1-r015",
+   "stratum": "resource",
+   "expected": [
+    "substance_use"
+   ],
+   "got": [
+    "substance_use"
+   ],
+   "evidence": {
+    "substance_use": [
+     "text"
+    ]
+   }
+  },
+  {
+   "id": "sd1-r016",
+   "stratum": "resource_negative",
+   "expected": [],
+   "got": [],
+   "evidence": {}
+  },
+  {
+   "id": "sd1-r017",
+   "stratum": "resource_negative",
+   "expected": [],
+   "got": [],
+   "evidence": {}
+  },
+  {
+   "id": "sd1-r018",
+   "stratum": "resource_negative",
+   "expected": [],
+   "got": [],
+   "evidence": {}
+  },
+  {
+   "id": "sd1-r019",
+   "stratum": "resource_negative",
+   "expected": [],
+   "got": [],
+   "evidence": {}
+  },
+  {
+   "id": "sd1-r020",
+   "stratum": "resource_negative",
+   "expected": [],
+   "got": [],
+   "evidence": {}
+  },
+  {
+   "id": "sd1-r021",
+   "stratum": "resource_negative",
+   "expected": [],
+   "got": [],
+   "evidence": {}
+  },
+  {
+   "id": "sd1-r022",
+   "stratum": "resource_negative",
+   "expected": [],
+   "got": [],
+   "evidence": {}
+  }
+ ]
+}

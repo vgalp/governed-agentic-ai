@@ -49,7 +49,7 @@ LABEL_KEYS = ("security", "securityLabel")       # where FHIR carries security l
 TEXT_KEYS = ("display", "text", "div", "valueString", "description", "conclusion", "comment", "title",
              "patientInstruction")
 SOURCES = ("label", "code", "medication", "text", "model")
-CATEGORY_KEYS = {"title", "hl7_labels", "confidentiality", "icd10", "drugs", "phrases", "phrases_exact_case"}
+CATEGORY_KEYS = {"title", "description", "hl7_labels", "confidentiality", "icd10", "drugs", "phrases", "phrases_exact_case"}
 MAX_TEXT = 20_000                                # characters of one text read; records are far shorter
 
 TextModel = Callable[[str], Mapping[str, float]]  # text -> probability per category
@@ -70,6 +70,7 @@ class Finding:
 class Category:
     key: str
     title: str
+    description: str                       # what counts, for a text model; the title when the file gives none
     icd10: tuple[str, ...]                 # normalized prefixes: upper case, no dot
     drugs: re.Pattern | None
     phrases: tuple[re.Pattern, ...]
@@ -127,8 +128,11 @@ def parse(raw, sha256: str = "") -> ValueSets:
         phrases = [_pattern(f"{where}.phrases", p, re.IGNORECASE) for p in _strings(f"{where}.phrases", spec.get("phrases"))]
         phrases += [_pattern(f"{where}.phrases_exact_case", p, 0)
                     for p in _strings(f"{where}.phrases_exact_case", spec.get("phrases_exact_case"))]
+        description = spec.get("description", spec["title"])
+        if not isinstance(description, str) or not description.strip():
+            raise ValueSetError(f"{where}.description must be text")
         categories[key] = Category(
-            key=key, title=spec["title"].strip(),
+            key=key, title=spec["title"].strip(), description=" ".join(description.split()),
             icd10=tuple(icd10_key(c) for c in _strings(f"{where}.icd10", spec.get("icd10"))),
             drugs=_pattern(f"{where}.drugs", "|".join(re.escape(d) for d in drugs), re.IGNORECASE) if drugs else None,
             phrases=tuple(phrases))
@@ -183,10 +187,13 @@ def resource_tagger(settings: Settings | None) -> Callable[[Mapping], list[str]]
 class Detector:
     """Finds the sensitive categories of a text or a FHIR resource. Holds no state between calls."""
 
-    def __init__(self, sets: ValueSets, model: TextModel | None = None, threshold: float = 0.5):
+    def __init__(self, sets: ValueSets, model: TextModel | None = None, threshold: float = 0.5, lists: bool = True):
+        """`lists=False` reads text with the model alone: for measuring a model, never for use."""
         if not 0.0 < threshold < 1.0:
             raise ValueError("threshold must be between 0 and 1")
-        self.sets, self.model, self.threshold = sets, model, threshold
+        if not lists and model is None:
+            raise ValueError("without the lists a text model is needed")
+        self.sets, self.model, self.threshold, self.lists = sets, model, threshold, lists
 
     def of_text(self, text: str) -> list[Finding]:
         """Categories named or implied by this text: the medication and phrase lists, then the model."""
@@ -194,7 +201,7 @@ class Detector:
         if not text.strip():
             return []
         found: list[Finding] = []
-        for c in self.sets.categories.values():
+        for c in self.sets.categories.values() if self.lists else ():
             if c.drugs and (m := c.drugs.search(text)):
                 found.append(Finding(c.key, "medication", m.group(0).lower()))
             for p in c.phrases:
