@@ -1,8 +1,9 @@
 # Clinic assistant data
 
 **All data here is synthetic.** It was generated with [Synthea](https://github.com/synthetichealth/synthea)
-(Apache-2.0), plus three hand-written patients for the medication review demo (`demo_patients.yaml`:
-Harold Brinkley, Doris Whitfield, Lena Okafor; invented, not real people). No real person's
+(Apache-2.0), plus four hand-written patients for the demos (`demo_patients.yaml`: Harold Brinkley,
+Doris Whitfield and Lena Okafor for the medication review and chart brief, Maya Castellan for records
+in protected categories, ADR 038; invented, not real people). No real person's
 information is used anywhere in this project.
 
 ## FDA label file (medication review, ADR 017)

@@ -192,13 +192,19 @@ DEMO_PATIENTS = HERE / "demo_patients.yaml"
 
 def load_demo_patients(db, path: Path = DEMO_PATIENTS) -> None:
     """Hand-written synthetic patients for the medication review demo (demo_patients.yaml).
-    Added after the Synthea patients' appointments, so those stay exactly as they were."""
+    Added after the Synthea patients' appointments, so those stay exactly as they were. A patient
+    already in the database is left as it is, so a patient added to the file later reaches a database
+    built before it."""
     import yaml
     if not path.exists():
         return
     people = (yaml.safe_load(path.read_text()) or {}).get("patients") or []
     next_apt = db.execute("SELECT COUNT(*) FROM appointments").fetchone()[0] + 1
+    added = 0
     for p in people:
+        if db.execute("SELECT 1 FROM patients WHERE id = ?", (p["id"],)).fetchone():
+            continue
+        added += 1
         db.execute("INSERT INTO patients VALUES (?, ?, ?, ?, ?)",
                    (p["id"], p["name"], str(p["birth_date"]), p["sex"], p["city"]))
         db.executemany("INSERT INTO medications (patient_id, encounter_id, start, stop, description, reason) "
@@ -210,7 +216,7 @@ def load_demo_patients(db, path: Path = DEMO_PATIENTS) -> None:
                        (f"apt-{next_apt:04d}", p["id"], str(a["starts_at"]), a["type"]))
             next_apt += 1
     load_demo_charts(db, people)
-    print(f"demo patients: {len(people)} (demo_patients.yaml, hand-written, synthetic)")
+    print(f"demo patients: {len(people)}, {added} added (demo_patients.yaml, hand-written, synthetic)")
 
 
 def load_demo_charts(db, people: list[dict]) -> None:
@@ -255,7 +261,8 @@ def add_demo(db_path: Path = DB_PATH, path: Path = DEMO_PATIENTS) -> Path:
     db = sqlite3.connect(db_path)
     db.execute("PRAGMA foreign_keys = ON")
     ids = [p["id"] for p in (yaml.safe_load(path.read_text()) or {}).get("patients") or []]
-    if db.execute(f"SELECT COUNT(*) FROM patients WHERE id IN ({','.join('?' * len(ids))})", ids).fetchone()[0]:
+    have = db.execute(f"SELECT COUNT(*) FROM patients WHERE id IN ({','.join('?' * len(ids))})", ids).fetchone()[0]
+    if have == len(ids):
         print("demo patients: already there")
     else:
         load_demo_patients(db, path)

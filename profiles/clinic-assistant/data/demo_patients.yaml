@@ -5,6 +5,9 @@
 #           office threshold; warfarin's reason documented (atrial fibrillation).
 #   Doris:  omeprazole with no recorded reason and nothing on the problem list that documents it.
 #   Lena:   temperature above the threshold; a sulfonamide allergy.
+#   Maya:   records in protected categories (ADR 038): a psychiatry appointment, and medications and
+#           problems for depression and opioid use disorder. A role that may not see a category is
+#           not shown those records.
 # Added to clinic.db by build_db.py (--add-demo, --add-chart). Not for patient care.
 
 patients:
@@ -76,3 +79,24 @@ patients:
       - {date: "2026-10-31", description: Body temperature, value: 38.4, units: Cel}
       - {date: "2026-10-31", description: Oxygen saturation, value: 98, units: "%"}
     appointment: {starts_at: "2026-11-05T09:00", type: Annual physical}
+
+  - id: 00000000-0000-4000-8000-00000000a004
+    name: Maya Castellan
+    birth_date: "1990-05-09"
+    sex: F
+    city: Riverton
+    medications:
+      - {description: Buprenorphine 8 MG / Naloxone 2 MG Sublingual Film, start: "2025-09-15", reason: Opioid use disorder}
+      - {description: Sertraline 50 MG Oral Tablet, start: "2024-11-02", reason: Major depressive disorder}
+      - {description: Lisinopril 10 MG Oral Tablet, start: "2023-04-20", reason: Essential hypertension}
+    conditions:
+      - {description: Opioid use disorder, onset: "2025-09-01"}
+      - {description: Major depressive disorder, onset: "2024-10-21"}
+      - {description: Essential hypertension, onset: "2023-04-20"}
+    allergies: []
+    vitals:
+      - {date: "2026-10-29", description: Systolic blood pressure, value: 124, units: mmHg}
+      - {date: "2026-10-29", description: Diastolic blood pressure, value: 80, units: mmHg}
+      - {date: "2026-10-29", description: Heart rate, value: 76, units: /min}
+      - {date: "2026-10-29", description: Body temperature, value: 36.7, units: Cel}
+    appointment: {starts_at: "2026-11-18T10:30", type: Psychiatry follow-up}

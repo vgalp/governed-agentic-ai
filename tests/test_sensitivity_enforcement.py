@@ -22,6 +22,7 @@ from router import router
 from router.router import RouteDecision
 
 EPIC = load_profile("clinic-epic")
+CLINIC = load_profile("clinic-assistant")
 ALL = ("substance_use", "mental_health", "hiv", "sexual_health", "reproductive_health", "violence", "genetic",
        "protected")
 ACT = "http://terminology.hl7.org/CodeSystem/v3-ActCode"
@@ -348,3 +349,60 @@ def test_routing_is_given_the_categories_of_the_question_and_of_the_notes(monkey
     rt = runtime(monkeypatch, {"search_records": {"results": [VISIT]}})
     handle(rt, {"request_id": "s5", "message": "When was Ann Lee last seen?", "role": "clinician"})
     assert rt.calls["routes"] == [()]
+
+
+# --- the demo patient: something to show (clinic-assistant, database records) ------------------------------
+
+@pytest.fixture(scope="module")
+def clinic_db(tmp_path_factory):
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("build_db", CLINIC.path / "data" / "build_db.py")
+    build_db = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(build_db)
+    path = tmp_path_factory.mktemp("clinic") / "clinic.db"
+    build_db.build(CLINIC.path / "data" / "sample_csv", path)
+    return build_db, path
+
+
+def seen_by(role, db_path, name="Maya Castellan"):
+    from mcp_servers.records import server as records
+    found = records.search(db_path, f"When is {name}'s next appointment?", list(CLINIC.roles[role].data_classes),
+                           CLINIC.records_map)
+    tagged, marked = gateway.tag_sensitive(found["results"], CLINIC)
+    kept, withheld = gateway.filter_sensitive(tagged, list(CLINIC.roles[role].sensitive_categories))
+    return kept, dict(marked), dict(withheld)
+
+
+def test_the_front_desk_is_not_shown_the_demo_patients_psychiatry_appointment(clinic_db):
+    _, db_path = clinic_db
+    kept, marked, withheld = seen_by("front_desk", db_path)
+    assert withheld == {"mental_health": 1} and marked == {"mental_health": 1}
+    assert [r["title"] for r in kept] == ["Patient: Maya Castellan"]            # she exists; the visit is not shown
+    kept, marked, withheld = seen_by("clinician", db_path)
+    assert withheld == {} and marked["mental_health"] >= 2 and marked["substance_use"] >= 2
+    assert any("Psychiatry follow-up" in r["text"] for r in kept)
+    assert seen_by("front_desk", db_path, "Harold Brinkley")[2] == {}           # an ordinary patient: nothing withheld
+
+
+def test_a_demo_patient_added_to_the_file_reaches_a_database_built_before_it(clinic_db, tmp_path):
+    import sqlite3
+    build_db, built = clinic_db
+    db_path = tmp_path / "older.db"
+    shutil.copy(built, db_path)
+    db = sqlite3.connect(db_path)
+    for table, column in (("medications", "patient_id"), ("appointments", "patient_id"), ("conditions", "patient_id"),
+                          ("allergies", "patient_id"), ("vitals", "patient_id"), ("patients", "id")):
+        db.execute(f"DELETE FROM {table} WHERE {column} LIKE '%a004'")        # as built before Maya was written
+    db.commit()
+
+    def counts():
+        c = sqlite3.connect(db_path)
+        return [c.execute(f"SELECT COUNT(*) FROM {t}").fetchone()[0]
+                for t in ("patients", "medications", "appointments", "conditions", "vitals")]
+    before = counts()
+    build_db.add_chart(db_path)                                                # what dev.sh runs on every start
+    after = counts()
+    assert [a - b for a, b in zip(after, before)] == [1, 3, 1, 3, 4]
+    build_db.add_chart(db_path)
+    build_db.add_demo(db_path)
+    assert counts() == after                                                   # run again: no change
