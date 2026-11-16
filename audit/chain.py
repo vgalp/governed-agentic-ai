@@ -290,13 +290,29 @@ _default_chain: AuditChain | None = None
 _default_lock = threading.Lock()
 
 
+AUDIT_SINKS = ("kafka", "file")
+
+
+def audit_producer(source: str, env=os.environ):
+    """Where audit events go: Kafka (the default), or files when AUDIT_SINK=file, for a deployment
+    without a broker (ops/filesink.py, ADR 039). An unknown value stops the process: an audit trail
+    that silently goes nowhere is worse than a service that does not start."""
+    sink = (env.get("AUDIT_SINK") or "kafka").strip().lower()
+    if sink == "kafka":
+        from ops.delivery import Producer  # delivery confirmed per event (ADR 030)
+        return Producer(service=source)
+    if sink == "file":
+        from ops.filesink import DEFAULT_DIR, FileProducer
+        return FileProducer(Path(env.get("AUDIT_DIR") or DEFAULT_DIR))
+    raise ValueError(f"AUDIT_SINK must be one of {', '.join(AUDIT_SINKS)}, not {sink!r}")
+
+
 def get_audit_chain(source: str) -> AuditChain:
     """The process-wide chain, so the planner and the gateway share one sequence."""
     global _default_chain
     with _default_lock:
         if _default_chain is None:
-            from ops.delivery import Producer  # delivery confirmed per event (ADR 030)
-            producer = Producer(service=source)
+            producer = audit_producer(source)
             key = key_from_env()
             if key is None:
                 print("Audit: AUDIT_HMAC_KEY not set, using plain SHA-256 (detects changes, not deliberate forgery).")

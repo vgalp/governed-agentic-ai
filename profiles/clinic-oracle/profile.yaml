@@ -54,6 +54,7 @@ routing:
 tools: tools.yaml
 fhir: fhir.yaml                            # records come from Oracle Health (FHIR R4), read-only
 roles: roles.yaml
+outside: outside.yaml                      # the governed gateway for outside assistants (ADR 039)
 cite_sources: true
 # Oracle Health resource IDs: letters and digits are kept, the last 8 (fhir.yaml source_id); shorter IDs
 # are kept whole, so 4 to 8.
@@ -94,6 +95,8 @@ sensitivity:
 agents:
   planner:
     tools: [search_knowledge, search_records, medication_review, medication_list, chart_brief, drug_reference, web_research]   # review before list
+  outside:                                   # outside assistants, through the governed gateway (outside.yaml)
+    tools: [search_records, medication_review, medication_list, chart_brief]
 
 # Oracle Health sandbox test patients (fhir.cerner.com documentation lists them), found by name
 # and date of birth. Shown as example buttons.

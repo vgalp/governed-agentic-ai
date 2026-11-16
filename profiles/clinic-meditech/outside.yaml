@@ -1,0 +1,20 @@
+# The governed gateway (ADR 015, ADR 039): assistants outside this pipeline (an AI assistant the
+# hospital already uses, a vendor's app) reach the record tools through gateway/endpoint.py, under the
+# same roles, sensitive categories and audit as the pipeline's own agents. Read-only.
+#
+# Who is calling comes from the organization's identity system, never from the caller: the endpoint
+# sends each bearer token to auth.url and gets back the client, its role and whether it runs inside
+# the organization (location: local) or at an outside AI service (external). Record data never goes
+# to an external client (profile.yaml routing.never_external_labels).
+#
+# For a trial on one machine: ./scripts/gateway.sh start (docs/gateway/README.md), which runs a
+# development-only stand-in for the identity system on port 8120.
+
+agent: outside
+listen: {host: 127.0.0.1, port: 8110}
+auth:
+  kind: introspection
+  url: http://127.0.0.1:8120/introspect      # the organization's token check
+  secret_env: GATEWAY_INTROSPECT_SECRET      # the NAME of the variable; the secret is never written here
+  cache_seconds: 30                          # a revoked client stops within this time
+mask_results: external

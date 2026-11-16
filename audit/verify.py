@@ -3,6 +3,7 @@
   uv run python -m audit.verify                      # read the audit topics from Kafka and check them
   uv run python -m audit.verify --export audit.jsonl # also save what was read, one event per line
   uv run python -m audit.verify --file audit.jsonl   # check a saved file instead of Kafka
+  uv run python -m audit.verify --dir logs/audit     # check a file audit trail (AUDIT_SINK=file, ADR 039)
 
 Exit code 0 = intact, 1 = problems found.
 """
@@ -41,6 +42,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Verify the tamper-evident audit trail.")
     parser.add_argument("--file", help="verify a saved JSONL file instead of reading Kafka")
     parser.add_argument("--export", help="save the events read from Kafka to this JSONL file")
+    parser.add_argument("--dir", help="verify the files an AUDIT_SINK=file deployment wrote (its AUDIT_DIR)")
     parser.add_argument("--allow-unkeyed", action="store_true",
                         help="accept chains written without AUDIT_HMAC_KEY even though a key is set "
                              "(only for chains written before the key existed)")
@@ -48,7 +50,15 @@ def main() -> int:
                                               "logs/audit-checkpoints); 'none' to skip")
     args = parser.parse_args()
 
-    if args.file:
+    damaged: list[str] = []
+    if args.file and args.dir:
+        parser.error("give --file or --dir, not both")
+    if args.dir:
+        from ops.filesink import read_events
+        found = read_events(args.dir)
+        damaged = [r["unreadable"] for r in found if "unreadable" in r]
+        records = [r for r in found if "unreadable" not in r]
+    elif args.file:
         with open(args.file) as f:
             records = [json.loads(line) for line in f if line.strip()]
     else:
@@ -61,6 +71,7 @@ def main() -> int:
     chained = [r for r in records if "audit" in r]
     legacy = len(records) - len(chained)
     problems = verify_chain(chained, key_from_env(), allow_unkeyed=args.allow_unkeyed)
+    problems += [f"{where}: not a readable event (damaged or edited)" for where in damaged]
     if args.checkpoints != "none":
         cp_problems, cp = verify_checkpoints(chained, read_checkpoints(args.checkpoints), key_from_env())
         problems += cp_problems
