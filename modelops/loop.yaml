@@ -73,7 +73,7 @@ answer:
 # loop yet: one set of data, one training. The frontier model writes the training text and the reviewer
 # labels it blind; for the test set they swap, so no model is tested on its own writing.
 sensitivity:
-  train_batches_per_cell: 4   # x about 100 cells x 10 texts: about 4,000 texts asked for (about $15 with Opus writing)
+  train_batches_per_cell: 3   # x about 100 cells x 10 texts: about 4,000 texts asked for (about $15 with Opus writing)
   test_batches_per_cell: 1    # about 1,000 texts, written by the reviewer model, labelled by the frontier model
   dev_share: 0.1              # of the kept training texts, held back to choose the epoch and thresholds
   max_false_mark_rate: 0.02   # per category, on dev: thresholds that mark more rows without it are not chosen
