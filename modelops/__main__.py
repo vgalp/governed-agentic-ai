@@ -6,6 +6,8 @@
     uv run python -m modelops status --run nov26                             # every round so far
     uv run python -m modelops sensitivity data --run sens1                   # text for the sensitive-category classifier
     uv run --group train python -m modelops sensitivity train --run sens1    # train it (ADR 038 step 3)
+    uv run python -m modelops sensitivity mine --run sens1 --source ~/datasets/open-patients/Open-Patients.jsonl
+                                                                             # a test set from text people wrote
     uv run python -m modelops promote guard --run nov26                      # sealed checks for the best guard
     uv run python -m modelops promote answer --run nov26                     # sealed checks for the best answer model
 
@@ -175,6 +177,57 @@ def sensitivity_data(cfg: config.LoopConfig, ledger: Ledger, writer, labeller) -
     return report
 
 
+def sensitivity_mine(args, cfg: config.LoopConfig, ledger: Ledger, frontiers=None) -> int:
+    """A test set from text people wrote: choose sentences, say what labelling will cost, and with --go label
+    them with both models. The text stays beside the source file; the run keeps a manifest."""
+    from modelops import sensitivity_mine as mine
+    from privacy import sensitivity
+    from privacy.sensitivity_model import readable_categories
+    if not args.source:
+        print("Give --source: a JSON-lines file of patient descriptions (see modelops/sensitivity_mine.py).")
+        return 2
+    source = Path(args.source).expanduser()
+    if ROOT in source.resolve().parents:
+        print("Keep the source file outside this repository: its text is under its own licence.")
+        return 2
+    if cfg.reviewer is None:
+        print("loop.yaml has no reviewer block: two different models must label for their agreement to mean anything.")
+        return 2
+    sets = sensitivity.load()
+    try:
+        items = mine.choose(mine.read_source(source), args.random, args.per_category, readable_categories(sets))
+    except (mine.SourceError, FileNotFoundError) as e:
+        print(f"Not done: {e}")
+        return 1
+    picked = {k: sum(i["picked"] == k for i in items) for k in ("random", "enriched")}
+    print(f"{len(items)} sentences chosen from {source.name}: {picked['random']} from descriptions at random, "
+          f"{picked['enriched']} from descriptions that mention a category.\n"
+          f"Labelling them with both models will cost about ${mine.estimate_usd(items, [cfg.frontier, cfg.reviewer]):.2f} "
+          "(an estimate from the prices in loop.yaml).")
+    if not args.go:
+        print("Nothing was sent. Run the same command with --go to label them.")
+        return 0
+    first, second = frontiers or (lambda f: (f, _reviewer(cfg, ledger, f)))(_frontier(cfg, ledger))
+    rows, disputed, report = mine.label(first, second, sets, items, f"{ledger.run_id}-human")
+    test = source.with_name("sensitivity_human_test_v1.jsonl")
+    mine.data.write_jsonl(test, rows)
+    mine.write_disputed(source.with_name("sensitivity_human_test_v1_not_agreed.csv"), disputed)
+    out = ledger.dir / "sensitivity" / "human_test_v1_manifest.json"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(mine.manifest(rows, source, report), indent=1) + "\n", encoding="utf-8")
+    print(f"\n{report['agreed']} sentences both models labelled the same way; {report['not_agreed']} they did not "
+          f"(left out, in {test.with_name('sensitivity_human_test_v1_not_agreed.csv')}).\n"
+          f"  by kind: {report['by_stratum']}\n  by category: {report['by_category']}\n"
+          f"  of {report['with_a_category']['random']} sentences chosen at random, "
+          f"{report['with_a_category']['from_random']} have a category\n"
+          f"Saved {test} (not in the repository) and {out.relative_to(ROOT)} (commit it).\nMeasure on it:\n"
+          f"  uv run python -m eval.run_sensitivity --dataset {test}\n"
+          f"  uv run --group train python -m eval.run_sensitivity --classifier {sensitivity_model_name(ledger.run_id)} "
+          f"--model-only --dataset {test}\n"
+          f"  uv run python -m eval.run_sensitivity --model qwen2.5:7b --model-only --dataset {test}")
+    return 0
+
+
 def cmd_sensitivity(args, cfg) -> int:
     ledger = Ledger(args.run)
     out, name = ledger.dir / "sensitivity", sensitivity_model_name(args.run)
@@ -197,6 +250,8 @@ def cmd_sensitivity(args, cfg) -> int:
               f"Read a page of each before training.\nNext: uv run --group train python -m modelops sensitivity "
               f"train --run {args.run}")
         return 0
+    if args.action == "mine":
+        return sensitivity_mine(args, cfg, ledger)
     if not (out / "train.jsonl").exists():
         print(f"Run {args.run} has no training text yet: python -m modelops sensitivity data --run {args.run}")
         return 1
@@ -300,9 +355,14 @@ def main(argv: list[str] | None = None) -> int:
     a.add_argument("--rounds", type=int)
     a.add_argument("--base", help="an Ollama tag from answer.candidates (default: the best from select)")
     c = sub.add_parser("sensitivity", help="the sensitive-category classifier (ADR 038 step 3)")
-    c.add_argument("action", choices=["data", "train"],
-                   help="data: frontier-written, blind-labelled text and a test set; train: fine-tune on it")
+    c.add_argument("action", choices=["data", "train", "mine"],
+                   help="data: frontier-written, blind-labelled text and a test set; train: fine-tune on it; "
+                        "mine: a test set from text people wrote (--source), labelled by both models")
     c.add_argument("--run", default=run_id)
+    c.add_argument("--source", help="mine: a JSON-lines file of patient descriptions, outside this repository")
+    c.add_argument("--random", type=int, default=600, help="mine: sentences from descriptions chosen at random")
+    c.add_argument("--per-category", type=int, default=140, help="mine: sentences from descriptions mentioning each category")
+    c.add_argument("--go", action="store_true", help="mine: label the chosen sentences (without it, only the cost is shown)")
     s = sub.add_parser("status", help="every round of a run")
     s.add_argument("--run", default=run_id)
     p = sub.add_parser("promote", help="sealed checks for a loop model, after a person's review")

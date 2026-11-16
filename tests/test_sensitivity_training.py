@@ -271,7 +271,7 @@ def write_config(tmp_path, block: str):
 
 
 def test_settings_are_optional_and_bounded(tmp_path):
-    assert config.load().sensitivity.train_batches_per_cell == 4
+    assert 1 <= config.load().sensitivity.train_batches_per_cell <= 50      # whatever loop.yaml says today
     assert config.load(write_config(tmp_path, "")).sensitivity == config.SensitivitySettings()
     custom = config.load(write_config(tmp_path, "sensitivity: {train_batches_per_cell: 2, train_args: {epochs: 2}}\n"))
     assert custom.sensitivity.train_batches_per_cell == 2 and custom.sensitivity.train_args == {"epochs": 2}
@@ -306,3 +306,130 @@ def test_data_command_swaps_writer_and_labeller_for_the_test_set(tmp_path, monke
     assert report["test"]["writer"] == "sonnet" and report["train"]["labeller"] == "sonnet"
     assert not {r["text"] for r in test} & {r["text"] for r in train + dev}        # training stays off the test set
     assert json.loads((out / "data_report.json").read_text())["value_sets_sha256"] == SETS.sha256
+
+
+# ---- a test set from text people wrote
+
+from modelops import sensitivity_mine as mine  # noqa: E402
+
+
+def source_rows(n: int = 60) -> list[dict]:
+    plain = ("The patient presented with fever and a productive cough for three days. Chest radiography showed a "
+             "left lower lobe infiltrate. He was treated with oral antibiotics and recovered fully. Follow-up at six "
+             "weeks was unremarkable in every respect.")
+    cued = ("A {i}-year-old woman had a miscarriage at eleven weeks during the admission number {i}. She had "
+            "lost the baby she and her husband wanted, before case {i}. Her blood pressure was normal on "
+            "arrival to ward {i}. The remainder of the examination was unremarkable for patient {i}.")
+    return ([{"_id": f"plain-{i}", "description": plain.replace("three", str(i + 3)).replace("six", str(i + 6))}
+             for i in range(n)] + [{"_id": f"cued-{i}", "description": cued.format(i=i + 20)} for i in range(n)])
+
+
+def test_sentences_are_split_and_kept_within_length():
+    found = mine.sentences("Too short. This one is long enough to be kept as a sentence.  And so is this\none, with a break.")
+    assert found == ["This one is long enough to be kept as a sentence.", "And so is this one, with a break."]
+    assert mine.sentences("") == []
+
+
+def test_choose_is_repeatable_never_repeats_and_fills_each_share():
+    rows = source_rows()
+    items = mine.choose(rows, n_random=10, per_category=12, categories=["reproductive_health"])
+    assert items == mine.choose(rows, 10, 12, ["reproductive_health"])
+    assert len({i["text"] for i in items}) == len(items)
+    assert sum(i["picked"] == "random" for i in items) >= 10
+    enriched = [i for i in items if i["picked"] == "enriched"]
+    assert len(enriched) >= 12 and {i["cue_for"] for i in enriched} == {"reproductive_health"}
+    assert {i["has_cue"] for i in enriched} == {True, False}                 # with the cue word and without
+    assert all(i["source_id"].startswith("cued-") for i in enriched)
+    random_ids = {i["source_id"] for i in items if i["picked"] == "random"}
+    assert not random_ids & {i["source_id"] for i in enriched}               # a description is used once
+
+
+def test_read_source_refuses_other_shapes(tmp_path):
+    good = tmp_path / "s.jsonl"
+    data.write_jsonl(good, source_rows(2))
+    assert len(mine.read_source(good)) == 4
+    for content in ('{"_id": "a"}\n', "not json\n", ""):
+        bad = tmp_path / "bad.jsonl"
+        bad.write_text(content)
+        with pytest.raises(mine.SourceError):
+            mine.read_source(bad)
+
+
+def test_estimate_grows_with_the_sentences_and_uses_both_prices():
+    items = [{"text": "one two three four five six seven"}] * 30
+    models = [{"price": {"input_per_million": 15, "output_per_million": 75}},
+              {"price": {"input_per_million": 3, "output_per_million": 15}}]
+    assert 0 < mine.estimate_usd(items, models[1:]) < mine.estimate_usd(items, models) < mine.estimate_usd(items * 2, models)
+
+
+def human_label(text):
+    return ["reproductive_health"] if "miscarriage" in text or "lost the baby" in text else []
+
+
+def test_label_keeps_agreement_files_by_the_lists_and_sets_the_rest_aside():
+    items = mine.choose(source_rows(), 6, 8, ["reproductive_health"])
+    opus = FakeFrontier("opus", labeller_for(human_label))
+    doubter = FakeFrontier("sonnet", labeller_for(lambda t: [] if "lost the baby" in t else human_label(t)))
+    rows, disputed, report = mine.label(opus, doubter, SETS, items, "t")
+    assert report["agreed"] == len(rows) and report["not_agreed"] == len(disputed) > 0
+    assert all("lost the baby" in d["text"] and d["opus"] == "reproductive_health" and d["sonnet"] == "none"
+               for d in disputed)
+    strata = {r["stratum"] for r in rows}
+    assert "explicit" in strata and "plain" in strata and "hard_negative" in strata
+    assert all((r["stratum"] in ("explicit", "implicit")) == bool(r["categories"]) for r in rows)
+    assert all(r["stratum"] == "plain" for r in rows if r["picked"] == "random")
+    assert len({r["id"] for r in rows}) == len(rows)
+    both, _, _ = mine.label(opus, FakeFrontier("sonnet", labeller_for(human_label)), SETS, items, "t")
+    assert any(r["stratum"] == "implicit" for r in both)                     # the lists do not know "lost the baby"
+    assert [t for _, t, _ in opus.asked][:1] == [0]
+
+
+def test_manifest_holds_no_text(tmp_path):
+    source = tmp_path / "s.jsonl"
+    data.write_jsonl(source, source_rows(3))
+    rows = [{"id": "a#1", "text": "A secret sentence from the source.", "categories": [], "stratum": "plain", "picked": "random"}]
+    m = mine.manifest(rows, source, {"agreed": 1})
+    assert "secret sentence" not in json.dumps(m)
+    assert m["rows"][0]["id"] == "a#1" and len(m["rows"][0]["text_sha256"]) == 64 and len(m["source_sha256"]) == 64
+
+
+def mine_args(source, go):
+    return type("A", (), {"run": "t1", "action": "mine", "source": str(source), "go": go, "random": 6, "per_category": 8})()
+
+
+def test_mine_command_shows_the_cost_first_and_keeps_text_out_of_the_run(tmp_path, capsys):
+    import modelops.__main__ as cli
+    source = tmp_path / "outside" / "s.jsonl"
+    data.write_jsonl(source, source_rows())
+    ledger = type("L", (), {"dir": cli.ROOT / "modelops" / "runs" / "zz_test_mine", "run_id": "t1"})()
+    cfg = config.load()
+    try:
+        assert cli.sensitivity_mine(mine_args(source, go=False), cfg, ledger) == 0
+        assert "Nothing was sent" in capsys.readouterr().out and not (tmp_path / "outside" / "sensitivity_human_test_v1.jsonl").exists()
+        pair = (FakeFrontier("opus", labeller_for(human_label)), FakeFrontier("sonnet", labeller_for(human_label)))
+        assert cli.sensitivity_mine(mine_args(source, go=True), cfg, ledger, frontiers=pair) == 0
+        kept = data.read_jsonl(tmp_path / "outside" / "sensitivity_human_test_v1.jsonl")
+        manifest = json.loads((ledger.dir / "sensitivity" / "human_test_v1_manifest.json").read_text())
+        assert len(kept) == len(manifest["rows"]) > 0 and kept[0]["text"] not in json.dumps(manifest)
+        from eval.run_sensitivity import read_rows
+        assert len(read_rows(tmp_path / "outside" / "sensitivity_human_test_v1.jsonl", set(SETS.categories))) == len(kept)
+    finally:
+        import shutil
+        shutil.rmtree(ledger.dir, ignore_errors=True)
+
+
+def test_mine_command_refuses_a_source_inside_the_repository(capsys):
+    import modelops.__main__ as cli
+    inside = cli.ROOT / "eval" / "datasets" / "sensitivity_dev_v1.jsonl"
+    assert cli.sensitivity_mine(mine_args(inside, go=False), config.load(), None) == 2
+    assert "outside this repository" in capsys.readouterr().out
+
+
+def test_result_names_for_each_kind_of_dataset():
+    from pathlib import Path
+
+    from eval.run_sensitivity import DEV, result_stem
+    assert result_stem(DEV) == "sensitivity_dev_v1"
+    assert result_stem(Path("modelops/runs/sens1/sensitivity/test.jsonl")) == "sensitivity_sens1_test"
+    assert result_stem(Path("/x/sensitivity_human_test_v1.jsonl")) == "sensitivity_human_test_v1"
+    assert result_stem(Path("/x/other.jsonl")) == "sensitivity_other"

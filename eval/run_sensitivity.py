@@ -71,6 +71,15 @@ def read_rows(dataset: Path, known: set[str]) -> list[dict]:
     return rows
 
 
+def result_stem(dataset: Path) -> str:
+    """The results file's name for a dataset: the development set, a run's test set, or any other file."""
+    if dataset == DEV:
+        return "sensitivity_dev_v1"
+    if dataset.name == "test.jsonl" and dataset.parent.name == "sensitivity":
+        return f"sensitivity_{dataset.parent.parent.name}_test"
+    return dataset.stem if dataset.stem.startswith("sensitivity") else f"sensitivity_{dataset.stem}"
+
+
 def predict(detector: sensitivity.Detector, row: dict) -> list[sensitivity.Finding]:
     return detector.of_text(row["text"]) if row["kind"] == "text" else detector.of_resource(row["resource"])
 
@@ -180,7 +189,7 @@ def main() -> None:
         print(f"  {p['id']} ({p['stratum']}): expected {p['expected'] or 'none'}, got {p['got'] or 'none'}")
     if not args.no_save:
         RESULTS.mkdir(parents=True, exist_ok=True)
-        stem = "sensitivity_dev_v1" if args.dataset == DEV else f"sensitivity_{args.dataset.parent.parent.name}_{args.dataset.stem}"
+        stem = result_stem(args.dataset)
         path = RESULTS / f"{stem}_{out['detector']}_{out['value_sets_sha256'][:12]}.json"
         path.write_text(json.dumps(out, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
         path.with_suffix(".md").write_text(md, encoding="utf-8")

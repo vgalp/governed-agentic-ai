@@ -100,9 +100,23 @@ categories it tracks. The four clinic profiles do.
     threshold per category, chosen on held-back training text under a limit on false marks.
   - **Measured the same way as the lists and Qwen** (`eval/run_sensitivity.py --classifier`), on the
     development set and on the run's test set.
+- **First trained version, run `sens1`** (2,615 training texts; results in `eval/results/sensitivity_*sens1*`):
+  - On the run's test set (725 texts another model wrote): implied wording caught 144 of 169 (Qwen 145,
+    lists 0); look-alikes marked 11 of 270 (Qwen 31, lists 73); 0.036 s a text (Qwen 0.37 s).
+  - On the hand-written development set: implied 16 of 28 (Qwen 18), explicit 32 of 42 (Qwen 38),
+    look-alikes marked 4 of 24 (Qwen 5), everyday text marked 2 of 10.
+  - So: as good as Qwen and ten times faster on model-written text, a little behind it on text a
+    person wrote, and it marks too much everyday text. The model-written test set flatters it.
+- **Built: a test set from text people wrote** (`python -m modelops sensitivity mine --source ...`,
+  `modelops/sensitivity_mine.py`). Sentences from published patient descriptions (NCBI Open-Patients),
+  some from descriptions chosen at random and some from descriptions that mention a category. Two
+  frontier models label each blind; a sentence is kept when they agree. The detectors take no part
+  in choosing sentences. The text stays outside the repository, under its own licence; the run keeps
+  a manifest of ids, labels and hashes.
 - **Not wired into the pipeline.** Neither reader is used for enforcement.
-- **Not built:** a frozen test set from someone else's text (people's, not a model's). No model is
-  turned on for enforcement until it has been scored on that. Also not built: rounds (new data aimed
+- **Not built:** a frozen test set labelled by people. The mined set is people's text with models'
+  labels: better evidence than model-written text, and still not a person's judgement. No model is
+  turned on for enforcement on these numbers alone. Also not built: rounds (new data aimed
   at what the last model missed), and reading SNOMED CT or RxNorm.
 
 ## First measurement
