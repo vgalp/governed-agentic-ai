@@ -1,0 +1,63 @@
+{
+ "value_sets_sha256": "b4f10f83f0ef8281750f9f3f9c0e4ea23df00a5b35592cbe104d86465eb8bcac",
+ "train": {
+  "cells": 303,
+  "batches_unreadable": 0,
+  "texts_written": 3030,
+  "writer_and_labeller_disagreed": {
+   "explicit": 51,
+   "implicit": 69
+  },
+  "dropped_in_cleaning": {
+   "too close to the development set": 3
+  },
+  "kept": 2907,
+  "by_stratum": {
+   "explicit": 603,
+   "implicit": 1166,
+   "hard_negative": 839,
+   "plain": 299
+  },
+  "by_category": {
+   "substance_use": 323,
+   "mental_health": 294,
+   "hiv": 277,
+   "sexual_health": 216,
+   "reproductive_health": 327,
+   "violence": 257,
+   "genetic": 278
+  },
+  "writer": "claude-opus-5-5",
+  "labeller": "claude-sonnet-5-5",
+  "train_rows": 2615,
+  "dev_rows": 292
+ },
+ "test": {
+  "cells": 99,
+  "batches_unreadable": 24,
+  "texts_written": 750,
+  "writer_and_labeller_disagreed": {
+   "explicit": 19,
+   "implicit": 6
+  },
+  "dropped_in_cleaning": {},
+  "kept": 725,
+  "by_stratum": {
+   "explicit": 195,
+   "implicit": 160,
+   "hard_negative": 270,
+   "plain": 100
+  },
+  "by_category": {
+   "substance_use": 68,
+   "mental_health": 57,
+   "hiv": 30,
+   "sexual_health": 42,
+   "reproductive_health": 40,
+   "violence": 81,
+   "genetic": 46
+  },
+  "writer": "claude-sonnet-5-5",
+  "labeller": "claude-opus-5-5"
+ }
+}
