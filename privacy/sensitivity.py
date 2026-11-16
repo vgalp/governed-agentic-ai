@@ -32,7 +32,7 @@ from __future__ import annotations
 
 import hashlib
 import re
-from collections.abc import Callable, Iterable, Iterator, Mapping
+from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
@@ -53,6 +53,12 @@ CATEGORY_KEYS = {"title", "description", "hl7_labels", "confidentiality", "icd10
 MAX_TEXT = 20_000                                # characters of one text read; records are far shorter
 
 TextModel = Callable[[str], Mapping[str, float]]  # text -> probability per category
+MODELS = Path(__file__).resolve().parent.parent / "models"    # where a trained text model's folder is
+
+
+class TextModelError(RuntimeError):
+    """A profile names a text model that cannot be loaded. Raised instead of reading with the lists
+    alone: an office that turned the model on must not get less without being told."""
 
 
 class ValueSetError(ValueError):
@@ -165,13 +171,34 @@ class Settings:
     categories: tuple[str, ...]
     never_external: tuple[str, ...]
     value_sets: Path | None = None
+    text_model: str | None = None          # a trained classifier's folder in models/, read with the lists
 
-    def detector(self, model: TextModel | None = None) -> Detector:
-        return Detector(load(self.value_sets or DEFAULT), model=model)
+    def detector(self, model: TextModel | None = None, text_model: bool = True) -> Detector:
+        """The detector for this office. With `text_model` (the default) and a model named in the profile,
+        text is read by the lists and that model; `text_model=False` gives the lists alone, for a caller
+        whose text is read again later (a record tool, before the gateway)."""
+        sets_path = self.value_sets or DEFAULT
+        if model is None and text_model and self.text_model:
+            model = _text_model(self.text_model, str(sets_path))
+        return Detector(load(sets_path), model=model)
 
     def tracked(self, found: Iterable[Finding]) -> tuple[str, ...]:
         """The categories found that this office tracks, sorted."""
         return tuple(c for c in categories(found) if c in self.categories)
+
+
+@lru_cache(maxsize=4)
+def _text_model(name: str, sets_path: str) -> TextModel:
+    """The profile's trained text model, loaded once for the process."""
+    from privacy import sensitivity_model  # imported here: that module imports this one
+    try:
+        return sensitivity_model.classifier_reader(name, load(Path(sets_path)), MODELS)
+    except ImportError as e:
+        raise TextModelError(f"the profile's sensitivity text model '{name}' needs torch and transformers, which are "
+                             f"not installed here ({e.name})") from None
+    except (OSError, ValueError, KeyError) as e:
+        raise TextModelError(f"the profile's sensitivity text model '{name}' cannot be loaded from {MODELS / name}: "
+                             f"{e}") from None
 
 
 def resource_tagger(settings: Settings | None) -> Callable[[Mapping], list[str]] | None:
@@ -180,7 +207,7 @@ def resource_tagger(settings: Settings | None) -> Callable[[Mapping], list[str]]
     The gateway adds what the record's text shows and enforces; a tool only ever adds."""
     if settings is None:
         return None
-    detector = settings.detector()
+    detector = settings.detector(text_model=False)       # the gateway reads the record's text with the model
     return lambda resource: list(settings.tracked(detector.of_resource(resource)))
 
 
@@ -197,9 +224,27 @@ class Detector:
 
     def of_text(self, text: str) -> list[Finding]:
         """Categories named or implied by this text: the medication and phrase lists, then the model."""
-        text = (text or "")[:MAX_TEXT]
-        if not text.strip():
-            return []
+        return self.of_texts([text])[0]
+
+    def of_texts(self, texts: Sequence[str]) -> list[list[Finding]]:
+        """`of_text` for many texts. A model that can read several at once (`many`) is asked once, which is
+        what makes reading every record of a chart affordable."""
+        texts = [(t or "")[:MAX_TEXT] for t in texts]
+        found = [self._listed(t) if t.strip() else [] for t in texts]
+        if self.model is not None:
+            asked = [i for i, t in enumerate(texts) if t.strip()]
+            read_many = getattr(self.model, "many", None)
+            scores = (read_many([texts[i] for i in asked]) if read_many else [self.model(texts[i]) for i in asked]) \
+                if asked else []
+            for i, by_category in zip(asked, scores):
+                for category, probability in by_category.items():
+                    if category not in self.sets.categories:
+                        raise ValueError(f"the text model returned an unknown category: {category!r}")
+                    if probability >= self.threshold:
+                        found[i].append(Finding(category, "model", f"{probability:.2f}"))
+        return [_unique(f) for f in found]
+
+    def _listed(self, text: str) -> list[Finding]:
         found: list[Finding] = []
         for c in self.sets.categories.values() if self.lists else ():
             if c.drugs and (m := c.drugs.search(text)):
@@ -208,17 +253,14 @@ class Detector:
                 if p.search(text):
                     found.append(Finding(c.key, "text", "phrase list"))
                     break
-        if self.model is not None:
-            for category, probability in self.model(text).items():
-                if category not in self.sets.categories:
-                    raise ValueError(f"the text model returned an unknown category: {category!r}")
-                if probability >= self.threshold:
-                    found.append(Finding(category, "model", f"{probability:.2f}"))
-        return _unique(found)
+        return found
 
     def of_record(self, record: Mapping) -> list[Finding]:
         """Categories of one record as a tool returns it: its title and text."""
-        return self.of_text(f"{record.get('title') or ''}\n{record.get('text') or ''}")
+        return self.of_records([record])[0]
+
+    def of_records(self, records: Sequence[Mapping]) -> list[list[Finding]]:
+        return self.of_texts([f"{r.get('title') or ''}\n{r.get('text') or ''}" for r in records])
 
     def of_resource(self, resource: Mapping) -> list[Finding]:
         """Categories of one FHIR resource: its security labels, its codes, then its text."""

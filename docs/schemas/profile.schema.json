@@ -580,6 +580,19 @@
           "default": null,
           "title": "Never External"
         },
+        "text_model": {
+          "anyOf": [
+            {
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,80}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Text Model"
+        },
         "value_sets": {
           "anyOf": [
             {

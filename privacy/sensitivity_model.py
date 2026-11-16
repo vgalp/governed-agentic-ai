@@ -28,6 +28,7 @@ from __future__ import annotations
 
 import json
 import re
+import threading
 import time
 from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
@@ -35,6 +36,7 @@ from pathlib import Path
 from privacy.sensitivity import ValueSets
 
 Ask = Callable[[list[dict]], str]           # chat messages -> the model's reply
+BATCH = 32                                  # texts in one pass of a trained classifier
 
 SYSTEM = """You read one piece of text from a health clinic: a staff member's message, or a line from a \
 patient's record. Say which protected categories of health information it reveals about a particular person.
@@ -118,6 +120,7 @@ def local_reader(name: str, sets: ValueSets) -> LlmReader:
 
 
 Score = Callable[[str], Sequence[float]]    # text -> one probability per category, in the model's order
+ScoreMany = Callable[[Sequence[str]], Sequence[Sequence[float]]]
 
 
 def rescale(probability: float, threshold: float) -> float:
@@ -132,7 +135,7 @@ class ClassifierReader:
     """text -> {category: probability}, from a trained classifier, each on its own threshold's scale."""
 
     def __init__(self, score: Score, categories: Sequence[str], thresholds: Mapping[str, float], sets: ValueSets,
-                 clock: Callable[[], float] = time.monotonic):
+                 clock: Callable[[], float] = time.monotonic, score_many: ScoreMany | None = None):
         unknown = set(categories) - set(sets.categories)
         if unknown:
             raise ValueError(f"the classifier knows categories the value sets do not: {', '.join(sorted(unknown))}")
@@ -140,6 +143,7 @@ class ClassifierReader:
             if not 0.0 < float(thresholds.get(c, 0.0)) < 1.0:
                 raise ValueError(f"the classifier needs a threshold between 0 and 1 for {c}")
         self._score, self._categories, self._thresholds, self._clock = score, tuple(categories), dict(thresholds), clock
+        self._score_many = score_many or (lambda texts: [score(t) for t in texts])
         self.calls = self.unreadable = 0
         self.seconds: list[float] = []
 
@@ -148,6 +152,21 @@ class ClassifierReader:
         scores = self._score(text)
         self.seconds.append(self._clock() - started)
         self.calls += 1
+        return self._scaled(scores)
+
+    def many(self, texts: Sequence[str]) -> list[Mapping[str, float]]:
+        """`__call__` for several texts in one pass of the model: a chart's records together."""
+        if not texts:
+            return []
+        started = self._clock()
+        scores = self._score_many(texts)
+        self.seconds.append(self._clock() - started)
+        self.calls += 1
+        if len(scores) != len(texts):
+            raise ValueError("the classifier returned scores for a different number of texts than it was given")
+        return [self._scaled(s) for s in scores]
+
+    def _scaled(self, scores: Sequence[float]) -> Mapping[str, float]:
         if len(scores) != len(self._categories):
             raise ValueError("the classifier returned a different number of scores than it has categories")
         return {c: round(rescale(float(p), self._thresholds[c]), 4) for c, p in zip(self._categories, scores)}
@@ -168,8 +187,14 @@ def classifier_reader(name: str, sets: ValueSets, models: Path | None = None) ->
     model = AutoModelForSequenceClassification.from_pretrained(folder)
     model.eval()
 
-    def score(text: str) -> list[float]:
-        with torch.no_grad():
-            enc = tok([text], truncation=True, max_length=int(chosen.get("max_len", 128)), return_tensors="pt")
-            return torch.sigmoid(model(**enc).logits.float())[0].tolist()
-    return ClassifierReader(score, chosen["categories"], chosen["thresholds"], sets)
+    max_len, lock = int(chosen.get("max_len", 128)), threading.Lock()
+
+    def score_many(texts: Sequence[str]) -> list[list[float]]:
+        out: list[list[float]] = []
+        with lock, torch.no_grad():                     # one pass at a time: requests share the model
+            for i in range(0, len(texts), BATCH):
+                enc = tok(list(texts[i:i + BATCH]), truncation=True, max_length=max_len, padding=True, return_tensors="pt")
+                out += torch.sigmoid(model(**enc).logits.float()).tolist()
+        return out
+    return ClassifierReader(lambda text: score_many([text])[0], chosen["categories"], chosen["thresholds"], sets,
+                            score_many=score_many)

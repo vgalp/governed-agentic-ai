@@ -85,6 +85,7 @@ Everything is in the profile folder (`profiles/clinic-oracle/`, `clinic-epic/`, 
 | `profile.yaml` `agents.outside` | Which tools outside assistants may be offered at all |
 | `roles.yaml` | Per role: tools, kinds of record data, sensitive categories |
 | `profile.yaml` `sensitivity` | Which sensitive categories are tracked, and your own lists if you have them |
+| `profile.yaml` `sensitivity.text_model` | Optional: a trained classifier (a folder in `models/`) that also reads record text for wording the lists cannot know. Off unless named; see ADR 038 for what it has and has not been tested on |
 | `fhir.yaml` | The record system: address, sign-in, limits, which resources become which records |
 | `rules.yaml`, `responses.yaml` | What is stopped, and the fixed replies |
 

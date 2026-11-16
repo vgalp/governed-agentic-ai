@@ -150,8 +150,12 @@ def cmd_answer(args, cfg) -> int:
     return 0
 
 
-def sensitivity_model_name(run_id: str) -> str:
-    return f"sensitivity-modernbert-{run_id}"
+def sensitivity_model_name(run_id: str, tag: str | None = None) -> str:
+    return f"sensitivity-modernbert-{run_id}" + (f"-{tag}" if tag else "")
+
+
+HUMAN_TEST, HUMAN_TRAIN, HUMAN_DEV = (f"sensitivity_human_{part}_v1.jsonl" for part in ("test", "train", "dev"))
+HUMAN_TEST_MANIFEST, HUMAN_TRAIN_MANIFEST = "human_test_v1_manifest.json", "human_train_v1_manifest.json"
 
 
 def sensitivity_data(cfg: config.LoopConfig, ledger: Ledger, writer, labeller) -> dict:
@@ -194,25 +198,41 @@ def sensitivity_mine(args, cfg: config.LoopConfig, ledger: Ledger, frontiers=Non
         print("loop.yaml has no reviewer block: two different models must label for their agreement to mean anything.")
         return 2
     sets = sensitivity.load()
+    training = args.purpose == "train"
+    test_manifest = ledger.dir / "sensitivity" / HUMAN_TEST_MANIFEST
+    if training and not test_manifest.exists():
+        print("Build the test set first (the same command without --purpose train): training text is taken from "
+              "descriptions the test set did not use.")
+        return 1
+    n_random = args.random or (3000 if training else 600)
+    per_category = args.per_category or (1000 if training else 140)
     try:
-        items = mine.choose(mine.read_source(source), args.random, args.per_category, readable_categories(sets))
+        items = mine.choose(mine.read_source(source), n_random, per_category, readable_categories(sets),
+                            seed=41 if training else 23,
+                            exclude=mine.used_descriptions(test_manifest) if training else frozenset())
     except (mine.SourceError, FileNotFoundError) as e:
         print(f"Not done: {e}")
         return 1
     picked = {k: sum(i["picked"] == k for i in items) for k in ("random", "enriched")}
+    cost = (mine.estimate_training_usd(items, cfg.reviewer, cfg.frontier) if training
+            else mine.estimate_usd(items, [cfg.frontier, cfg.reviewer]))
+    how = (f"{cfg.reviewer['name']} labels all of them and {cfg.frontier['name']} confirms those with a category and a "
+           "sample of the rest" if training else "both models label all of them")
     print(f"{len(items)} sentences chosen from {source.name}: {picked['random']} from descriptions at random, "
           f"{picked['enriched']} from descriptions that mention a category.\n"
-          f"Labelling them with both models will cost about ${mine.estimate_usd(items, [cfg.frontier, cfg.reviewer]):.2f} "
+          f"For {'training' if training else 'a test set'}: {how}. That will cost about ${cost:.2f} "
           "(an estimate from the prices in loop.yaml).")
     if not args.go:
         print("Nothing was sent. Run the same command with --go to label them.")
         return 0
     first, second = frontiers or (lambda f: (f, _reviewer(cfg, ledger, f)))(_frontier(cfg, ledger))
+    if training:
+        return _mine_training(args, cfg, ledger, mine, sets, items, source, strong=first, cheap=second)
     rows, disputed, report = mine.label(first, second, sets, items, f"{ledger.run_id}-human")
-    test = source.with_name("sensitivity_human_test_v1.jsonl")
+    test = source.with_name(HUMAN_TEST)
     mine.data.write_jsonl(test, rows)
     mine.write_disputed(source.with_name("sensitivity_human_test_v1_not_agreed.csv"), disputed)
-    out = ledger.dir / "sensitivity" / "human_test_v1_manifest.json"
+    out = test_manifest
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(mine.manifest(rows, source, report), indent=1) + "\n", encoding="utf-8")
     print(f"\n{report['agreed']} sentences both models labelled the same way; {report['not_agreed']} they did not "
@@ -228,9 +248,28 @@ def sensitivity_mine(args, cfg: config.LoopConfig, ledger: Ledger, frontiers=Non
     return 0
 
 
+def _mine_training(args, cfg, ledger: Ledger, mine, sets, items: list[dict], source: Path, strong, cheap) -> int:
+    rows, report = mine.label_for_training(cheap, strong, sets, items, f"{ledger.run_id}-human-train")
+    train, dev = mine.split_by_description(rows, cfg.sensitivity.dev_share)
+    mine.data.write_jsonl(source.with_name(HUMAN_TRAIN), train)
+    mine.data.write_jsonl(source.with_name(HUMAN_DEV), dev)
+    out = ledger.dir / "sensitivity" / HUMAN_TRAIN_MANIFEST
+    out.write_text(json.dumps(mine.manifest(rows, source, {**report, "train_rows": len(train), "dev_rows": len(dev)}),
+                              indent=1) + "\n", encoding="utf-8")
+    sample = report["sample_of_no_category"]
+    print(f"\n{report['kept']} sentences kept of {report['sentences']} ({len(train)} to train on, {len(dev)} held back).\n"
+          f"  left out: {report['left_out']}\n  by kind: {report['by_stratum']}\n  by category: {report['by_category']}\n"
+          f"  of {sample} sampled sentences the first model gave no category, the second found one in "
+          f"{report['sample_where_second_found_a_category']}: about that share of the unchecked ones are wrong\n"
+          f"Saved {source.with_name(HUMAN_TRAIN)} and {HUMAN_DEV} (not in the repository) and {out.relative_to(ROOT)} "
+          f"(commit it).\nTrain on the generated and the human text together:\n"
+          f"  uv run --group train python -m modelops sensitivity train --run {ledger.run_id} --source {source} --tag r2")
+    return 0
+
+
 def cmd_sensitivity(args, cfg) -> int:
     ledger = Ledger(args.run)
-    out, name = ledger.dir / "sensitivity", sensitivity_model_name(args.run)
+    out, name = ledger.dir / "sensitivity", sensitivity_model_name(args.run, args.tag)
     if args.action == "data":
         frontier = _frontier(cfg, ledger)
         reviewer = _reviewer(cfg, ledger, frontier)
@@ -259,15 +298,24 @@ def cmd_sensitivity(args, cfg) -> int:
     from privacy import sensitivity
     from privacy.sensitivity_model import readable_categories
     keys = list(readable_categories(sensitivity.load()))
-    sensitivity_train.train(out, sensitivity_train.MODELS / name, keys, cfg.sensitivity.max_false_mark_rate,
-                            cfg.sensitivity.train_args)
+    train_files, dev_files, human_test = [out / "train.jsonl"], [out / "dev.jsonl"], None
+    if args.source:                                     # also the text people wrote, kept beside its source file
+        source = Path(args.source).expanduser()
+        human = [source.with_name(HUMAN_TRAIN), source.with_name(HUMAN_DEV)]
+        if not all(f.exists() for f in human):
+            print(f"No human-written training text beside {source}: python -m modelops sensitivity mine --run {args.run} "
+                  f"--source {source} --purpose train")
+            return 1
+        train_files.append(human[0])
+        dev_files.append(human[1])
+        human_test = source.with_name(HUMAN_TEST)
+    sensitivity_train.train(train_files, dev_files, sensitivity_train.MODELS / name, keys,
+                            cfg.sensitivity.max_false_mark_rate, cfg.sensitivity.train_args)
     test = (out / "test.jsonl").relative_to(ROOT)
+    run = f"uv run --group train python -m eval.run_sensitivity --classifier {name}"
     print("\nNow measure it, where it was not trained. Each can be rerun:\n"
-          f"  uv run --group train python -m eval.run_sensitivity --classifier {name} --model-only\n"
-          f"  uv run --group train python -m eval.run_sensitivity --classifier {name}\n"
-          f"  uv run --group train python -m eval.run_sensitivity --classifier {name} --model-only --dataset {test}\n"
-          f"  uv run python -m eval.run_sensitivity --dataset {test}\n"
-          f"  uv run python -m eval.run_sensitivity --model qwen2.5:7b --model-only --dataset {test}")
+          f"  {run} --model-only\n  {run}\n  {run} --model-only --dataset {test}"
+          + (f"\n  {run} --model-only --dataset {human_test}\n  {run} --dataset {human_test}" if human_test else ""))
     return 0
 
 
@@ -359,9 +407,15 @@ def main(argv: list[str] | None = None) -> int:
                    help="data: frontier-written, blind-labelled text and a test set; train: fine-tune on it; "
                         "mine: a test set from text people wrote (--source), labelled by both models")
     c.add_argument("--run", default=run_id)
-    c.add_argument("--source", help="mine: a JSON-lines file of patient descriptions, outside this repository")
-    c.add_argument("--random", type=int, default=600, help="mine: sentences from descriptions chosen at random")
-    c.add_argument("--per-category", type=int, default=140, help="mine: sentences from descriptions mentioning each category")
+    c.add_argument("--source", help="mine: a JSON-lines file of patient descriptions, outside this repository; "
+                                    "train: the same file, to train on the human-written text mined beside it too")
+    c.add_argument("--purpose", choices=["test", "train"], default="test",
+                   help="mine: test (both models label everything) or train (more text; the cheaper model labels, the "
+                        "stronger confirms), from descriptions the test set did not use")
+    c.add_argument("--random", type=int, help="mine: sentences from descriptions chosen at random (600; train: 3000)")
+    c.add_argument("--per-category", type=int,
+                   help="mine: sentences from descriptions mentioning each category (140; train: 1000)")
+    c.add_argument("--tag", help="train: added to the model's folder name, e.g. r2, so an earlier model is kept")
     c.add_argument("--go", action="store_true", help="mine: label the chosen sentences (without it, only the cost is shown)")
     s = sub.add_parser("status", help="every round of a run")
     s.add_argument("--run", default=run_id)

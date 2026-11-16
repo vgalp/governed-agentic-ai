@@ -153,6 +153,8 @@ class Sensitivity(Strict):
     categories: list[str] = Field(min_length=1)   # names from the value sets file
     never_external: list[str] | None = None       # never sent to an outside model; default: all of them
     value_sets: str | None = None                 # the office's own lists, a file in the profile folder
+    # A trained text classifier's folder name in models/, read with the lists (ADR 038 step 3). Off unless named.
+    text_model: str | None = Field(default=None, pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]{0,80}$")
 
 
 class RateLimit(Strict):

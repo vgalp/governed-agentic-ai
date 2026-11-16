@@ -113,7 +113,61 @@ categories it tracks. The four clinic profiles do.
   frontier models label each blind; a sentence is kept when they agree. The detectors take no part
   in choosing sentences. The text stays outside the repository, under its own licence; the run keeps
   a manifest of ids, labels and hashes.
-- **Not wired into the pipeline.** Neither reader is used for enforcement.
+- **On that set, the first version does not hold up** (1,509 sentences; `eval/results/sensitivity_human_test_v1_*`):
+
+  | | Lists | Qwen alone | Classifier `sens1` alone |
+  |---|---|---|---|
+  | Categories the lists catch (165) | 165 | 149 | 101 |
+  | Categories the lists miss (128) | 11 | 75 | 76 |
+  | Sentences beside a sensitive topic, marked anyway | 82 of 674 | 57 | 149 |
+  | Ordinary sentences, marked anyway | 5 of 563 | 13 | 83 |
+  | Rows exactly right | 1,307 | 1,365 | 1,162 |
+
+  The classifier finds what Qwen finds at an eighth of the time, and marks seven times as many ordinary
+  sentences, most of them as genetics. It had only seen short notes and messages written by a model.
+- **Built: training text from what people wrote** (`sensitivity mine --purpose train`, then
+  `sensitivity train --source ... --tag r2`). Sentences from descriptions the test set did not use.
+  The cheaper model labels all of them; the stronger one confirms every sentence given a category and
+  a sample of the rest, and the sample's disagreements are reported. Training and validation never
+  share a description. The model is trained on the generated and the human text together, under a
+  new name, so the first is kept for comparison.
+- **Second version, `sens1-r2`** (11,293 training texts: 2,615 generated and 8,678 human-written; results
+  in `eval/results/sensitivity_*sens1-r2*`). Classifier alone, against the first version and Qwen:
+
+  | | First version | Qwen | `sens1-r2` |
+  |---|---|---|---|
+  | Human-written test set: categories the lists miss, caught (128) | 76 | 75 | 88 |
+  | Human-written test set: ordinary sentences marked anyway (563) | 83 | 13 | 7 |
+  | Human-written test set: sentences beside a sensitive topic marked anyway (674) | 149 | 57 | 16 |
+  | Human-written test set: rows exactly right (1,509) | 1,162 | 1,365 | 1,426 |
+  | Generated test set: implied wording caught (169) | 144 | 145 | 151 |
+  | Generated test set: look-alikes marked anyway (270) | 11 | 31 | 5 |
+  | Hand-written development set: implied wording caught (28) | 16 | 18 | 14 |
+  | Hand-written development set: look-alikes marked anyway (24) | 4 | 5 | 2 |
+  | Seconds a text | 0.036 | 0.29 to 0.37 | 0.036 |
+
+  What this does and does not show:
+  - It is the best of the three on the two larger sets and ten times faster than Qwen.
+  - On the hand-written set it is still behind Qwen on implied wording (14 against 18 of 28).
+  - The human-written test set is now text from the same source as part of its training (other
+    descriptions, never the same ones). It is no longer an independent check of this model: a set
+    from another source is needed for that.
+  - Weak spots: implied HIV (1 of 7) and implied sexual health (0 of 6) on the human-written set.
+  - With the lists added, every named category is caught and the lists' own false marks come back
+    (94 of 674 beside a sensitive topic): the lists cannot tell a negated or general mention.
+  - Its training text includes sentences under share-alike and non-commercial terms. That has to be
+    settled before the model is published or sold.
+- **A profile can turn the classifier on; none does.** `sensitivity.text_model: <folder in models/>` in
+  profile.yaml makes the gateway, the router's check of the question and the pipeline read text with the
+  lists and that model. The model adds categories; it never removes one the lists, a code or a label
+  found.
+  - A chart's records are read in one pass of the model, not one call each.
+  - The audit names the model on every tool call it read (`sensitive_text_model`).
+  - If the named model cannot be loaded, the request fails. It does not fall back to the lists alone:
+    an office that turned the model on must not get less without being told.
+  - The record tools keep to labels, codes and lists; the gateway reads the text.
+  - It is off in every profile in this repository. It is for demonstration on synthetic records until
+    the model has been scored on labels a person reviewed.
 - **Not built:** a frozen test set labelled by people. The mined set is people's text with models'
   labels: better evidence than model-written text, and still not a person's judgement. No model is
   turned on for enforcement on these numbers alone. Also not built: rounds (new data aimed

@@ -706,7 +706,7 @@ def _sensitivity(raw: dict | None, path: Path, roles: dict[str, Role], responses
     if missing:
         raise ProfileError(f"{path.name}/responses.yaml: no response for {', '.join(missing)} "
                            "(needed because the profile has roles and tracks sensitive categories)")
-    return sensitive.Settings(categories, never, value_sets)
+    return sensitive.Settings(categories, never, value_sets, raw.get("text_model"))
 
 
 def _actions(raw: dict, where: str, patterns: dict[str, re.Pattern], agents: dict[str, tuple[str, ...]],

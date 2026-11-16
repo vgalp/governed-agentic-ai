@@ -90,9 +90,9 @@ def tag_sensitive(results: list[dict], profile: Profile) -> tuple[list[dict], Co
     settings = profile.sensitivity
     detector = settings.detector()
     tagged, counts = [], Counter()
-    for r in results:
+    for r, findings in zip(results, detector.of_records(results)):       # one pass of the text model, if any
         claimed = r.get("sensitivity") if isinstance(r.get("sensitivity"), list) else []
-        found = sorted(set(settings.tracked(detector.of_record(r))) | {c for c in claimed if c in settings.categories})
+        found = sorted(set(settings.tracked(findings)) | {c for c in claimed if c in settings.categories})
         tagged.append({**r, "sensitivity": found})
         counts.update(found)
     return tagged, counts
@@ -223,6 +223,8 @@ def call_tool(agent: str, tool: str, args: dict, request_id: str,
         tagged, found = tag_sensitive(result.get("results", []), profile)
         result = {**result, "results": tagged}
         event["sensitive_categories"] = dict(sorted(found.items()))
+        if profile.sensitivity.text_model:         # which model read the text, so a decision can be traced to it
+            event["sensitive_text_model"] = profile.sensitivity.text_model
         if profile.roles and found:                # nothing marked: nothing to ask policy about
             kept, withheld = filter_sensitive(tagged, allowed_sensitive(profile, role))
             if withheld:

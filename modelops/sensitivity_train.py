@@ -6,8 +6,9 @@ One model, one output per category, each yes or no on its own: a text can be in 
 none. It reads the text alone (no policy beside it, unlike the guard), so it can mark every record a
 tool returns in a few milliseconds each.
 
-Trains on the run's train.jsonl (modelops/sensitivity_data.py). After each epoch it scores the run's
-dev.jsonl and keeps the best epoch (macro F1 over categories, then fewest marks on rows with no
+Trains on the run's train.jsonl (modelops/sensitivity_data.py), and on any further files it is given
+(text people wrote, modelops/sensitivity_mine.py). After each epoch it scores the validation files and
+keeps the best epoch (macro F1 over categories, then fewest marks on rows with no
 category). Then it chooses one threshold per category on dev: the best F1 among thresholds that mark at
 most `max_false_mark_rate` of the rows without the category.
 
@@ -118,8 +119,9 @@ def read_rows(path: Path) -> list[dict]:
     return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
 
 
-def train(data_dir: Path, out_dir: Path, keys: Sequence[str], max_false_mark_rate: float, settings: dict) -> dict:
-    """Train on data_dir/train.jsonl, choose the epoch and thresholds on data_dir/dev.jsonl, save to out_dir.
+def train(train_files: Sequence[Path], dev_files: Sequence[Path], out_dir: Path, keys: Sequence[str],
+          max_false_mark_rate: float, settings: dict) -> dict:
+    """Train on every row of `train_files`, choose the epoch and thresholds on `dev_files`, save to out_dir.
     Returns what is written to training_info.json."""
     import torch
     from transformers import AutoModelForSequenceClassification, AutoTokenizer, get_linear_schedule_with_warmup
@@ -128,8 +130,8 @@ def train(data_dir: Path, out_dir: Path, keys: Sequence[str], max_false_mark_rat
 
     s = {**DEFAULTS, **settings}
     keys = list(keys)
-    train_file, dev_file = data_dir / "train.jsonl", data_dir / "dev.jsonl"
-    rows, dev = read_rows(train_file), read_rows(dev_file)
+    rows = [r for f in train_files for r in read_rows(f)]
+    dev = [r for f in dev_files for r in read_rows(f)]
     random.seed(s["seed"])
     torch.manual_seed(s["seed"])
     device = device_name()
@@ -199,11 +201,11 @@ def train(data_dir: Path, out_dir: Path, keys: Sequence[str], max_false_mark_rat
     info = {
         "base_model": BASE, "categories": keys, "trained": date.today().isoformat(), "settings": s, "device": device,
         "positive_weights": dict(zip(keys, weights)), "max_false_mark_rate": max_false_mark_rate,
-        "data": {"train": {"rows": len(rows), "sha256": sha256(train_file)},
-                 "dev": {"rows": len(dev), "sha256": sha256(dev_file)}},
+        "data": {"train": [{"file": f.name, "rows": len(read_rows(f)), "sha256": sha256(f)} for f in train_files],
+                 "dev": [{"file": f.name, "rows": len(read_rows(f)), "sha256": sha256(f)} for f in dev_files]},
         "best_dev_at_0.5": best, "thresholds": thresholds,
         "dev_at_thresholds": measure(dev, best_probabilities, keys, thresholds), "history": history,
-        "note": "Dev only, and dev is written by the same model as the training text. The run's test set and the "
+        "note": "Dev only, and dev comes from the same sources as the training text. The test sets and the "
                 "hand-written development set are scored separately (eval/run_sensitivity.py --classifier).",
     }
     (out_dir / "training_info.json").write_text(json.dumps(info, indent=2) + "\n")

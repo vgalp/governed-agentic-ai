@@ -286,7 +286,7 @@ def test_data_command_needs_a_second_model(tmp_path, monkeypatch, capsys):
     monkeypatch.setattr(cli, "Ledger", lambda run: type("L", (), {"dir": tmp_path, "run_id": run})())
     monkeypatch.setattr(cli, "_frontier", lambda cfg, ledger: "one model")
     monkeypatch.setattr(cli, "_reviewer", lambda cfg, ledger, frontier: frontier)
-    args = type("A", (), {"run": "t1", "action": "data"})()
+    args = type("A", (), {"run": "t1", "action": "data", "tag": None})()
     assert cli.cmd_sensitivity(args, config.load()) == 2
     assert "Add a reviewer" in capsys.readouterr().out
 
@@ -393,8 +393,9 @@ def test_manifest_holds_no_text(tmp_path):
     assert m["rows"][0]["id"] == "a#1" and len(m["rows"][0]["text_sha256"]) == 64 and len(m["source_sha256"]) == 64
 
 
-def mine_args(source, go):
-    return type("A", (), {"run": "t1", "action": "mine", "source": str(source), "go": go, "random": 6, "per_category": 8})()
+def mine_args(source, go, purpose="test"):
+    return type("A", (), {"run": "t1", "action": "mine", "source": str(source), "go": go, "random": 6, "per_category": 8,
+                          "purpose": purpose, "tag": None})()
 
 
 def test_mine_command_shows_the_cost_first_and_keeps_text_out_of_the_run(tmp_path, capsys):
@@ -433,3 +434,177 @@ def test_result_names_for_each_kind_of_dataset():
     assert result_stem(Path("modelops/runs/sens1/sensitivity/test.jsonl")) == "sensitivity_sens1_test"
     assert result_stem(Path("/x/sensitivity_human_test_v1.jsonl")) == "sensitivity_human_test_v1"
     assert result_stem(Path("/x/other.jsonl")) == "sensitivity_other"
+
+
+# ---- a profile that turns the text model on
+
+def fake_reader(marks: dict[str, list[str]]):
+    """A classifier that marks a text containing a key with that key's categories; counts its passes."""
+    def score_many(texts):
+        return [[0.9 if c in next((v for k, v in marks.items() if k in t), []) else 0.01 for c in KEYS] for t in texts]
+    return ClassifierReader(lambda t: score_many([t])[0], KEYS, dict.fromkeys(KEYS, 0.5), SETS, score_many=score_many)
+
+
+def test_records_are_read_in_one_pass_and_empty_text_is_not_sent():
+    reader = fake_reader({"vodka": ["substance_use"]})
+    detector = sensitivity.Detector(SETS, model=reader)
+    records = [{"title": "Note", "text": "Finishes a fifth of vodka most nights."}, {"title": "", "text": ""},
+               {"title": "Medication", "text": "methadone 40 mg daily"}, {"title": "Visit", "text": "Flu shot given."}]
+    found = [sensitivity.categories(f) for f in detector.of_records(records)]
+    assert found == [("substance_use",), (), ("substance_use",), ()]
+    assert reader.calls == 1                                              # three texts, one pass
+    assert {f.source for f in detector.of_records(records)[0]} == {"model"}
+    assert "medication" in {f.source for f in detector.of_records(records)[2]}     # the lists still apply
+    assert detector.of_text("Finishes a fifth of vodka most nights.") == detector.of_records(records[:1])[0]
+
+
+def test_a_reader_without_many_is_asked_text_by_text():
+    asked = []
+    detector = sensitivity.Detector(SETS, model=lambda t: asked.append(t) or {"hiv": 0.9})
+    assert [sensitivity.categories(f) for f in detector.of_texts(["a b", "", "c d"])] == [("hiv",), (), ("hiv",)]
+    assert asked == ["a b", "c d"]
+
+
+def test_settings_use_the_named_model_except_for_record_tools(monkeypatch):
+    loaded = []
+    monkeypatch.setattr(sensitivity, "_text_model", lambda name, sets: loaded.append(name) or fake_reader({"vodka": ["substance_use"]}))
+    settings = sensitivity.Settings(("substance_use",), ("substance_use",), None, "sensitivity-modernbert-x")
+    assert settings.tracked(settings.detector().of_text("a fifth of vodka most nights")) == ("substance_use",)
+    assert settings.detector(text_model=False).model is None and loaded == ["sensitivity-modernbert-x"]
+    tagger = sensitivity.resource_tagger(settings)
+    assert tagger({"resourceType": "Observation", "valueString": "a fifth of vodka most nights"}) == []
+    assert loaded == ["sensitivity-modernbert-x"]                          # a record tool never loads the model
+    assert sensitivity.Settings(("hiv",), ("hiv",)).detector().model is None
+
+
+def test_a_named_model_that_cannot_load_stops_instead_of_reading_with_lists_alone(tmp_path, monkeypatch):
+    monkeypatch.setattr(sensitivity, "MODELS", tmp_path)
+    sensitivity._text_model.cache_clear()
+    settings = sensitivity.Settings(("hiv",), ("hiv",), None, "not-there")
+    with pytest.raises(sensitivity.TextModelError, match="not-there"):
+        settings.detector()
+    sensitivity._text_model.cache_clear()
+
+
+def test_profile_schema_takes_a_model_folder_name_only():
+    from pydantic import ValidationError
+
+    from profiles.schema import Sensitivity
+    assert Sensitivity(categories=["hiv"], text_model="sensitivity-modernbert-sens1").text_model
+    assert Sensitivity(categories=["hiv"]).text_model is None
+    for bad in ("../elsewhere", "a/b", "", "name with space"):
+        with pytest.raises(ValidationError):
+            Sensitivity(categories=["hiv"], text_model=bad)
+
+
+def test_gateway_marks_implied_records_with_the_model_and_names_it_in_the_audit(monkeypatch):
+    from dataclasses import replace
+
+    from gateway import gateway
+    from profiles.loader import load_profile
+    profile = load_profile("clinic-oracle")
+    with_model = replace(profile, sensitivity=replace(profile.sensitivity, text_model="sensitivity-modernbert-x"))
+    monkeypatch.setattr(sensitivity, "_text_model", lambda name, sets: fake_reader({"vodka": ["substance_use"]}))
+    records = [{"title": "Social history", "text": "Finishes a fifth of vodka most nights."},
+               {"title": "Immunization", "text": "Influenza vaccine given."}]
+    without, _ = gateway.tag_sensitive(records, profile)
+    assert [r["sensitivity"] for r in without] == [[], []]                 # the lists see nothing in it
+    tagged, counts = gateway.tag_sensitive(records, with_model)
+    assert [r["sensitivity"] for r in tagged] == [["substance_use"], []] and counts == {"substance_use": 1}
+    kept, withheld = gateway.filter_sensitive(tagged, [])
+    assert [r["title"] for r in kept] == ["Immunization"] and withheld == {"substance_use": 1}
+
+
+# ---- training text from what people wrote
+
+def test_choose_leaves_excluded_descriptions_alone():
+    rows = source_rows()
+    first = mine.choose(rows, 6, 8, ["reproductive_health"])
+    used = frozenset(i["source_id"] for i in first)
+    second = mine.choose(rows, 6, 8, ["reproductive_health"], seed=41, exclude=used)
+    assert second and not used & {i["source_id"] for i in second}
+
+
+def test_training_labels_confirm_every_category_and_sample_the_rest():
+    items = mine.choose(source_rows(), 20, 12, ["reproductive_health"])
+    cheap = FakeFrontier("sonnet", labeller_for(lambda t: ["hiv"] if "blood pressure" in t else human_label(t)))
+    strong = FakeFrontier("opus", labeller_for(human_label))
+    rows, report = mine.label_for_training(cheap, strong, SETS, items, "t", check_share=0.5)
+    texts = " ".join(r["text"] for r in rows)
+    assert "blood pressure" not in texts                          # the strong model did not confirm the cheap one's category
+    assert all(r["labelled_twice"] for r in rows if r["categories"])
+    assert any(not r["labelled_twice"] for r in rows) and any(r["labelled_twice"] and not r["categories"] for r in rows)
+    assert report["left_out"] == {"the second model disagreed, on a sentence the first gave a category":
+                                  sum("blood pressure" in i["text"] for i in items)}
+    assert report["kept"] == len(rows) == report["sentences"] - sum(report["left_out"].values())
+    assert report["labelled_twice"] < report["sentences"]
+
+
+def test_training_labels_report_what_the_sample_caught():
+    items = mine.choose(source_rows(), 6, 12, ["reproductive_health"])
+    blind = FakeFrontier("sonnet", labeller_for(lambda t: []))                      # the cheap model sees nothing
+    rows, report = mine.label_for_training(blind, FakeFrontier("opus", labeller_for(human_label)), SETS, items, "t",
+                                           check_share=1.0)
+    assert report["sample_where_second_found_a_category"] > 0
+    assert all(not r["categories"] for r in rows)                                  # a contradicted label is not trained on
+    assert report["sample_of_no_category"] == len(items)
+
+
+def test_split_by_description_keeps_each_description_on_one_side():
+    rows = [{"id": f"d{d}#{n}", "text": f"{d} {n}"} for d in range(30) for n in range(3)]
+    train, dev = mine.split_by_description(rows, 0.2)
+    side = lambda part: {r["id"].split("#")[0] for r in part}                      # noqa: E731
+    assert not side(train) & side(dev) and len(train) + len(dev) == 90 and 18 <= len(dev) <= 20
+    assert mine.split_by_description(rows, 0.2) == (train, dev)
+
+
+def test_mine_for_training_needs_the_test_set_and_stays_off_it(tmp_path, capsys):
+    import shutil
+
+    import modelops.__main__ as cli
+    source = tmp_path / "outside" / "s.jsonl"
+    data.write_jsonl(source, source_rows(200))
+    ledger = type("L", (), {"dir": cli.ROOT / "modelops" / "runs" / "zz_test_mine_train", "run_id": "t1"})()
+    cfg = config.load()
+    pair = lambda: (FakeFrontier("opus", labeller_for(human_label)), FakeFrontier("sonnet", labeller_for(human_label)))  # noqa: E731
+    try:
+        assert cli.sensitivity_mine(mine_args(source, True, "train"), cfg, ledger, frontiers=pair()) == 1
+        assert "Build the test set first" in capsys.readouterr().out
+        assert cli.sensitivity_mine(mine_args(source, True), cfg, ledger, frontiers=pair()) == 0
+        assert cli.sensitivity_mine(mine_args(source, False, "train"), cfg, ledger) == 0
+        assert "Nothing was sent" in capsys.readouterr().out
+        opus, sonnet = pair()
+        assert cli.sensitivity_mine(mine_args(source, True, "train"), cfg, ledger, frontiers=(opus, sonnet)) == 0
+        folder = tmp_path / "outside"
+        test = data.read_jsonl(folder / cli.HUMAN_TEST)
+        train, dev = data.read_jsonl(folder / cli.HUMAN_TRAIN), data.read_jsonl(folder / cli.HUMAN_DEV)
+        described = lambda part: {r["id"].rsplit("#", 1)[0] for r in part}         # noqa: E731
+        assert train and dev and not described(test) & described(train + dev) and not described(train) & described(dev)
+        texts = lambda model: sum(len(numbered(m[1]["content"])) for m, _, _ in model.asked)       # noqa: E731
+        assert texts(sonnet) > texts(opus) > 0                                     # the cheap model labels all; the strong one some
+        manifest = json.loads((ledger.dir / "sensitivity" / cli.HUMAN_TRAIN_MANIFEST).read_text())
+        assert len(manifest["rows"]) == len(train) + len(dev) and train[0]["text"] not in json.dumps(manifest)
+    finally:
+        shutil.rmtree(ledger.dir, ignore_errors=True)
+
+
+def test_train_command_adds_the_human_text_and_tags_the_model(tmp_path, monkeypatch, capsys):
+    import modelops.__main__ as cli
+    from modelops import sensitivity_train
+    run = tmp_path / "run"
+    data.write_jsonl(run / "sensitivity" / "train.jsonl", [{"text": "a"}])
+    monkeypatch.setattr(cli, "Ledger", lambda r: type("L", (), {"dir": run, "run_id": r})())
+    monkeypatch.setattr(cli, "ROOT", tmp_path)
+    called = {}
+    monkeypatch.setattr(sensitivity_train, "train", lambda *a: called.update(args=a))
+    args = lambda **k: type("A", (), {"run": "t1", "action": "train", "source": None, "tag": None, **k})()   # noqa: E731
+    assert cli.cmd_sensitivity(args(), config.load()) == 0
+    assert [f.name for f in called["args"][0]] == ["train.jsonl"] and called["args"][2].name == "sensitivity-modernbert-t1"
+    source = tmp_path / "outside" / "s.jsonl"
+    assert cli.cmd_sensitivity(args(source=str(source), tag="r2"), config.load()) == 1       # nothing mined yet
+    for name in (cli.HUMAN_TRAIN, cli.HUMAN_DEV):
+        data.write_jsonl(source.with_name(name), [{"text": "b"}])
+    assert cli.cmd_sensitivity(args(source=str(source), tag="r2"), config.load()) == 0
+    assert [f.name for f in called["args"][0]] == ["train.jsonl", cli.HUMAN_TRAIN]
+    assert [f.name for f in called["args"][1]] == ["dev.jsonl", cli.HUMAN_DEV]
+    assert called["args"][2].name == "sensitivity-modernbert-t1-r2" and cli.HUMAN_TEST in capsys.readouterr().out
