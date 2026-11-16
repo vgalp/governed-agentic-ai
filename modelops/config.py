@@ -69,6 +69,17 @@ class AnswerSettings:
 
 
 @dataclass(frozen=True)
+class SensitivitySettings:
+    """The sensitive-category classifier (ADR 038 step 3). A batch is about ten texts; a round of batches
+    covers every category, kind of text and angle once (modelops/sensitivity_data.py)."""
+    train_batches_per_cell: int = 4
+    test_batches_per_cell: int = 1
+    dev_share: float = 0.1
+    max_false_mark_rate: float = 0.02
+    train_args: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
 class LoopConfig:
     frontier: dict[str, Any]
     budget: Budget
@@ -76,6 +87,7 @@ class LoopConfig:
     answer: AnswerSettings
     reviewer: dict[str, Any] | None = None       # a different model for the reviewer; None: the frontier model
     source: Path = field(default=DEFAULT)
+    sensitivity: SensitivitySettings = field(default_factory=SensitivitySettings)
 
 
 def _num(raw: dict, key: str, low: float, high: float, where: str, kind=float):
@@ -161,6 +173,31 @@ def _answer(raw: dict) -> AnswerSettings:
         lora=lora, judge=bool(raw.get("judge", True)), targets=targets)
 
 
+TRAIN_ARGS = {"epochs": (1, 20, int), "lr": (1e-6, 1e-3, float), "batch": (1, 128, int), "max_len": (16, 512, int),
+              "seed": (0, 2**31 - 1, int)}
+
+
+def _sensitivity(raw: dict) -> SensitivitySettings:
+    """Every key is optional: the block may be left out."""
+    w, d = "sensitivity", SensitivitySettings()
+    unknown = set(raw) - {"train_batches_per_cell", "test_batches_per_cell", "dev_share", "max_false_mark_rate",
+                          "train_args"}
+    if unknown:
+        raise ConfigError(f"{w}: unknown setting {', '.join(sorted(unknown))}")
+    args = dict(raw.get("train_args") or {})
+    if set(args) - set(TRAIN_ARGS):
+        raise ConfigError(f"{w}.train_args: unknown setting {', '.join(sorted(set(args) - set(TRAIN_ARGS)))}")
+    args = {k: _num(args, k, *TRAIN_ARGS[k][:2], f"{w}.train_args", TRAIN_ARGS[k][2]) for k in args}
+
+    def get(key: str, low: float, high: float, kind=float):
+        return _num(raw, key, low, high, w, kind) if key in raw else getattr(d, key)
+    return SensitivitySettings(
+        train_batches_per_cell=get("train_batches_per_cell", 1, 50, int),
+        test_batches_per_cell=get("test_batches_per_cell", 1, 20, int),
+        dev_share=get("dev_share", 0.02, 0.5), max_false_mark_rate=get("max_false_mark_rate", 0.0, 0.5),
+        train_args=args)
+
+
 def load(path: Path = DEFAULT) -> LoopConfig:
     try:
         raw = yaml.safe_load(Path(path).read_text(encoding="utf-8")) or {}
@@ -172,4 +209,5 @@ def load(path: Path = DEFAULT) -> LoopConfig:
                     patience=_num(b, "patience", 1, 20, "budget", int))
     reviewer = _frontier(raw["reviewer"]) if raw.get("reviewer") else None
     return LoopConfig(_frontier(raw.get("frontier") or {}), budget, _guard(raw.get("guard") or {}),
-                      _answer(raw.get("answer") or {}), reviewer, Path(path))
+                      _answer(raw.get("answer") or {}), reviewer, Path(path),
+                      _sensitivity(raw.get("sensitivity") or {}))

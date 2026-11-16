@@ -18,6 +18,10 @@ A local model only: the text it reads is the text the category rules exist to ke
 The model answers yes or no per category, so every category it names is returned with probability 1.
 A reply that cannot be read counts as "nothing found by the model" and is counted (`unreadable`): the
 lists still apply, and the caller can see how often it happened.
+
+A trained classifier (modelops/sensitivity_train.py) is the other reader here, `classifier_reader`:
+milliseconds a text, so it can read every record. It is for measuring too, until it has been scored on
+text it was not built from.
 """
 
 from __future__ import annotations
@@ -25,7 +29,8 @@ from __future__ import annotations
 import json
 import re
 import time
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Mapping, Sequence
+from pathlib import Path
 
 from privacy.sensitivity import ValueSets
 
@@ -110,3 +115,61 @@ def local_reader(name: str, sets: ValueSets) -> LlmReader:
 
     model = {"provider": "ollama", "name": name, "location": "local", "temperature": 0}
     return LlmReader(lambda messages: providers.complete(model, messages)[0], sets)
+
+
+Score = Callable[[str], Sequence[float]]    # text -> one probability per category, in the model's order
+
+
+def rescale(probability: float, threshold: float) -> float:
+    """The probability on a scale where the category's own threshold sits at 0.5, which is where the
+    detector draws the line. Order is kept; 0 stays 0 and 1 stays 1."""
+    if probability < threshold:
+        return 0.5 * probability / threshold
+    return 0.5 + 0.5 * (probability - threshold) / (1.0 - threshold)
+
+
+class ClassifierReader:
+    """text -> {category: probability}, from a trained classifier, each on its own threshold's scale."""
+
+    def __init__(self, score: Score, categories: Sequence[str], thresholds: Mapping[str, float], sets: ValueSets,
+                 clock: Callable[[], float] = time.monotonic):
+        unknown = set(categories) - set(sets.categories)
+        if unknown:
+            raise ValueError(f"the classifier knows categories the value sets do not: {', '.join(sorted(unknown))}")
+        for c in categories:
+            if not 0.0 < float(thresholds.get(c, 0.0)) < 1.0:
+                raise ValueError(f"the classifier needs a threshold between 0 and 1 for {c}")
+        self._score, self._categories, self._thresholds, self._clock = score, tuple(categories), dict(thresholds), clock
+        self.calls = self.unreadable = 0
+        self.seconds: list[float] = []
+
+    def __call__(self, text: str) -> Mapping[str, float]:
+        started = self._clock()
+        scores = self._score(text)
+        self.seconds.append(self._clock() - started)
+        self.calls += 1
+        if len(scores) != len(self._categories):
+            raise ValueError("the classifier returned a different number of scores than it has categories")
+        return {c: round(rescale(float(p), self._thresholds[c]), 4) for c, p in zip(self._categories, scores)}
+
+
+def classifier_reader(name: str, sets: ValueSets, models: Path | None = None) -> ClassifierReader:
+    """A reader backed by a classifier trained here: a folder under models/ holding the model and the
+    thresholds chosen for it."""
+    import torch
+    from transformers import AutoModelForSequenceClassification, AutoTokenizer
+
+    folder = (models or Path(__file__).resolve().parent.parent / "models") / name
+    try:
+        chosen = json.loads((folder / "thresholds.json").read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        raise FileNotFoundError(f"{folder} holds no trained sensitive-category classifier (no thresholds.json)") from None
+    tok = AutoTokenizer.from_pretrained(folder)
+    model = AutoModelForSequenceClassification.from_pretrained(folder)
+    model.eval()
+
+    def score(text: str) -> list[float]:
+        with torch.no_grad():
+            enc = tok([text], truncation=True, max_length=int(chosen.get("max_len", 128)), return_tensors="pt")
+            return torch.sigmoid(model(**enc).logits.float())[0].tolist()
+    return ClassifierReader(score, chosen["categories"], chosen["thresholds"], sets)

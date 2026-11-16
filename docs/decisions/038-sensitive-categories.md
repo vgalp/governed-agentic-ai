@@ -1,6 +1,6 @@
 # 038: Sensitive categories of health information
 
-Status: Accepted · Date: 2026-11-14 · Steps 1 and 2 of 3 built (detection, and enforcement in the four clinic profiles). Step 3: a local language model can be measured as the text reader; it is not used by the pipeline
+Status: Accepted · Date: 2026-11-14 · Steps 1 and 2 of 3 built (detection, and enforcement in the four clinic profiles). Step 3: a local language model and a trained classifier can be measured as the text reader; neither is used by the pipeline
 
 ## Context
 A hospital that connects an AI assistant to its records has two fears the pipeline does not yet
@@ -83,8 +83,27 @@ categories it tracks. The four clinic profiles do.
   - good on implied wording, few false marks: use it for questions, and train a small classifier
     from its labels for records (the loop of ADR 037);
   - poor: the classifier needs frontier-written data from the start, as the guard did.
-- **Not built:** the classifier, and a frozen test set from someone else's text. No model is turned
-  on for enforcement until it has been scored on that.
+- **Measured (`eval/results/sensitivity_dev_v1_*qwen2.5-7b*`):** alone it caught 18 of 28 implied texts
+  and 38 of 42 explicit ones, and marked 5 of 24 look-alikes; with the lists, 42 of 42, 18 of 28 and 10
+  of 24. Better than the lists on implied wording, not good enough to hide records, and too slow for
+  them. So the classifier gets frontier-written data from the start.
+- **Built: the classifier's data and trainer** (`python -m modelops sensitivity data | train`,
+  `modelops/sensitivity_data.py`, `modelops/sensitivity_train.py`).
+  - **Data.** One model writes short texts for a cell (a category; explicit, implied or look-alike; an
+    angle), another labels them without seeing what they were written for, and only texts where both
+    agree are kept. A text written as implied that the lists already catch is filed as explicit.
+    Anything close to the hand-written development set is dropped.
+  - **Test set.** The two models swap: the reviewer model writes, the frontier model labels. Training
+    text close to it is dropped. No model is tested on its own writing, but all of it is model
+    writing.
+  - **Model.** ModernBERT-base, one yes-or-no output per category, reading the text alone. One
+    threshold per category, chosen on held-back training text under a limit on false marks.
+  - **Measured the same way as the lists and Qwen** (`eval/run_sensitivity.py --classifier`), on the
+    development set and on the run's test set.
+- **Not wired into the pipeline.** Neither reader is used for enforcement.
+- **Not built:** a frozen test set from someone else's text (people's, not a model's). No model is
+  turned on for enforcement until it has been scored on that. Also not built: rounds (new data aimed
+  at what the last model missed), and reading SNOMED CT or RxNorm.
 
 ## First measurement
 The lists alone, on the development set (`eval/results/sensitivity_dev_v1_lists_b4f10f83f0ef.md`):

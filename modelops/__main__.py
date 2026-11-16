@@ -4,6 +4,8 @@
     uv run python -m modelops answer select --run nov26                      # compare the candidate models
     uv run python -m modelops answer run --run nov26                         # rounds on the chosen base
     uv run python -m modelops status --run nov26                             # every round so far
+    uv run python -m modelops sensitivity data --run sens1                   # text for the sensitive-category classifier
+    uv run --group train python -m modelops sensitivity train --run sens1    # train it (ADR 038 step 3)
     uv run python -m modelops promote guard --run nov26                      # sealed checks for the best guard
     uv run python -m modelops promote answer --run nov26                     # sealed checks for the best answer model
 
@@ -146,6 +148,74 @@ def cmd_answer(args, cfg) -> int:
     return 0
 
 
+def sensitivity_model_name(run_id: str) -> str:
+    return f"sensitivity-modernbert-{run_id}"
+
+
+def sensitivity_data(cfg: config.LoopConfig, ledger: Ledger, writer, labeller) -> dict:
+    """Write the run's test set (the reviewer model writes, the frontier model labels), then its training
+    text (the other way round), kept away from the test set and the hand-written development set."""
+    from eval.run_sensitivity import DEV
+    from modelops import sensitivity_data as data
+    from privacy import sensitivity
+    sets, s, out = sensitivity.load(), cfg.sensitivity, ledger.dir / "sensitivity"
+    held = data.held_out_texts(DEV)
+    print("Test set:")
+    test, test_report = data.build(labeller, writer, sets, data.plan(sets, s.test_batches_per_cell, seed=11),
+                                   f"{ledger.run_id}-test", held)
+    print("Training text:")
+    rows, train_report = data.build(writer, labeller, sets, data.plan(sets, s.train_batches_per_cell, seed=7),
+                                    f"{ledger.run_id}-train", held + [r["text"] for r in test])
+    train, dev = data.split(rows, s.dev_share)
+    for name, part in (("test", test), ("train", train), ("dev", dev)):
+        data.write_jsonl(out / f"{name}.jsonl", part)
+    report = {"value_sets_sha256": sets.sha256, "train": {**train_report, "train_rows": len(train), "dev_rows": len(dev)},
+              "test": test_report}
+    (out / "data_report.json").write_text(json.dumps(report, indent=1) + "\n", encoding="utf-8")
+    return report
+
+
+def cmd_sensitivity(args, cfg) -> int:
+    ledger = Ledger(args.run)
+    out, name = ledger.dir / "sensitivity", sensitivity_model_name(args.run)
+    if args.action == "data":
+        frontier = _frontier(cfg, ledger)
+        reviewer = _reviewer(cfg, ledger, frontier)
+        if reviewer is frontier:
+            print("loop.yaml has no reviewer block: one model would write and label everything, and be tested on "
+                  "its own writing. Add a reviewer (a different model) first.")
+            return 2
+        report = sensitivity_data(cfg, ledger, frontier, reviewer)
+        for part in ("train", "test"):
+            r = report[part]
+            print(f"\n{part}: {r['kept']} kept of {r['texts_written']} written "
+                  f"(writer {r['writer']}, blind labels {r['labeller']})\n"
+                  f"  writer and labeller disagreed: {r['writer_and_labeller_disagreed']}\n"
+                  f"  dropped in cleaning: {r['dropped_in_cleaning']}\n"
+                  f"  by kind: {r['by_stratum']}\n  by category: {r['by_category']}")
+        print(f"\nSaved {out.relative_to(ROOT)}/train.jsonl, dev.jsonl, test.jsonl and data_report.json. "
+              f"Read a page of each before training.\nNext: uv run --group train python -m modelops sensitivity "
+              f"train --run {args.run}")
+        return 0
+    if not (out / "train.jsonl").exists():
+        print(f"Run {args.run} has no training text yet: python -m modelops sensitivity data --run {args.run}")
+        return 1
+    from modelops import sensitivity_train
+    from privacy import sensitivity
+    from privacy.sensitivity_model import readable_categories
+    keys = list(readable_categories(sensitivity.load()))
+    sensitivity_train.train(out, sensitivity_train.MODELS / name, keys, cfg.sensitivity.max_false_mark_rate,
+                            cfg.sensitivity.train_args)
+    test = (out / "test.jsonl").relative_to(ROOT)
+    print("\nNow measure it, where it was not trained. Each can be rerun:\n"
+          f"  uv run --group train python -m eval.run_sensitivity --classifier {name} --model-only\n"
+          f"  uv run --group train python -m eval.run_sensitivity --classifier {name}\n"
+          f"  uv run --group train python -m eval.run_sensitivity --classifier {name} --model-only --dataset {test}\n"
+          f"  uv run python -m eval.run_sensitivity --dataset {test}\n"
+          f"  uv run python -m eval.run_sensitivity --model qwen2.5:7b --model-only --dataset {test}")
+    return 0
+
+
 def cmd_status(args, cfg) -> int:
     ledger = Ledger(args.run)
     for model in ("answer-select", "guard", "answer"):
@@ -229,6 +299,10 @@ def main(argv: list[str] | None = None) -> int:
     a.add_argument("--run", default=run_id)
     a.add_argument("--rounds", type=int)
     a.add_argument("--base", help="an Ollama tag from answer.candidates (default: the best from select)")
+    c = sub.add_parser("sensitivity", help="the sensitive-category classifier (ADR 038 step 3)")
+    c.add_argument("action", choices=["data", "train"],
+                   help="data: frontier-written, blind-labelled text and a test set; train: fine-tune on it")
+    c.add_argument("--run", default=run_id)
     s = sub.add_parser("status", help="every round of a run")
     s.add_argument("--run", default=run_id)
     p = sub.add_parser("promote", help="sealed checks for a loop model, after a person's review")
@@ -243,8 +317,8 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     from modelops.frontier import FrontierError
     try:
-        return {"guard": cmd_guard, "answer": cmd_answer, "status": cmd_status,
-                "promote": cmd_promote}[args.command](args, cfg)
+        return {"guard": cmd_guard, "answer": cmd_answer, "status": cmd_status, "promote": cmd_promote,
+                "sensitivity": cmd_sensitivity}[args.command](args, cfg)
     except FrontierError as e:
         hint = {"authentication_error": "the key was refused: check the variable named by api_key_env in loop.yaml",
                 "permission_error": "the key may not use this model or workspace",

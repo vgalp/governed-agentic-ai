@@ -4,6 +4,9 @@
     uv run python -m eval.run_sensitivity --sets my_sets.yaml   # a deployment's own value sets
     uv run python -m eval.run_sensitivity --model qwen2.5:7b    # the lists and a local model (Ollama running)
     uv run python -m eval.run_sensitivity --model qwen2.5:7b --model-only   # the model without the lists
+    uv run --group train python -m eval.run_sensitivity --classifier sensitivity-modernbert-sens1   # a trained classifier
+    uv run --group train python -m eval.run_sensitivity --classifier sensitivity-modernbert-sens1 \
+        --dataset modelops/runs/sens1/sensitivity/test.jsonl      # on the run's test set (other models' writing)
 
 The set (described in eval/datasets/sensitivity_dev_v1_protocol.md) holds synthetic text
 (sensitivity_dev_v1.jsonl) and FHIR resources (sensitivity_dev_v1_resources.json), each with the
@@ -140,26 +143,31 @@ def main() -> None:
     ap.add_argument("--dataset", type=Path, default=DEV)
     ap.add_argument("--no-save", action="store_true", help="print only")
     ap.add_argument("--model", help="a local model served by Ollama, e.g. qwen2.5:7b, read with the lists")
-    ap.add_argument("--model-only", action="store_true", help="with --model: the model without the lists")
+    ap.add_argument("--classifier", help="a trained classifier's folder name in models/, read with the lists")
+    ap.add_argument("--model-only", action="store_true", help="with --model or --classifier: without the lists")
     args = ap.parse_args()
-    if args.model_only and not args.model:
-        ap.error("--model-only needs --model")
+    if args.model and args.classifier:
+        ap.error("give --model or --classifier, not both")
+    if args.model_only and not (args.model or args.classifier):
+        ap.error("--model-only needs --model or --classifier")
     reader, name = None, "lists"
-    if args.model:
+    if args.model or args.classifier:
         from privacy import sensitivity_model
-        reader = sensitivity_model.local_reader(args.model, sensitivity.load(args.sets))
-        tag = re.sub(r"[^A-Za-z0-9.]+", "-", args.model)
+        sets = sensitivity.load(args.sets)
+        reader = (sensitivity_model.local_reader(args.model, sets) if args.model
+                  else sensitivity_model.classifier_reader(args.classifier, sets))
+        tag = re.sub(r"[^A-Za-z0-9.]+", "-", args.model or args.classifier)
         name = tag if args.model_only else f"lists+{tag}"
 
     def progress(done: int, total: int) -> None:
-        if reader is not None and (done % 20 == 0 or done == total):
+        if reader is not None and (done % max(20, total // 10) == 0 or done == total):
             print(f"  {done}/{total} rows", flush=True)
     out = run(args.sets, args.dataset, reader, name, lists=not args.model_only, progress=progress)
     if reader is not None and reader.calls:
-        out["model"] = {"name": args.model, "calls": reader.calls, "unreadable": reader.unreadable,
-                        "median_seconds": round(statistics.median(reader.seconds), 2)}
+        out["model"] = {"name": args.model or args.classifier, "calls": reader.calls, "unreadable": reader.unreadable,
+                        "median_seconds": round(statistics.median(reader.seconds), 3)}
     md = (f"# Sensitive categories: {out['detector']} on {out['dataset']}\n\n"
-          f"Development set, rerunnable. Value sets {out['value_sets_sha256'][:12]}. {out['run_at']}.\n\n"
+          f"{'Development set' if args.dataset == DEV else f'Dataset {args.dataset}'}, rerunnable. Value sets {out['value_sets_sha256'][:12]}. {out['run_at']}.\n\n"
           + table(out["summary"], out["titles"]) + "\n")
     if "model" in out:
         m = out["model"]
@@ -172,7 +180,8 @@ def main() -> None:
         print(f"  {p['id']} ({p['stratum']}): expected {p['expected'] or 'none'}, got {p['got'] or 'none'}")
     if not args.no_save:
         RESULTS.mkdir(parents=True, exist_ok=True)
-        path = RESULTS / f"sensitivity_dev_v1_{out['detector']}_{out['value_sets_sha256'][:12]}.json"
+        stem = "sensitivity_dev_v1" if args.dataset == DEV else f"sensitivity_{args.dataset.parent.parent.name}_{args.dataset.stem}"
+        path = RESULTS / f"{stem}_{out['detector']}_{out['value_sets_sha256'][:12]}.json"
         path.write_text(json.dumps(out, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
         path.with_suffix(".md").write_text(md, encoding="utf-8")
         print(f"\nSaved {path.relative_to(RESULTS.parent.parent)} and the .md table. Commit both.")
