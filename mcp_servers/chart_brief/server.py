@@ -36,7 +36,7 @@ from pathlib import Path
 import yaml
 
 from mcp_servers.common.patients import NotFound, Source
-from mcp_servers.common.serve import serve
+from mcp_servers.common.serve import serve, tool_server
 from profiles.loader import Profile, load_profile
 
 
@@ -543,7 +543,6 @@ def brief(
 
 
 if __name__ == "__main__":
-    from mcp.server.fastmcp import FastMCP
 
     PROFILE = load_profile()
     try:
@@ -561,7 +560,7 @@ if __name__ == "__main__":
                 print(f"Chart brief: {finding}")
         except FhirError as e:
             print(f"Chart brief: the FHIR server is not set up yet ({e})")
-    mcp = FastMCP("chart_brief", host="127.0.0.1", port=8106)
+    mcp = tool_server("chart_brief", 8106)
 
     @mcp.tool()
     def chart_brief(query: str, allowed_classes: list[str], launch_ref: str | None = None) -> dict:

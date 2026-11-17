@@ -1,13 +1,16 @@
 """Call the governed gateway as an outside assistant would, and show what came back (ADR 039).
 
-    export GATEWAY_TOKEN=<the token `python -m ops.dev_identity add` printed>
-    uv run python scripts/gateway_check.py
+    uv run python scripts/gateway_check.py                       # as a clinician, with a saved development token
+    uv run python scripts/gateway_check.py --as front_desk --tool search_records --query "Wilm Smart, born 1990-09-15"
+    export GATEWAY_TOKEN=<a token>                               # or a token of your own, which wins over --as
     uv run python scripts/gateway_check.py --tool search_records --query "Wilm Smart, born 1990-09-15"
     uv run python scripts/gateway_check.py --url https://gateway.example.org/mcp
 
 It connects over MCP with the bearer token, lists the tools this caller's role may use, calls one, and
 prints how many records came back, how many were withheld, and the record IDs. Record text is printed
-only with --show-text. The token is read from the environment, so it is not left in the shell history.
+only with --show-text. With no GATEWAY_TOKEN set, it uses the development identity stand-in's saved token
+for the role given by --as, making that caller on first use (ops/dev_identity.py). A token is never taken
+from the command line, so it is not left in the shell history.
 """
 
 from __future__ import annotations
@@ -17,9 +20,9 @@ import asyncio
 import json
 import os
 import sys
+from pathlib import Path
 
-from mcp import ClientSession
-from mcp.client.streamable_http import streamablehttp_client
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))     # run as a script: find the repository
 
 DEFAULT_URL = "http://127.0.0.1:8110/mcp"
 DEFAULT_QUERY = "What medications is Wilm Smart (born 1990-09-15) taking?"   # an Oracle Health sandbox test patient
@@ -53,25 +56,23 @@ def summary(result: dict, show_text: bool) -> list[str]:
 
 
 async def run(url: str, token: str, tool: str, query: str, show_text: bool) -> int:
-    async with streamablehttp_client(url, headers={"Authorization": f"Bearer {token}"}) as (read, write, _):
-        async with ClientSession(read, write) as session:
-            await session.initialize()
-            tools = [t.name for t in (await session.list_tools()).tools]
-            print(f"tools this caller may use: {', '.join(tools) or 'none'}")
-            if tool not in tools:
-                print(f"{tool} is not one of them: nothing called.")
-                return 1
-            reply = await session.call_tool(tool, {"query": query})
-            text = reply.content[0].text if reply.content and hasattr(reply.content[0], "text") else ""
-            if getattr(reply, "isError", False):
-                print(f"the gateway refused or failed: {text[:300]}")
-                return 1
-            try:
-                result = json.loads(text)
-            except json.JSONDecodeError:
-                print(f"reply: {text[:300]}")                      # a fixed reply (a stopped question) is plain text
-                return 0
-            print("\n".join(summary(result, show_text)) if isinstance(result, dict) else str(result)[:300])
+    from gateway.transport import mcp_session, tool_text  # the one MCP client in this repository
+    async with mcp_session(url, headers={"Authorization": f"Bearer {token}"}) as session:
+        tools = [t.name for t in (await session.list_tools()).tools]
+        print(f"tools this caller may use: {', '.join(tools) or 'none'}")
+        if tool not in tools:
+            print(f"{tool} is not one of them: nothing called.")
+            return 1
+        text, failed = tool_text(await session.call_tool(tool, {"query": query}))
+    if failed:
+        print(f"the gateway refused or failed: {text[:300]}")
+        return 1
+    try:
+        result = json.loads(text)
+    except json.JSONDecodeError:
+        print(f"reply: {text[:300]}")                              # a fixed reply (a stopped question) is plain text
+        return 0
+    print("\n".join(summary(result, show_text)) if isinstance(result, dict) else str(result)[:300])
     return 0
 
 
@@ -81,11 +82,18 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--tool", default="medication_list")
     ap.add_argument("--query", default=DEFAULT_QUERY)
     ap.add_argument("--show-text", action="store_true", help="print record text and the tool's answer")
+    ap.add_argument("--as", dest="role", default="clinician",
+                    help="with no GATEWAY_TOKEN: call as this role, with the development stand-in's saved token")
     args = ap.parse_args(argv)
     token = os.environ.get("GATEWAY_TOKEN")
     if not token:
-        print("Set GATEWAY_TOKEN to the caller's token (python -m ops.dev_identity add ... prints one).")
-        return 2
+        try:
+            from ops.dev_identity import saved_token
+            token = saved_token(args.role)
+        except (ValueError, OSError) as e:
+            print(f"No GATEWAY_TOKEN, and no development token could be made: {e}")
+            return 2
+        print(f"calling as {args.role} (development token)")
     try:
         return asyncio.run(run(args.url, token, args.tool, args.query, args.show_text))
     except Exception as e:  # noqa: BLE001  a connection problem is a message, not a traceback

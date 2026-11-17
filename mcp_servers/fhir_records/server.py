@@ -15,13 +15,11 @@ unchanged. What it reads, and how values become text, comes from the profile's f
 
 import re
 
-from mcp.server.fastmcp import FastMCP
-
 from fhir.capabilities import Capabilities, check_map
 from fhir.client import FhirClient, FhirError, client_from_settings
 from fhir.smart_launch import launch_client
 from fhir.transport import request_budget
-from mcp_servers.common.serve import serve
+from mcp_servers.common.serve import serve, tool_server
 from privacy.sensitivity import resource_tagger
 from profiles.fhir_map import FhirMap, RecordType, human_name, render
 from profiles.loader import load_profile
@@ -209,7 +207,7 @@ if __name__ == "__main__":
         except FhirError as e:
             print(f"FHIR records for profile {PROFILE.name}: not reachable yet ({e}); will retry on each request")
     TAG = resource_tagger(PROFILE.sensitivity)   # None when the profile tracks no sensitive categories
-    mcp = FastMCP("fhir_records", host="127.0.0.1", port=8104)
+    mcp = tool_server("fhir_records", 8104)
 
     @mcp.tool()
     def search_records(query: str, allowed_classes: list[str], launch_ref: str | None = None) -> dict:

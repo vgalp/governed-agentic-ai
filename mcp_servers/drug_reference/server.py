@@ -31,7 +31,7 @@ from pathlib import Path
 
 import yaml
 
-from mcp_servers.common.serve import serve
+from mcp_servers.common.serve import serve, tool_server
 from mcp_servers.medication_review import labels as fda
 from profiles.loader import Profile, load_profile
 
@@ -318,14 +318,13 @@ def reference(query: str, cfg: Config | None, store: dict | None = None) -> dict
 
 
 if __name__ == "__main__":
-    from mcp.server.fastmcp import FastMCP
 
     PROFILE = load_profile()
     try:
         CONFIG = load_config(PROFILE)
     except ValueError as e:
         sys.exit(f"drug reference: {e}")
-    mcp = FastMCP("drug_reference", host="127.0.0.1", port=8107)
+    mcp = tool_server("drug_reference", 8107)
 
     @mcp.tool()
     def drug_reference(query: str) -> dict:

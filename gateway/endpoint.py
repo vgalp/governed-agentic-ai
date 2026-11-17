@@ -57,12 +57,11 @@ from dataclasses import dataclass, field
 import anyio
 import requests
 from mcp import types
-from mcp.client.session import ClientSession
 from mcp.server.lowlevel import Server
 from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
 
 from gateway import gateway
-from gateway.transport import open_mcp
+from gateway.transport import mcp_session
 from guardrails.check import check_text
 from ops.ratelimit import RateLimiter
 from profiles.loader import Profile, load_profile
@@ -178,13 +177,11 @@ async def upstream_catalogue(profile: Profile) -> dict[str, types.Tool]:
     wanted = set(profile.agents[profile.outside.agent])
     found: dict[str, types.Tool] = {}
     for server in sorted({profile.tools[t].server for t in wanted}):
-        async with open_mcp(server) as (read, write, _):
-            async with ClientSession(read, write) as session:
-                await session.initialize()
-                for t in (await session.list_tools()).tools:
-                    if t.name in wanted and profile.tools[t.name].server == server:
-                        found[t.name] = types.Tool(name=t.name, description=profile.tools[t.name].description
-                                                   or t.description, inputSchema=strip_hidden(t.inputSchema))
+        async with mcp_session(server) as session:
+            for t in (await session.list_tools()).tools:
+                if t.name in wanted and profile.tools[t.name].server == server:
+                    found[t.name] = types.Tool(name=t.name, description=profile.tools[t.name].description
+                                               or t.description, input_schema=strip_hidden(t.input_schema))
     missing = wanted - set(found)
     if missing:
         raise SystemExit(f"Tool server(s) do not offer: {', '.join(sorted(missing))}")
@@ -585,28 +582,25 @@ def build_app(profile: Profile, introspector: Introspector, catalogue: dict[str,
     from starlette.responses import JSONResponse
     from starlette.routing import Route
 
-    server = Server("governed-endpoint")
-
-    def caller() -> Identity:
-        request = server.request_context.request
-        who = introspector.identify(bearer(request.headers)) if request is not None else None
+    def caller(ctx) -> Identity:
+        """Who sent this MCP request, from its own bearer token: every request stands alone."""
+        who = introspector.identify(bearer(ctx.request.headers)) if ctx.request is not None else None
         if who is None:
             raise Unauthorized("unknown or revoked token")
         return who
 
-    @server.list_tools()
-    async def list_tools() -> list[types.Tool]:
-        who = caller()
-        return [catalogue[t] for t in allowed_tools(profile, who.role) if t in catalogue]
+    async def list_tools(ctx, _params) -> types.ListToolsResult:
+        who = await anyio.to_thread.run_sync(caller, ctx)
+        return types.ListToolsResult(tools=[catalogue[t] for t in allowed_tools(profile, who.role) if t in catalogue])
 
-    @server.call_tool()
-    async def call_tool(name: str, arguments: dict) -> list[types.TextContent]:
-        who = caller()
-        request = server.request_context.request
-        chat_id = request.headers.get("x-request-id") if request is not None else None
-        result = await anyio.to_thread.run_sync(endpoint.handle, who, name, arguments, chat_id)
-        return [types.TextContent(type="text", text=json.dumps(result, ensure_ascii=False, default=str))]
+    async def call_tool(ctx, params) -> types.CallToolResult:
+        who = await anyio.to_thread.run_sync(caller, ctx)
+        chat_id = ctx.request.headers.get("x-request-id") if ctx.request is not None else None
+        result = await anyio.to_thread.run_sync(endpoint.handle, who, params.name, params.arguments or {}, chat_id)
+        return types.CallToolResult(
+            content=[types.TextContent(type="text", text=json.dumps(result, ensure_ascii=False, default=str))])
 
+    server = Server("governed-endpoint", on_list_tools=list_tools, on_call_tool=call_tool)
     manager = StreamableHTTPSessionManager(app=server, stateless=True)
 
     class GovernedMCP:

@@ -27,6 +27,7 @@ import asyncio
 import hashlib
 import html
 import ipaddress
+import itertools
 import re
 import socket
 import sys
@@ -37,7 +38,7 @@ from html.parser import HTMLParser
 import requests
 import yaml
 
-from mcp_servers.common.serve import serve
+from mcp_servers.common.serve import serve, tool_server
 from profiles.loader import Profile, load_profile
 
 UA = "governed-agentic-ai/web-research (+https://github.com/vgalp/governed-agentic-ai)"
@@ -356,26 +357,26 @@ def research(query: str, settings: dict | None, session=None, progress=None) -> 
 
 
 if __name__ == "__main__":
-    from mcp.server.fastmcp import Context, FastMCP
+    from mcp.server.mcpserver import Context
 
     PROFILE = load_profile()
     try:
         SETTINGS = load_settings(PROFILE)
     except ValueError as e:
         sys.exit(f"web research: {e}")
-    mcp = FastMCP("web_research", host="127.0.0.1", port=8105)
+    mcp = tool_server("web_research", 8105)
 
     @mcp.tool()
     async def web_research(query: str, ctx: Context) -> dict:
         """Search the web for the question and return a few pages from allowed sites, as dated
         snapshots with IDs to cite. Retrieval only: no model, no opinion. Reports each step
-        (search sent, results, pages read or skipped) as MCP log messages, so the caller can
+        (search sent, results, pages read or skipped) as MCP progress messages, so the caller can
         show the work as it happens."""
-        loop = asyncio.get_running_loop()
+        loop, steps = asyncio.get_running_loop(), itertools.count(1)
 
         def progress(message: str) -> None:  # called from the worker thread
             try:
-                asyncio.run_coroutine_threadsafe(ctx.info(message), loop).result(timeout=5)
+                asyncio.run_coroutine_threadsafe(ctx.report_progress(next(steps), None, message), loop).result(timeout=5)
             except Exception:  # noqa: BLE001  a lost progress message must not fail the search
                 pass
 

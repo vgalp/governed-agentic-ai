@@ -1,6 +1,6 @@
 # 001: Pin the MCP Python SDK below version 2
 
-Status: Accepted · Date: 2026-10-01
+Status: Accepted · Date: 2026-10-01 · Superseded by ADR 041 (2026-11-16): the project now uses version 2
 
 ## Context
 Version 2 of the MCP Python SDK renamed `FastMCP` to `MCPServer`, which broke the knowledge

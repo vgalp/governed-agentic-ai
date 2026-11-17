@@ -10,6 +10,12 @@ a local file.
     python -m ops.dev_identity serve                                        # http://127.0.0.1:8120/introspect
     python -m ops.dev_identity serve --port 8121                            # if 8120 is taken (match outside.yaml auth.url)
     python -m ops.dev_identity remove --name "My assistant"
+    python -m ops.dev_identity token --role front_desk                      # a saved token for that role, made if needed
+
+Saved tokens, so a developer does not copy one by hand each time: `token --role R` keeps one caller per
+role ("dev-R") and its token in gateway_dev_tokens.json beside the clients file, readable by its owner
+only. scripts/gateway_check.py --as R and the load test use it. This is the one place a token is
+stored, and only for this stand-in: a real identity system issues its own.
 
 What keeps it from being mistaken for the real thing:
 - it listens on 127.0.0.1 only, and has no option to listen anywhere else;
@@ -34,6 +40,7 @@ from pathlib import Path
 HOST, PORT = "127.0.0.1", 8120
 SECRET_ENV = "GATEWAY_INTROSPECT_SECRET"
 DEFAULT_FILE = Path.home() / ".config" / "governed-agentic-ai" / "gateway_dev_clients.json"
+TOKENS_FILE = DEFAULT_FILE.with_name("gateway_dev_tokens.json")
 LOCATIONS = ("local", "external")
 MAX_BODY = 8192
 
@@ -74,6 +81,31 @@ def add_client(path: Path, name: str, role: str, location: str = "local", make_t
     clients[digest(token)] = {"client_id": f"dev-{secrets.token_hex(4)}", "name": name, "role": role,
                               "location": location}
     write_clients(path, clients)
+    return token
+
+
+def in_production() -> bool:
+    return (os.environ.get("GOVERNED_ENV") or "").strip().lower() == "production"
+
+
+def saved_token(role: str, name: str | None = None, clients_file: Path = DEFAULT_FILE,
+                tokens_file: Path | None = None) -> str:
+    """The saved development token for a caller named `name` (default "dev-<role>") with this role, made and
+    saved on first use. If the saved one is no longer a known client, or has another role, it is replaced.
+    Never in production."""
+    if in_production():
+        raise ValueError("GOVERNED_ENV=production: development tokens are not made or read")
+    name = name or f"dev-{role}"
+    tokens_file = tokens_file or clients_file.with_name(TOKENS_FILE.name)
+    saved = read_clients(tokens_file) if tokens_file.exists() else {}
+    entry, clients = saved.get(name), read_clients(clients_file)
+    known = clients.get(digest(entry["token"])) if entry else None
+    if known and known.get("role") == role and known.get("name") == name:
+        return entry["token"]
+    if any(c.get("name") == name for c in clients.values()):
+        remove_client(clients_file, name)                 # an old client under this name, with a lost or changed token
+    token = add_client(clients_file, name, role)
+    write_clients(tokens_file, {**saved, name: {"token": token, "role": role}})
     return token
 
 
@@ -147,6 +179,9 @@ def main(argv: list[str] | None = None) -> int:
     r = sub.add_parser("remove", help="remove a client by name")
     r.add_argument("--name", required=True)
     sub.add_parser("list", help="clients and roles (never tokens)")
+    t = sub.add_parser("token", help="print the saved token for a role, making the caller if needed")
+    t.add_argument("--role", required=True)
+    t.add_argument("--name", help="the caller's name (default dev-<role>)")
     s = sub.add_parser("serve", help=f"answer token checks on {HOST}")
     s.add_argument("--port", type=int, default=PORT, help=f"default {PORT}; must match outside.yaml auth.url")
     args = ap.parse_args(argv)
@@ -159,6 +194,8 @@ def main(argv: list[str] | None = None) -> int:
             print(f"Client {args.name!r} added with role {args.role} ({args.location}). Its token, shown once:\n{token}")
         elif args.command == "remove":
             print(f"Removed {remove_client(args.file, args.name)} client(s).")
+        elif args.command == "token":
+            print(saved_token(args.role, args.name, args.file))
         elif args.command == "list":
             for c in read_clients(args.file).values():
                 print(f"{c.get('name')} | role {c.get('role')} | {c.get('location')} | {c.get('client_id')}")

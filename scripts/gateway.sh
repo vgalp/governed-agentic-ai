@@ -142,10 +142,9 @@ status() {
 ready() {
   say "Ready.  Gateway: http://127.0.0.1:8110/mcp   Audit files: $AUDIT_DIR"
   if [ "$IDENTITY" = "dev" ]; then
-    echo "  Callers are checked by the DEVELOPMENT identity stand-in. Add one, then try it:"
-    echo "    $PY -m ops.dev_identity add --role clinician --name \"My assistant\""
-    echo "    export GATEWAY_TOKEN=<the token it printed>"
-    echo "    $PY scripts/gateway_check.py"
+    echo "  Callers are checked by the DEVELOPMENT identity stand-in. Try it (a caller is made for you):"
+    echo "    $PY scripts/gateway_check.py                       # as a clinician"
+    echo "    $PY scripts/gateway_check.py --as front_desk --tool search_records --query \"Wilm Smart, born 1990-09-15\""
   fi
 }
 

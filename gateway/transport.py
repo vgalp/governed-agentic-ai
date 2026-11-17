@@ -7,12 +7,14 @@ servers over https:// with its client certificate, checking theirs against the l
 tool servers (another platform's, such as Meridale's data tools) are called as configured.
 """
 
+import contextlib
 import os
 import ssl
 from pathlib import Path
 from urllib.parse import urlparse, urlunparse
 
-from mcp.client.streamable_http import streamablehttp_client
+from mcp import ClientSession
+from mcp.client.streamable_http import httpx2, streamable_http_client
 
 OWN_PORTS = set(range(8100, 8108))   # the tool servers in mcp_servers/ (scripts/dev.sh SERVICES)
 LOOPBACK = {"127.0.0.1", "localhost", "::1"}
@@ -46,20 +48,25 @@ def client_context(directory: Path) -> ssl.SSLContext:
     return ctx
 
 
-def open_mcp(url: str, **kw):
-    """streamablehttp_client for a tool server, over mutual TLS when it is on for that server."""
-    d = mtls_dir()
-    target = tool_url(url)
-    if d is None or target == url:
-        return streamablehttp_client(url, **kw)
-    import httpx
-    ctx = client_context(d)
+@contextlib.asynccontextmanager
+async def mcp_session(url: str, *, connect_timeout: float = 30.0, read_timeout: float = 300.0,
+                      headers: dict[str, str] | None = None):
+    """An MCP session with a server, ready to use: the one place the MCP library's client is named.
 
-    def factory(headers=None, timeout=None, auth=None):
-        args = {"verify": ctx, "timeout": timeout or httpx.Timeout(30.0, read=300.0)}
-        if headers is not None:
-            args["headers"] = headers
-        if auth is not None:
-            args["auth"] = auth
-        return httpx.AsyncClient(**args)
-    return streamablehttp_client(target, httpx_client_factory=factory, **kw)
+    Over mutual TLS when it is on for that server. `headers` go on every request (a caller's bearer token).
+    Each request stands alone, so no session is ended on close."""
+    d, target = mtls_dir(), tool_url(url)
+    verify = client_context(d) if d is not None and target != url else True
+    async with httpx2.AsyncClient(headers=headers, verify=verify,
+                                  timeout=httpx2.Timeout(connect_timeout, read=read_timeout)) as http:
+        async with streamable_http_client(target, http_client=http, terminate_on_close=False) as (read, write):
+            async with ClientSession(read, write, read_timeout_seconds=read_timeout) as session:
+                await session.initialize()
+                yield session
+
+
+def tool_text(result) -> tuple[str, bool]:
+    """(the text of a tool's answer, whether the server reported an error)."""
+    content = getattr(result, "content", None) or []
+    text = content[0].text if content and hasattr(content[0], "text") else ""
+    return text, bool(getattr(result, "is_error", False))

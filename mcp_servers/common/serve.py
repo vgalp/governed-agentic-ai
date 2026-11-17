@@ -11,6 +11,10 @@ import os
 import ssl
 from pathlib import Path
 
+from mcp.server import MCPServer
+
+log = logging.getLogger("tool_server")
+
 
 def tls_files() -> dict | None:
     """The CA, certificate and key for the server, or None when mTLS is off."""
@@ -39,19 +43,31 @@ def add_metrics_route(mcp) -> None:
         return PlainTextResponse(METRICS.prometheus_text(), media_type="text/plain; version=0.0.4")
 
 
-def serve(mcp) -> None:
-    """Run a FastMCP server over streamable HTTP, with mutual TLS when it is configured."""
+def tool_server(name: str, port: int, host: str = "127.0.0.1") -> MCPServer:
+    """A tool server and where it listens. The one place the MCP library's server class is named, so a
+    change of library version is a change here."""
+    mcp = MCPServer(name)
+    mcp.listen = (host, port)
+    return mcp
+
+
+def serve(mcp: MCPServer) -> None:
+    """Run a tool server over streamable HTTP, with mutual TLS when it is configured.
+
+    Stateless: every request stands alone (no session to keep or to lose), so any copy of the server can
+    answer any request, as the current MCP specification expects."""
     logging.basicConfig(level=os.environ.get("GAAI_LOG_LEVEL", "INFO"),
                         format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+    import uvicorn
     add_metrics_route(mcp)
+    host, port = mcp.listen
+    app = mcp.streamable_http_app(stateless_http=True, host=host)
     files = tls_files()
     if files is None:
-        mcp.run(transport="streamable-http")
+        log.info("%s: listening on http://%s:%s/mcp", mcp.name, host, port)
+        uvicorn.run(app, host=host, port=port, log_level="warning")
         return
-    import uvicorn
-    print(f"{mcp.name}: mutual TLS on https://{mcp.settings.host}:{mcp.settings.port} "
-          "(only the gateway's certificate is accepted)", flush=True)
-    uvicorn.run(mcp.streamable_http_app(), host=mcp.settings.host, port=mcp.settings.port,
-                log_level=mcp.settings.log_level.lower(),
+    log.info("%s: mutual TLS on https://%s:%s/mcp (only the gateway's certificate is accepted)", mcp.name, host, port)
+    uvicorn.run(app, host=host, port=port, log_level="warning",
                 ssl_certfile=str(files["cert"]), ssl_keyfile=str(files["key"]),
                 ssl_ca_certs=str(files["ca"]), ssl_cert_reqs=ssl.CERT_REQUIRED)

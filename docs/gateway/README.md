@@ -38,9 +38,13 @@ gateway at `http://127.0.0.1:8110/mcp`. It makes two local secrets in `.env` if 
 Add a caller and call the gateway as an assistant would:
 
 ```bash
+.venv/bin/python scripts/gateway_check.py              # as a clinician; a development caller is made and saved for you
+```
+
+For your own assistant, make a caller and use its token (`export GATEWAY_TOKEN=...` wins over the saved one):
+
+```bash
 .venv/bin/python -m ops.dev_identity add --role clinician --name "My assistant"
-export GATEWAY_TOKEN=<the token it printed>
-.venv/bin/python scripts/gateway_check.py
 ```
 
 The check lists the tools this caller may use, asks for a sandbox test patient's medications, and
@@ -49,10 +53,8 @@ prints the record IDs and counts. `--show-text` prints the records.
 Then see the rules work:
 
 ```bash
-.venv/bin/python -m ops.dev_identity add --role front_desk --name "Front desk app"
-export GATEWAY_TOKEN=<its token>
-.venv/bin/python scripts/gateway_check.py                        # medication_list is not one of its tools
-.venv/bin/python scripts/gateway_check.py --tool search_records --query "Wilm Smart, born 1990-09-15"
+.venv/bin/python scripts/gateway_check.py --as front_desk        # medication_list is not one of its tools
+.venv/bin/python scripts/gateway_check.py --as front_desk --tool search_records --query "Wilm Smart, born 1990-09-15"
 ```
 
 The front desk may look up a record and gets patient details and visit dates only. Records in a

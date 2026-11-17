@@ -25,13 +25,10 @@ call without a tenant, and any returned record for another tenant, or with none,
 import asyncio
 import json
 from collections import Counter
-from datetime import timedelta
-
-from mcp import ClientSession
 
 from audit.chain import get_audit_chain
 from gateway.opa import decide
-from gateway.transport import open_mcp
+from gateway.transport import mcp_session, tool_text
 from guardrails.injection import check_result
 from privacy.tokens import scrub_for_audit
 from profiles.loader import Profile, load_profile
@@ -132,7 +129,7 @@ DEFAULT_TOOL_TIMEOUT = 30.0   # seconds; a tool may set its own in tools.yaml (t
 
 async def _call(server_url: str, tool: str, args: dict, on_progress=None,
                 timeout: float | None = None) -> dict:
-    """on_progress(message): a tool's MCP log messages, as it works (web research reports each
+    """on_progress(message): a tool's MCP progress messages, as it works (web research reports each
     page read); the planner shows them in the trace. Text only, never results.
 
     timeout bounds the whole call: a tool server that accepts the connection and then hangs
@@ -145,26 +142,23 @@ async def _call(server_url: str, tool: str, args: dict, on_progress=None,
 
 
 async def _call_once(server_url: str, tool: str, args: dict, on_progress, limit: float) -> dict:
-    async def logged(params) -> None:
-        if on_progress is not None and params.level in ("info", "notice", "warning"):
-            on_progress(str(params.data)[:300])
-    async with open_mcp(server_url, timeout=min(limit, 30.0), sse_read_timeout=limit) as (read, write, _):
-        async with ClientSession(read, write, read_timeout_seconds=timedelta(seconds=limit),
-                                 logging_callback=logged if on_progress else None) as session:
-            await session.initialize()
-            result = await session.call_tool(tool, args)
-            text = result.content[0].text if result.content and hasattr(result.content[0], "text") else ""
-            if getattr(result, "isError", False):              # the server raised: its message, not JSON
-                raise ToolFailed(f"{tool}: {text[:300] or 'error with no message'}")
-            if getattr(result, "structuredContent", None):
-                return result.structuredContent
-            try:
-                parsed = json.loads(text)
-            except json.JSONDecodeError:
-                raise ToolFailed(f"{tool} returned something that is not a result: {text[:300]!r}") from None
-            if not isinstance(parsed, dict):
-                raise ToolFailed(f"{tool} returned {type(parsed).__name__}, not a result")
-            return parsed
+    async def progressed(_progress: float, _total: float | None, message: str | None) -> None:
+        if message:
+            on_progress(str(message)[:300])
+    async with mcp_session(server_url, connect_timeout=min(limit, 30.0), read_timeout=limit) as session:
+        result = await session.call_tool(tool, args, progress_callback=progressed if on_progress else None)
+    text, failed = tool_text(result)
+    if failed:                                                 # the server raised: its message, not JSON
+        raise ToolFailed(f"{tool}: {text[:300] or 'error with no message'}")
+    if getattr(result, "structured_content", None):
+        return result.structured_content
+    try:
+        parsed = json.loads(text)
+    except json.JSONDecodeError:
+        raise ToolFailed(f"{tool} returned something that is not a result: {text[:300]!r}") from None
+    if not isinstance(parsed, dict):
+        raise ToolFailed(f"{tool} returned {type(parsed).__name__}, not a result")
+    return parsed
 
 
 def call_tool(agent: str, tool: str, args: dict, request_id: str,

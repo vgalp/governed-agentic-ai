@@ -27,10 +27,9 @@ from datetime import date
 from pathlib import Path
 
 import yaml
-from mcp.server.fastmcp import FastMCP
 
 from mcp_servers.common.patients import NotFound, Patient, Source
-from mcp_servers.common.serve import serve
+from mcp_servers.common.serve import serve, tool_server
 from privacy.sensitivity import resource_tagger
 from profiles.loader import Profile, load_profile
 
@@ -349,7 +348,7 @@ if __name__ == "__main__":
             CLIENT = client_from_settings(PROFILE.fhir_map.server)
         except FhirError as e:
             print(f"Medication review: the FHIR server is not set up yet ({e})")
-    mcp = FastMCP("medication_review", host="127.0.0.1", port=8103)
+    mcp = tool_server("medication_review", 8103)
 
     def _budget():
         """One time budget for all the FHIR requests of a tool call (ADR 036)."""

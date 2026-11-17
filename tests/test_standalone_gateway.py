@@ -121,7 +121,18 @@ def test_the_check_client_prints_ids_and_counts_and_text_only_when_asked(monkeyp
     assert "records returned: 2" in plain and "records withheld for this role (protected categories): 1" in plain
     assert "med-2: Current medication [mental_health]" in plain and "Ann Lee" not in plain
     assert "Ann Lee: sertraline" in "\n".join(check.summary(result, show_text=True))
-    assert check.main([]) == 2                                              # no token in the environment: says so
+    from ops import dev_identity
+
+    def no_token(role):
+        raise ValueError("no stand-in here")
+    monkeypatch.setattr(dev_identity, "saved_token", no_token)                 # never touch a developer's real files
+    assert check.main([]) == 2                                              # no token, and none can be made: says so
+    used = []
+    monkeypatch.setattr(dev_identity, "saved_token", lambda role: used.append(role) or "saved-token")
+    monkeypatch.setattr(check, "run", lambda url, token, tool, query, show: used.append(token) or _done())
+    assert check.main(["--as", "front_desk"]) == 0 and used == ["front_desk", "saved-token"]
+    monkeypatch.setenv("GATEWAY_TOKEN", "mine")                                # a token of your own wins over --as
+    assert check.main(["--as", "front_desk"]) == 0 and used[-1] == "mine" and len(used) == 3
     # a refusal, a stopped request and an unknown shape are said as what they are, never as "0 records"
     refused = check.summary({"error": "tool_failed", "message": "The tool could not run (ConnectError)."}, False)
     assert refused == ["the gateway answered: tool_failed: The tool could not run (ConnectError)."]
@@ -145,3 +156,51 @@ def test_the_stand_in_and_the_profiles_agree_on_a_port_no_other_service_here_use
     assert dev_identity.main(["--file", str(tmp_path / "c.json"), "serve", "--port", "8121"]) == 1
     said = capsys.readouterr().out
     assert "cannot listen on 127.0.0.1:8121" in said and "outside.yaml auth.url" in said
+
+
+async def _done() -> int:
+    return 0
+
+
+# ---- saved development tokens: no copying a token by hand
+
+def test_a_saved_token_is_made_once_reused_and_known_to_the_stand_in(tmp_path):
+    from ops import dev_identity as di
+    clients = tmp_path / "clients.json"
+    first = di.saved_token("clinician", clients_file=clients)
+    assert di.saved_token("clinician", clients_file=clients) == first              # reused, not made again
+    assert len(di.read_clients(clients)) == 1
+    status, body = di.answer(di.read_clients(clients), "s3cret", "s3cret", ('{"token": "%s"}' % first).encode())
+    assert status == 200 and body["active"] and body["role"] == "clinician" and body["name"] == "dev-clinician"
+    desk = di.saved_token("front_desk", clients_file=clients)
+    assert desk != first and {c["role"] for c in di.read_clients(clients).values()} == {"clinician", "front_desk"}
+    tokens = clients.with_name(di.TOKENS_FILE.name)
+    assert oct(tokens.stat().st_mode)[-3:] == "600"                                # readable by its owner only
+    assert first not in clients.read_text()                                        # the clients file still holds hashes only
+
+
+def test_a_saved_token_is_replaced_when_its_caller_is_gone_or_its_role_changed(tmp_path):
+    from ops import dev_identity as di
+    clients = tmp_path / "clients.json"
+    first = di.saved_token("clinician", clients_file=clients)
+    di.remove_client(clients, "dev-clinician")
+    second = di.saved_token("clinician", clients_file=clients)
+    assert second != first and len(di.read_clients(clients)) == 1
+    third = di.saved_token("nurse", name="dev-clinician", clients_file=clients)    # same name, another role
+    assert third != second and [c["role"] for c in di.read_clients(clients).values()] == ["nurse"]
+
+
+def test_saved_tokens_are_refused_in_production(tmp_path, monkeypatch, capsys):
+    from ops import dev_identity as di
+    monkeypatch.setenv("GOVERNED_ENV", "production")
+    with pytest.raises(ValueError, match="production"):
+        di.saved_token("clinician", clients_file=tmp_path / "c.json")
+    assert di.main(["--file", str(tmp_path / "c.json"), "token", "--role", "clinician"]) == 2
+    assert not (tmp_path / "c.json").exists()
+
+
+def test_the_token_command_prints_only_the_token(tmp_path, capsys):
+    from ops import dev_identity as di
+    assert di.main(["--file", str(tmp_path / "c.json"), "token", "--role", "clinician"]) == 0
+    out = capsys.readouterr().out.strip()
+    assert "\n" not in out and di.digest(out) in di.read_clients(tmp_path / "c.json")

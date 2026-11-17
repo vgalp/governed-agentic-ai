@@ -4,15 +4,13 @@
 import json
 import re
 
-from mcp.server.fastmcp import FastMCP
-
-from mcp_servers.common.serve import serve
+from mcp_servers.common.serve import serve, tool_server
 from profiles.loader import load_profile
 
 PROFILE = load_profile()
 ENTRIES = json.loads(PROFILE.knowledge_base.read_text(encoding="utf-8"))
 
-mcp = FastMCP("knowledge-base", host="127.0.0.1", port=8100)
+mcp = tool_server("knowledge-base", 8100)
 
 STOP_WORDS = {
     "a", "an", "and", "are", "as", "at", "be", "but", "by", "can", "do", "for",

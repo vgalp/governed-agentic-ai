@@ -23,15 +23,13 @@ import sqlite3
 import sys
 from pathlib import Path
 
-from mcp.server.fastmcp import FastMCP
-
-from mcp_servers.common.serve import serve
+from mcp_servers.common.serve import serve, tool_server
 from profiles.loader import load_profile
 from profiles.records_map import RecordsMap, RecordType, render_template
 
 PROFILE = load_profile()
 
-mcp = FastMCP("records", host="127.0.0.1", port=8101)
+mcp = tool_server("records", 8101)
 
 
 def _q(name: str) -> str:

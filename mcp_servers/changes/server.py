@@ -21,15 +21,13 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-from mcp.server.fastmcp import FastMCP
-
-from mcp_servers.common.serve import serve
+from mcp_servers.common.serve import serve, tool_server
 from profiles.loader import Action, Profile, load_profile
 from profiles.records_map import render
 
 PROFILE = load_profile()
 
-mcp = FastMCP("changes", host="127.0.0.1", port=8102)
+mcp = tool_server("changes", 8102)
 
 ACTION_LOG = """
 CREATE TABLE IF NOT EXISTS action_log (
