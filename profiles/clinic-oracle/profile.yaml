@@ -90,7 +90,6 @@ knowledge_base: data/knowledge_base.json
 # set for development, to be replaced by the compliance team's own (value_sets: <file in this folder>).
 sensitivity:
   categories: [substance_use, mental_health, hiv, sexual_health, reproductive_health, violence, genetic, protected]
-  text_model: sensitivity-modernbert-sens1-r2
   # never_external: every category above, unless listed here
 
 agents:

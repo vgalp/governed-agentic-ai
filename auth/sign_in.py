@@ -144,7 +144,7 @@ class OidcVerifier:
         return claims
 
 
-def _groups(claims: dict, claim: str) -> tuple[str, ...]:
+def groups_in(claims: dict, claim: str) -> tuple[str, ...]:
     """The person's groups: a list of names (Keycloak may send full paths, "/nurses")."""
     value = claims
     for part in claim.split("."):                  # e.g. "realm_access.roles"
@@ -219,7 +219,7 @@ class SignIn:
         user = claims.get(self.user_claim) or claims.get("sub")
         if not isinstance(user, str) or not user.strip():
             raise SignInRequired(f"the token has no {self.user_claim}")
-        groups = _groups(claims, self.groups_claim)
+        groups = groups_in(claims, self.groups_claim)
         name = claims.get("name") if isinstance(claims.get("name"), str) else user
         return Caller(user.strip()[:200], name[:200], role_for(groups, self.roles), groups)
 

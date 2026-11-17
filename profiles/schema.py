@@ -100,10 +100,21 @@ class OutsideListen(Strict):
 
 
 class OutsideAuth(Strict):
-    kind: str
-    url: str
-    secret_env: str  # the NAME of the environment variable
+    """Who a caller is. `introspection`: ask the organization's token check (url, secret_env).
+    `jwt`: verify a signed access token from the organization's identity provider (issuer, audience,
+    roles), as the MCP specification's OAuth 2.1 sign-in issues them."""
+    kind: Literal["introspection", "jwt"]
+    url: str | None = None            # introspection
+    secret_env: str | None = None     # introspection: the NAME of the environment variable
     cache_seconds: int = Field(default=30, ge=0, le=300)
+    issuer: str | None = None         # jwt: the identity provider (https)
+    audience: str | None = None       # jwt: who the token must be issued for (this gateway)
+    roles: dict[str, str] = {}        # jwt: group -> role; the first group a caller holds wins
+    groups_claim: str = "groups"      # jwt: where the token lists groups
+    agent_claim: str = "azp"          # jwt: the software calling (the OAuth client)
+    person_claim: str = "sub"         # jwt: the person it acts for
+    tenant_claim: str = "tenant"      # jwt: the tenant, when the profile has tenants
+    location: Literal["local", "external"] = "local"   # jwt: where callers signed in this way run
 
 
 class OutsideRateLimit(Strict):

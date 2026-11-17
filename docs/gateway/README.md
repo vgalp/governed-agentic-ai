@@ -140,11 +140,26 @@ Built since the first trial, and tested only with stand-ins so far:
 - **Observe mode for a sensitive-category model** (`text_model_mode: observe`, the default). The audit
   records what the model would have marked and withheld; nothing is withheld on its word.
 
+- **Signed tokens.** `auth.kind: jwt` in outside.yaml verifies access tokens from your identity provider
+  (signature, issuer, audience, expiry), with no call per request. This is the sign-in the MCP specification
+  uses, and it works with providers that have no token check, such as Microsoft Entra ID:
+
+  ```yaml
+  auth:
+    kind: jwt
+    issuer: https://login.example.org/realms/hospital
+    audience: governed-gateway
+    roles: {clinicians: clinician, nurses: nurse, front-desk: front_desk}   # the first group a caller holds wins
+    # groups_claim: groups · agent_claim: azp · person_claim: sub · tenant_claim: tenant · location: local
+  ```
+- **Two identities in the audit.** Every event names the software that called (`client`) and, when the
+  identity system says, the person it acted for (`on_behalf_of`).
+- **A classifier for a trial, without editing a profile.** `GOVERNED_TEXT_MODEL=<folder in models/>` turns a
+  trained sensitive-category classifier on (in observe mode unless `GOVERNED_TEXT_MODEL_MODE=enforce`).
+
 Not built, or not done:
 
 - **A container image for the gateway alone.** The repository's image is for the full pipeline.
-- **Signed tokens (JWT).** Callers are identified by a token check only. Microsoft Entra ID does not
-  offer one, so it needs an adapter or JWT validation in the gateway.
 - **More than one gateway process.** The file audit trail is one writer per folder.
 - **Your own value sets** for the sensitive categories. The lists in `privacy/sensitivity.yaml` are a
   development set and recognise named and coded information, not wording that only implies it.

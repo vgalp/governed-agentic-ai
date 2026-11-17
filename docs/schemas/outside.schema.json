@@ -2,7 +2,25 @@
   "$defs": {
     "OutsideAuth": {
       "additionalProperties": false,
+      "description": "Who a caller is. `introspection`: ask the organization's token check (url, secret_env).\n`jwt`: verify a signed access token from the organization's identity provider (issuer, audience,\nroles), as the MCP specification's OAuth 2.1 sign-in issues them.",
       "properties": {
+        "agent_claim": {
+          "default": "azp",
+          "title": "Agent Claim",
+          "type": "string"
+        },
+        "audience": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Audience"
+        },
         "cache_seconds": {
           "default": 30,
           "maximum": 300,
@@ -10,23 +28,85 @@
           "title": "Cache Seconds",
           "type": "integer"
         },
+        "groups_claim": {
+          "default": "groups",
+          "title": "Groups Claim",
+          "type": "string"
+        },
+        "issuer": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Issuer"
+        },
         "kind": {
+          "enum": [
+            "introspection",
+            "jwt"
+          ],
           "title": "Kind",
           "type": "string"
         },
+        "location": {
+          "default": "local",
+          "enum": [
+            "local",
+            "external"
+          ],
+          "title": "Location",
+          "type": "string"
+        },
+        "person_claim": {
+          "default": "sub",
+          "title": "Person Claim",
+          "type": "string"
+        },
+        "roles": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "default": {},
+          "title": "Roles",
+          "type": "object"
+        },
         "secret_env": {
-          "title": "Secret Env",
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Secret Env"
+        },
+        "tenant_claim": {
+          "default": "tenant",
+          "title": "Tenant Claim",
           "type": "string"
         },
         "url": {
-          "title": "Url",
-          "type": "string"
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Url"
         }
       },
       "required": [
-        "kind",
-        "url",
-        "secret_env"
+        "kind"
       ],
       "title": "OutsideAuth",
       "type": "object"

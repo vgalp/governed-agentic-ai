@@ -46,6 +46,7 @@ import asyncio
 import contextlib
 import hashlib
 import json
+import logging
 import os
 import re
 import threading
@@ -60,6 +61,7 @@ from mcp import types
 from mcp.server.lowlevel import Server
 from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
 
+from auth.sign_in import OidcVerifier, SignInRequired, groups_in, role_for
 from gateway import gateway
 from gateway.transport import mcp_session
 from guardrails.check import check_text
@@ -74,6 +76,9 @@ MAX_ROWS_TO_MODEL = 40                              # rows of one tool result gi
 DATA_MARK = "\n\n=== DATA FROM THE TOOLS ===\n"
 
 
+log = logging.getLogger("governed_endpoint")
+
+
 @dataclass(frozen=True)
 class Identity:
     client_id: str
@@ -85,6 +90,9 @@ class Identity:
     # use the tools at all, and the pipeline may route answers to an outside model. Off unless the
     # organization's own system says true.
     external_model_allowed: bool = False
+    # The person the software acts for, when the identity system says so. client_id is the software
+    # (the agent); this is who asked. Both go in every audit event: a shared credential must not hide a person.
+    on_behalf_of: str | None = None
 
 
 class Unauthorized(Exception):
@@ -141,7 +149,52 @@ class Introspector:
                         str(d["tenant_id"]) if d.get("tenant_id") else None,
                         str(d["role"]) if d.get("role") else None,
                         location if location in ("local", "external") else "external",
-                        d.get("external_model_allowed") is True)
+                        d.get("external_model_allowed") is True,
+                        str(d["on_behalf_of"])[:200] if d.get("on_behalf_of") else None)
+
+
+class TokenVerifier:
+    """Callers identified by a signed access token from the organization's identity provider (OAuth 2.1 and
+    OpenID Connect, as the MCP specification's sign-in issues them): verified here, with no call per request.
+
+    The same checks as the chat application's sign-in (auth/sign_in.py): signature against the provider's
+    published keys, issuer, audience, expiry. The role comes from the token's groups through the profile's
+    map, never from the caller. Fails closed: a token that cannot be verified is no caller."""
+
+    def __init__(self, settings, verifier=None):
+        self.settings = settings
+        self.verifier = verifier or OidcVerifier(settings.issuer, settings.audience)
+        self._roles = dict(settings.roles)
+
+    def identify(self, token: str | None) -> Identity | None:
+        if not token:
+            return None
+        s = self.settings
+        try:
+            claims = self.verifier.verify(token)
+        except SignInRequired as e:
+            log.info("token refused: %s", e)                  # the reason, never the token
+            return None
+        agent = claims.get(s.agent_claim) or claims.get("client_id")
+        if not isinstance(agent, str) or not agent.strip():
+            log.info("token refused: it names no client (%s)", s.agent_claim)
+            return None
+        person = claims.get(s.person_claim)
+        person = person.strip()[:200] if isinstance(person, str) and person.strip() and person != agent else None
+        tenant = claims.get(s.tenant_claim)
+        name = claims.get("name") if isinstance(claims.get("name"), str) else (person or agent)
+        return Identity(agent.strip()[:200], name[:200], str(tenant) if tenant else None,
+                        role_for(groups_in(claims, s.groups_claim), self._roles), s.location, False, person)
+
+
+def identifier_for(settings, env):
+    """The caller check the profile chose (outside.yaml auth.kind)."""
+    if settings.auth_kind == "jwt":
+        return TokenVerifier(settings)
+    secret = env.get(settings.secret_env)
+    if not secret:
+        raise SystemExit(f"Set {settings.secret_env} (the shared secret for the token check).")
+    return Introspector(settings.introspect_url, secret, settings.cache_seconds)
 
 
 def bearer(headers) -> str | None:
@@ -309,7 +362,7 @@ class Endpoint:
     def _event(self, who: Identity, request_id: str, **fields) -> dict:
         return {"request_id": request_id, "profile": self.profile.name, "agent": self.profile.outside.agent,
                 "client": who.client_id, "tenant": who.tenant, "role": who.role, "location": who.location,
-                **fields}
+                **({"on_behalf_of": who.on_behalf_of} if who.on_behalf_of else {}), **fields}
 
     def check_message(self, who: Identity, text: str, request_id: str | None = None) -> dict:
         """A question a person typed, checked before any model sees it. With a chat request ID,
@@ -415,7 +468,8 @@ class Endpoint:
             return {"error": "tool_failed", "message": "The request could not be checked, so it was not run."}
         try:
             result = self._call(p.outside.agent, tool, args, request_id, p, audit_args=audit_args,
-                                role=who.role, tenant=who.tenant, client=who.client_id)
+                                role=who.role, tenant=who.tenant, client=who.client_id,
+                                **({"on_behalf_of": who.on_behalf_of} if who.on_behalf_of else {}))
         except gateway.ToolCallDenied:
             return {"error": "not_allowed", "message": f"Tool '{tool}' is not available to you."}
         except Exception as e:  # noqa: BLE001 - the caller gets a plain error, never a stack trace
@@ -694,20 +748,20 @@ def serving_settings(introspect_url: str, env) -> dict:
 
 def main() -> None:
     import uvicorn
+    logging.basicConfig(level=os.environ.get("GAAI_LOG_LEVEL", "INFO"),
+                        format="%(asctime)s %(levelname)s %(name)s: %(message)s")
     profile = load_profile()
     if profile.outside is None:
         raise SystemExit(f"Profile '{profile.name}' has no outside.yaml: nothing to serve.")
     o = profile.outside
-    secret = os.environ.get(o.secret_env)
-    if not secret:
-        raise SystemExit(f"Set {o.secret_env} (the shared secret for the token check).")
-    tls = serving_settings(o.introspect_url, os.environ)
+    identifier = identifier_for(o, os.environ)
+    tls = serving_settings(o.identity_url, os.environ)
     catalogue = asyncio.run(upstream_catalogue(profile))
     endpoint = Endpoint(profile)
     endpoint.warm_up()
-    app = build_app(profile, Introspector(o.introspect_url, secret, o.cache_seconds), catalogue, endpoint)
-    print(f"Governed MCP endpoint for profile {profile.name}: {'https' if tls else 'http'}://{o.host}:{o.port}/mcp "
-          f"({len(catalogue)} tools, callers checked at {o.introspect_url})")
+    app = build_app(profile, identifier, catalogue, endpoint)
+    log.info("governed MCP endpoint for profile %s: %s://%s:%s/mcp (%d tools, callers checked by %s at %s)",
+             profile.name, "https" if tls else "http", o.host, o.port, len(catalogue), o.auth_kind, o.identity_url)
     uvicorn.run(app, host=o.host, port=o.port, log_level="warning", **tls)
 
 

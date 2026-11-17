@@ -138,6 +138,20 @@ class OutsideConfig:
     mask_results: str                # external: mask results for clients marked external · always · never
     rate_per_minute: int = 120       # calls one caller may make a minute, after a burst
     rate_burst: int = 30
+    # auth_kind "jwt": signed tokens from the identity provider, verified here (no token check to call)
+    issuer: str = ""
+    audience: str = ""
+    roles: tuple[tuple[str, str], ...] = ()     # (group, role) in the administrator's order
+    groups_claim: str = "groups"
+    agent_claim: str = "azp"
+    person_claim: str = "sub"
+    tenant_claim: str = "tenant"
+    location: str = "local"
+
+    @property
+    def identity_url(self) -> str:
+        """Where callers are checked: the token check, or the identity provider."""
+        return self.issuer if self.auth_kind == "jwt" else self.introspect_url
 
 @dataclass(frozen=True)
 class Action:
@@ -564,8 +578,24 @@ def _tools(raw: dict, where: str, patterns: dict[str, re.Pattern] | None = None,
 
 NEVER_KEPT = {"PERSON", "PHONE_NUMBER", "EMAIL_ADDRESS", "US_SSN", "CREDIT_CARD", "IP_ADDRESS",
               "US_PASSPORT", "US_DRIVER_LICENSE", "IBAN_CODE", "MEDICAL_LICENSE", "US_BANK_NUMBER"}
-OUTSIDE_AUTH_KINDS = {"introspection"}
+OUTSIDE_AUTH_KINDS = {"introspection", "jwt"}
 MASK_RESULTS = {"external", "always", "never"}
+
+
+def _signed_tokens(auth: dict, where: str) -> dict:
+    """auth.kind jwt: the identity provider, who tokens are for, and which group gives which role."""
+    issuer, audience = str(_require(auth, "issuer", where)), str(_require(auth, "audience", where))
+    if not re.match(r"^https?://\S+$", issuer):
+        raise ProfileError(f"{where}.issuer must be the identity provider's https:// address")
+    roles = auth.get("roles")
+    if not isinstance(roles, dict) or not roles or not all(isinstance(k, str) and isinstance(v, str) for k, v in roles.items()):
+        raise ProfileError(f"{where}.roles must map at least one of the provider's groups to a role")
+    location = auth.get("location", "local")
+    if location not in ("local", "external"):
+        raise ProfileError(f"{where}.location must be local or external")
+    claims = {k: str(auth.get(k, d)) for k, d in (("groups_claim", "groups"), ("agent_claim", "azp"),
+                                                   ("person_claim", "sub"), ("tenant_claim", "tenant"))}
+    return {"issuer": issuer.rstrip("/"), "audience": audience, "roles": tuple(roles.items()), "location": location, **claims}
 
 
 def _outside(raw: dict, tools: dict[str, Tool], agents: dict[str, tuple[str, ...]], where: str) -> OutsideConfig:
@@ -588,13 +618,18 @@ def _outside(raw: dict, tools: dict[str, Tool], agents: dict[str, tuple[str, ...
     kind = auth.get("kind")
     if kind not in OUTSIDE_AUTH_KINDS:
         raise ProfileError(f"{where}: auth.kind must be one of {sorted(OUTSIDE_AUTH_KINDS)}")
-    url = str(_require(auth, "url", f"{where}: auth"))
-    if not re.match(r"^https?://\S+$", url):
-        raise ProfileError(f"{where}: auth.url must be an http:// or https:// URL")
-    secret_env = str(_require(auth, "secret_env", f"{where}: auth"))
-    if not re.match(r"^[A-Z][A-Z0-9_]*$", secret_env):
-        raise ProfileError(f"{where}: auth.secret_env is the NAME of an environment variable "
-                           "(the secret itself never goes in a profile)")
+    signed = {}
+    if kind == "jwt":
+        url = secret_env = ""
+        signed = _signed_tokens(auth, f"{where}: auth")
+    else:
+        url = str(_require(auth, "url", f"{where}: auth"))
+        if not re.match(r"^https?://\S+$", url):
+            raise ProfileError(f"{where}: auth.url must be an http:// or https:// URL")
+        secret_env = str(_require(auth, "secret_env", f"{where}: auth"))
+        if not re.match(r"^[A-Z][A-Z0-9_]*$", secret_env):
+            raise ProfileError(f"{where}: auth.secret_env is the NAME of an environment variable "
+                               "(the secret itself never goes in a profile)")
     cache = auth.get("cache_seconds", 30)
     if not isinstance(cache, int) or not 0 <= cache <= 300:
         raise ProfileError(f"{where}: auth.cache_seconds must be 0 to 300")
@@ -605,7 +640,7 @@ def _outside(raw: dict, tools: dict[str, Tool], agents: dict[str, tuple[str, ...
     per_minute, burst = limit.get("per_minute", 120), limit.get("burst", 30)
     if not (isinstance(per_minute, int) and isinstance(burst, int) and 1 <= per_minute <= 6000 and 1 <= burst <= 1000):
         raise ProfileError(f"{where}: rate_limit needs per_minute (1 to 6000) and burst (1 to 1000)")
-    return OutsideConfig(agent, host, port, kind, url, secret_env, cache, mask_results, per_minute, burst)
+    return OutsideConfig(agent, host, port, kind, url, secret_env, cache, mask_results, per_minute, burst, **signed)
 
 
 def _check_grants(tools: dict[str, Tool], agents: dict[str, tuple[str, ...]], where: str) -> None:
@@ -712,8 +747,34 @@ def _sensitivity(raw: dict | None, path: Path, roles: dict[str, Role], responses
     if missing:
         raise ProfileError(f"{path.name}/responses.yaml: no response for {', '.join(missing)} "
                            "(needed because the profile has roles and tracks sensitive categories)")
-    return sensitive.Settings(categories, never, value_sets, raw.get("text_model"),
-                              raw.get("text_model_mode") or sensitive.OBSERVE)
+    model, mode = _text_model_choice(raw, os.environ, where)
+    return sensitive.Settings(categories, never, value_sets, model, mode)
+
+
+TEXT_MODEL_ENV, TEXT_MODEL_MODE_ENV = "GOVERNED_TEXT_MODEL", "GOVERNED_TEXT_MODEL_MODE"
+
+
+def _text_model_choice(raw: dict, env, where: str) -> tuple[str | None, str]:
+    """The sensitive-category text model and its mode: the profile's, unless the environment names one.
+
+    GOVERNED_TEXT_MODEL=<folder in models/> turns a trained classifier on for a trial without editing a
+    committed profile ("none" turns the profile's off); GOVERNED_TEXT_MODEL_MODE=observe|enforce sets
+    what it may do. A profile that tracks no categories is not affected: there is nothing to read for."""
+    model, mode = raw.get("text_model"), raw.get("text_model_mode") or sensitive.OBSERVE
+    named = (env.get(TEXT_MODEL_ENV) or "").strip()
+    if named:
+        if named.lower() == "none":
+            model = None
+        elif not re.match(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,80}$", named):
+            raise ProfileError(f"{where}: {TEXT_MODEL_ENV} must be a folder name in models/, not {named!r}")
+        else:
+            model = named
+    wanted = (env.get(TEXT_MODEL_MODE_ENV) or "").strip().lower()
+    if wanted:
+        if wanted not in (sensitive.OBSERVE, sensitive.ENFORCE):
+            raise ProfileError(f"{where}: {TEXT_MODEL_MODE_ENV} must be observe or enforce, not {wanted!r}")
+        mode = wanted
+    return model, mode
 
 
 def _actions(raw: dict, where: str, patterns: dict[str, re.Pattern], agents: dict[str, tuple[str, ...]],
@@ -965,6 +1026,9 @@ def load_profile_from(path: Path) -> Profile:
         outside = _outside(_shaped(_yaml(_file(path, p["outside"], where)), f"{path.name}/{p['outside']}",
                                    lambda raw, w: schema.validate(schema.Outside, raw, w)), tools, agents,
                            f"{path.name}/{p['outside']}")
+        unknown = sorted({role for _, role in outside.roles if role not in roles})
+        if unknown:
+            raise ProfileError(f"{path.name}/{p['outside']}: auth.roles names {', '.join(unknown)}, not in roles.yaml")
     scoped = [t.name for t in tools.values() if t.tenant_scoped and t.name in granted]
     if scoped and outside is None:
         raise ProfileError(f"{where}: {', '.join(scoped)} hold one tenant's data; only the outside "
