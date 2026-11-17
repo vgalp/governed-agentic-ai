@@ -31,6 +31,51 @@ jobs:
       - name: Run tests
         run: uv run pytest -v
 
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Lint (the rules in pyproject.toml)
+        run: uv run ruff check .
+
+  dependencies:
+    # Known vulnerabilities in the locked dependencies. A finding fails the build: fix it, or record
+    # why it does not apply with --ignore-vuln <id> and a comment here.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Export the locked dependencies
+        run: uv export --frozen --no-dev --no-emit-project --format requirements-txt -o requirements.audit.txt
+
+      - name: Audit them
+        run: uvx pip-audit --requirement requirements.audit.txt --require-hashes --disable-pip
+
+  secrets:
+    # Keys and tokens committed by mistake, in this change and in history.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Scan for secrets
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   opa:
     runs-on: ubuntu-latest
     steps:

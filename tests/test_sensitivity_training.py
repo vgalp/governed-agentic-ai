@@ -438,6 +438,15 @@ def test_result_names_for_each_kind_of_dataset():
 
 # ---- a profile that turns the text model on
 
+def clinic_profile():
+    """clinic-oracle with no text model named, whatever a developer has put in their local profile.yaml."""
+    from dataclasses import replace
+
+    from profiles.loader import load_profile
+    profile = load_profile("clinic-oracle")
+    return replace(profile, sensitivity=replace(profile.sensitivity, text_model=None, text_model_mode="observe"))
+
+
 def fake_reader(marks: dict[str, list[str]]):
     """A classifier that marks a text containing a key with that key's categories; counts its passes."""
     def score_many(texts):
@@ -468,7 +477,7 @@ def test_a_reader_without_many_is_asked_text_by_text():
 def test_settings_use_the_named_model_except_for_record_tools(monkeypatch):
     loaded = []
     monkeypatch.setattr(sensitivity, "_text_model", lambda name, sets: loaded.append(name) or fake_reader({"vodka": ["substance_use"]}))
-    settings = sensitivity.Settings(("substance_use",), ("substance_use",), None, "sensitivity-modernbert-x")
+    settings = sensitivity.Settings(("substance_use",), ("substance_use",), None, "sensitivity-modernbert-x", "enforce")
     assert settings.tracked(settings.detector().of_text("a fifth of vodka most nights")) == ("substance_use",)
     assert settings.detector(text_model=False).model is None and loaded == ["sensitivity-modernbert-x"]
     tagger = sensitivity.resource_tagger(settings)
@@ -480,7 +489,7 @@ def test_settings_use_the_named_model_except_for_record_tools(monkeypatch):
 def test_a_named_model_that_cannot_load_stops_instead_of_reading_with_lists_alone(tmp_path, monkeypatch):
     monkeypatch.setattr(sensitivity, "MODELS", tmp_path)
     sensitivity._text_model.cache_clear()
-    settings = sensitivity.Settings(("hiv",), ("hiv",), None, "not-there")
+    settings = sensitivity.Settings(("hiv",), ("hiv",), None, "not-there", "enforce")
     with pytest.raises(sensitivity.TextModelError, match="not-there"):
         settings.detector()
     sensitivity._text_model.cache_clear()
@@ -501,9 +510,9 @@ def test_gateway_marks_implied_records_with_the_model_and_names_it_in_the_audit(
     from dataclasses import replace
 
     from gateway import gateway
-    from profiles.loader import load_profile
-    profile = load_profile("clinic-oracle")
-    with_model = replace(profile, sensitivity=replace(profile.sensitivity, text_model="sensitivity-modernbert-x"))
+    profile = clinic_profile()
+    with_model = replace(profile, sensitivity=replace(profile.sensitivity, text_model="sensitivity-modernbert-x",
+                                                      text_model_mode="enforce"))
     monkeypatch.setattr(sensitivity, "_text_model", lambda name, sets: fake_reader({"vodka": ["substance_use"]}))
     records = [{"title": "Social history", "text": "Finishes a fifth of vodka most nights."},
                {"title": "Immunization", "text": "Influenza vaccine given."}]
@@ -608,3 +617,179 @@ def test_train_command_adds_the_human_text_and_tags_the_model(tmp_path, monkeypa
     assert [f.name for f in called["args"][0]] == ["train.jsonl", cli.HUMAN_TRAIN]
     assert [f.name for f in called["args"][1]] == ["dev.jsonl", cli.HUMAN_DEV]
     assert called["args"][2].name == "sensitivity-modernbert-t1-r2" and cli.HUMAN_TEST in capsys.readouterr().out
+
+
+# ---- observe mode: the model is recorded, not obeyed
+
+def test_a_named_model_only_observes_unless_the_profile_says_enforce(monkeypatch):
+    from dataclasses import replace
+
+    from gateway import gateway
+    from profiles.schema import Sensitivity
+    assert Sensitivity(categories=["hiv"], text_model="m").text_model_mode == "observe"
+    monkeypatch.setattr(sensitivity, "_text_model", lambda name, sets: fake_reader({"vodka": ["substance_use"]}))
+    profile = clinic_profile()
+    watching = replace(profile, sensitivity=replace(profile.sensitivity, text_model="sensitivity-modernbert-x"))
+    assert watching.sensitivity.observing and watching.sensitivity.detector().model is None
+    records = [{"title": "Social history", "text": "Finishes a fifth of vodka most nights."},
+               {"title": "Medication", "text": "methadone 40 mg daily"},
+               {"title": "Immunization", "text": "Influenza vaccine given."}]
+    tagged, _ = gateway.tag_sensitive(records, watching)
+    assert [r["sensitivity"] for r in tagged] == [[], ["substance_use"], []]      # the lists alone decide
+    seen, lost = gateway.observe_sensitive(tagged, watching, allowed=[])
+    assert seen == {"substance_use": 1} and lost == 1         # one more record would be marked, and lost to this role
+    assert gateway.observe_sensitive(tagged, watching, allowed=["substance_use"]) == ({"substance_use": 1}, 0)
+    assert gateway.observe_sensitive(tagged, watching, allowed=None)[1] == 0
+    assert not profile.sensitivity.observing                  # no model named: nothing to observe
+
+
+# ---- the audit never holds a date or a long number
+
+def test_audit_scrub_removes_dates_and_long_numbers_and_keeps_the_rest():
+    from privacy.tokens import scrub_for_audit
+    args = {"query": "[PERSON_1], born 1990-09-15, MRN 00482913, seen 9/15/2024 and on March 3rd, 2025; call 555-201-7788",
+            "allowed_classes": ["visit_dates"], "limit": 5, "nested": [{"note": "15 Sep 1990, 2 tablets, room 12, in 2024"}]}
+    out = scrub_for_audit(args)
+    assert out["query"] == "[PERSON_1], born [DATE], MRN [NUMBER], seen [DATE] and on [DATE]; call [NUMBER]"
+    assert out["nested"] == [{"note": "[DATE], 2 tablets, room 12, in 2024"}]
+    assert out["allowed_classes"] == ["visit_dates"] and out["limit"] == 5
+    assert args["query"].startswith("[PERSON_1], born 1990")                   # the caller's copy is untouched
+
+
+def test_tool_call_audit_is_scrubbed(monkeypatch):
+    from gateway import gateway
+    from profiles.loader import load_profile
+    written = []
+    monkeypatch.setattr(gateway, "_audit", written.append)
+    monkeypatch.setattr(gateway, "decide", lambda *a, **k: False)
+    profile = load_profile("clinic-oracle")
+    with pytest.raises(gateway.ToolCallDenied):
+        gateway.call_tool("outside", "search_records", {"query": "Wilm Smart, born 1990-09-15"}, "r1", profile,
+                          audit_args={"query": "[PERSON_1], born 1990-09-15"}, role="front_desk")
+    assert written and written[0]["args"]["query"] == "[PERSON_1], born [DATE]"
+
+
+# ---- production refuses development conveniences
+
+def test_production_refuses_demo_sign_in_the_stand_in_and_a_plain_gateway(capsys):
+    from auth import sign_in
+    from gateway import endpoint
+    prod = {"GOVERNED_ENV": "production"}
+    assert sign_in.in_production(prod) and not sign_in.in_production({}) and not sign_in.in_production({"GOVERNED_ENV": "dev"})
+    with pytest.raises(sign_in.SignInError, match="demo sign-in"):
+        sign_in.SignIn({"mode": "demo"}, env=prod)
+    with pytest.raises(sign_in.SignInError, match="demo sign-in"):
+        sign_in.SignIn(None, env={**prod, "GOVERNED_SIGN_IN": "demo"})
+    assert sign_in.SignIn({"mode": "demo"}, env={}).mode == "demo"
+    idp = "https://login.example.org/introspect"
+    with pytest.raises(SystemExit, match="GATEWAY_TLS_CERT"):
+        endpoint.serving_settings(idp, prod)
+    with pytest.raises(SystemExit, match="identity system"):
+        endpoint.serving_settings("http://127.0.0.1:8120/introspect", {**prod, "GATEWAY_TLS_AT_PROXY": "1"})
+    with pytest.raises(SystemExit, match="identity system"):
+        endpoint.serving_settings("https://localhost/introspect", {**prod, "GATEWAY_TLS_AT_PROXY": "1"})
+    assert endpoint.serving_settings(idp, {**prod, "GATEWAY_TLS_AT_PROXY": "1"}) == {}
+    assert endpoint.serving_settings(idp, {**prod, "GATEWAY_TLS_CERT": "c.pem", "GATEWAY_TLS_KEY": "k.pem"}) == {
+        "ssl_certfile": "c.pem", "ssl_keyfile": "k.pem"}
+    with pytest.raises(SystemExit, match="both"):
+        endpoint.serving_settings(idp, {"GATEWAY_TLS_CERT": "c.pem"})
+    assert endpoint.serving_settings("http://127.0.0.1:8120/introspect", {}) == {}       # development is unchanged
+
+
+def test_the_identity_stand_in_does_not_run_in_production(monkeypatch, capsys, tmp_path):
+    from ops import dev_identity
+    monkeypatch.setenv("GOVERNED_ENV", "production")
+    assert dev_identity.main(["--file", str(tmp_path / "c.json"), "list"]) == 2
+    assert "does not run" in capsys.readouterr().out
+
+
+# ---- the gateway: a limit per caller, and nothing left to load on the first request
+
+def gateway_endpoint(clock, **kw):
+    from gateway.endpoint import Endpoint
+    audits = []
+    e = Endpoint(clinic_profile(), audit=lambda topic, event: audits.append(event), clock=clock, **kw)
+    return e, audits
+
+
+def caller(client="dev-1"):
+    import inspect
+
+    from gateway.endpoint import Identity
+    fields = inspect.signature(Identity).parameters
+    values = {"client_id": client, "name": "Assistant", "tenant": "clinic", "role": "clinician", "location": "local",
+              "external_model_allowed": False}
+    return Identity(**{k: v for k, v in values.items() if k in fields})
+
+
+def test_a_caller_over_its_limit_is_refused_and_audited_and_others_are_not():
+    now = [0.0]
+    e, audits = gateway_endpoint(lambda: now[0])
+    burst = e.profile.outside.rate_burst
+    for _ in range(burst):
+        assert e._too_fast(caller(), "search_records") is None
+    refused = e._too_fast(caller(), "search_records")
+    assert refused["error"] == "rate_limited" and refused["retry_after_seconds"] >= 1
+    assert audits[-1]["decision"] == "deny" and audits[-1]["reason"] == "rate limit" and audits[-1]["client"] == "dev-1"
+    assert e._too_fast(caller("dev-2"), "search_records") is None            # another caller is unaffected
+    assert e.handle(caller(), "search_records", {"query": "x"})["error"] == "rate_limited"     # before anything runs
+    now[0] += 60
+    assert e._too_fast(caller(), "search_records") is None                   # a minute later it may call again
+
+
+def test_outside_rate_limit_is_bounded():
+    from pydantic import ValidationError
+
+    from profiles.schema import OutsideRateLimit
+    assert OutsideRateLimit().per_minute == 120
+    for bad in ({"per_minute": 0}, {"burst": 0}, {"per_minute": 10**6}):
+        with pytest.raises(ValidationError):
+            OutsideRateLimit(**bad)
+
+
+def test_warm_up_loads_masking_the_guard_and_the_text_model_before_the_first_caller(monkeypatch):
+    loaded = []
+    monkeypatch.setattr(sensitivity, "_text_model", lambda name, sets: loaded.append("model") or fake_reader({}))
+    e, _ = gateway_endpoint(lambda: 0.0, mask=lambda t: loaded.append("mask") or t,
+                            check=lambda text, profile: loaded.append("guard") or ("allow", None, None))
+    e.warm_up()
+    assert loaded == ["mask", "guard"]                                       # no text model named: none loaded
+    from dataclasses import replace
+    e.profile = replace(e.profile, sensitivity=replace(e.profile.sensitivity, text_model="m"))
+    e.warm_up()
+    assert loaded[-1] == "model"
+
+    def broken(text, profile):
+        raise RuntimeError("guard missing")
+    e, _ = gateway_endpoint(lambda: 0.0, mask=lambda t: t, check=broken)
+    with pytest.raises(RuntimeError):                                        # a part that cannot load stops the start
+        e.warm_up()
+
+
+# ---- the masking evaluation's arithmetic (the analyzer itself is not loaded here)
+
+def test_masking_score_separates_the_model_view_from_the_audit_view():
+    from eval import run_masking
+    rows = [{"id": "a", "text": "Ana Ruiz, born 1990-09-15, MRN 00482913, takes apixaban.",
+             "identifiers": [{"type": "PERSON", "value": "Ana Ruiz"}, {"type": "DATE_OF_BIRTH", "value": "1990-09-15"},
+                             {"type": "RECORD_NUMBER", "value": "00482913"}], "keep": ["apixaban"]},
+            {"id": "b", "text": "Call Li Wei about metformin.", "identifiers": [{"type": "PERSON", "value": "Li Wei"}],
+             "keep": ["metformin"]}]
+    names_only = lambda t: t.replace("Ana Ruiz", "[PERSON_1]").replace("metformin", "[PERSON_2]")      # noqa: E731
+    r = run_masking.score(rows, names_only)
+    assert r["identifiers"] == {"PERSON": 2, "DATE_OF_BIRTH": 1, "RECORD_NUMBER": 1}
+    assert r["left_in_model_view"] == {"PERSON": 1, "DATE_OF_BIRTH": 1, "RECORD_NUMBER": 1}
+    assert r["left_in_audit_view"] == {"PERSON": 1}                           # the scrub takes the date and the number
+    assert r["audit_misses"] == [{"id": "b", "type": "PERSON"}]
+    assert r["medication_names_kept"] == 1 and r["medication_names_masked"] == 1
+    assert "Names | 2 | 1 | 1" in run_masking.table(r)
+
+
+def test_masking_dataset_is_well_formed_and_the_scrub_alone_clears_its_dates_and_numbers():
+    from eval import run_masking
+    rows = json.loads(run_masking.DATASET.read_text())
+    assert len(rows) == 150 and all(i["value"] in r["text"] or i["type"] == "RECORD_NUMBER" for r in rows for i in r["identifiers"])
+    r = run_masking.score(rows, lambda t: t)                                  # no masking at all: only the scrub
+    for kind in ("DATE_OF_BIRTH", "RECORD_NUMBER", "PHONE_NUMBER", "US_SSN"):
+        assert r["left_in_audit_view"].get(kind, 0) == 0, kind
+    assert r["left_in_audit_view"]["PERSON"] == r["identifiers"]["PERSON"]    # names are the masker's job

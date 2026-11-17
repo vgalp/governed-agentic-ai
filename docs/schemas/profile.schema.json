@@ -593,6 +593,15 @@
           "default": null,
           "title": "Text Model"
         },
+        "text_model_mode": {
+          "default": "observe",
+          "enum": [
+            "observe",
+            "enforce"
+          ],
+          "title": "Text Model Mode",
+          "type": "string"
+        },
         "value_sets": {
           "anyOf": [
             {

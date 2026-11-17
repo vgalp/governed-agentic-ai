@@ -1,0 +1,34 @@
+{
+ "profile": "clinic-oracle",
+ "dataset": "masking_dev_v1.json",
+ "rows": 150,
+ "identifiers": {
+  "PERSON": 150,
+  "DATE_OF_BIRTH": 75,
+  "RECORD_NUMBER": 45,
+  "PHONE_NUMBER": 30,
+  "EMAIL_ADDRESS": 30,
+  "LOCATION": 15,
+  "US_SSN": 15
+ },
+ "left_in_model_view": {
+  "PERSON": 1,
+  "DATE_OF_BIRTH": 72,
+  "RECORD_NUMBER": 32,
+  "PHONE_NUMBER": 7,
+  "EMAIL_ADDRESS": 0,
+  "LOCATION": 0,
+  "US_SSN": 0
+ },
+ "left_in_audit_view": {
+  "PERSON": 1
+ },
+ "medication_names_kept": 75,
+ "medication_names_masked": 0,
+ "audit_misses": [
+  {
+   "id": "mk1-004",
+   "type": "PERSON"
+  }
+ ]
+}

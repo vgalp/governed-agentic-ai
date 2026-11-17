@@ -53,6 +53,7 @@ CATEGORY_KEYS = {"title", "description", "hl7_labels", "confidentiality", "icd10
 MAX_TEXT = 20_000                                # characters of one text read; records are far shorter
 
 TextModel = Callable[[str], Mapping[str, float]]  # text -> probability per category
+OBSERVE, ENFORCE = "observe", "enforce"
 MODELS = Path(__file__).resolve().parent.parent / "models"    # where a trained text model's folder is
 
 
@@ -172,15 +173,28 @@ class Settings:
     never_external: tuple[str, ...]
     value_sets: Path | None = None
     text_model: str | None = None          # a trained classifier's folder in models/, read with the lists
+    # observe: the model's reading is recorded in the audit and changes nothing. enforce: it marks records
+    # and questions as the lists do. Observe is the default: a model earns enforcement with evidence.
+    text_model_mode: str = OBSERVE
+
+    @property
+    def observing(self) -> bool:
+        return bool(self.text_model) and self.text_model_mode == OBSERVE
 
     def detector(self, model: TextModel | None = None, text_model: bool = True) -> Detector:
-        """The detector for this office. With `text_model` (the default) and a model named in the profile,
-        text is read by the lists and that model; `text_model=False` gives the lists alone, for a caller
-        whose text is read again later (a record tool, before the gateway)."""
+        """The detector whose findings are acted on. With a model named in the profile AND in enforce mode,
+        text is read by the lists and that model; otherwise by the lists alone. `text_model=False` gives
+        the lists alone whatever the mode, for a caller whose text is read again later (a record tool,
+        before the gateway)."""
         sets_path = self.value_sets or DEFAULT
-        if model is None and text_model and self.text_model:
+        if model is None and text_model and self.text_model and self.text_model_mode == ENFORCE:
             model = _text_model(self.text_model, str(sets_path))
         return Detector(load(sets_path), model=model)
+
+    def observer(self) -> Detector:
+        """The named model alone, for recording what it would have found (observe mode)."""
+        sets_path = self.value_sets or DEFAULT
+        return Detector(load(sets_path), model=_text_model(self.text_model, str(sets_path)), lists=False)
 
     def tracked(self, found: Iterable[Finding]) -> tuple[str, ...]:
         """The categories found that this office tracks, sorted."""

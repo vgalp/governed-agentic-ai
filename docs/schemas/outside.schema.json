@@ -49,6 +49,28 @@
       },
       "title": "OutsideListen",
       "type": "object"
+    },
+    "OutsideRateLimit": {
+      "additionalProperties": false,
+      "description": "Tool calls and checks one caller (client) may make: `burst` at once, then `per_minute` a minute.",
+      "properties": {
+        "burst": {
+          "default": 30,
+          "maximum": 1000,
+          "minimum": 1,
+          "title": "Burst",
+          "type": "integer"
+        },
+        "per_minute": {
+          "default": 120,
+          "maximum": 6000,
+          "minimum": 1,
+          "title": "Per Minute",
+          "type": "integer"
+        }
+      },
+      "title": "OutsideRateLimit",
+      "type": "object"
     }
   },
   "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -77,6 +99,13 @@
       ],
       "title": "Mask Results",
       "type": "string"
+    },
+    "rate_limit": {
+      "$ref": "#/$defs/OutsideRateLimit",
+      "default": {
+        "burst": 30,
+        "per_minute": 120
+      }
     }
   },
   "required": [

@@ -33,6 +33,7 @@ from audit.chain import get_audit_chain
 from gateway.opa import decide
 from gateway.transport import open_mcp
 from guardrails.injection import check_result
+from privacy.tokens import scrub_for_audit
 from profiles.loader import Profile, load_profile
 
 
@@ -96,6 +97,20 @@ def tag_sensitive(results: list[dict], profile: Profile) -> tuple[list[dict], Co
         tagged.append({**r, "sensitivity": found})
         counts.update(found)
     return tagged, counts
+
+
+def observe_sensitive(tagged: list[dict], profile: Profile, allowed: list[str] | None) -> tuple[Counter, int]:
+    """For a text model in observe mode: by category, how many records the model would mark that are not
+    marked already, and how many records a role with `allowed` categories would lose because of it
+    (None: no roles, so none). The records themselves are not changed."""
+    settings = profile.sensitivity
+    seen, lost = Counter(), 0
+    for r, findings in zip(tagged, settings.observer().of_records(tagged)):
+        extra = [c for c in settings.tracked(findings) if c not in r.get("sensitivity", [])]
+        seen.update(extra)
+        already = any(c not in allowed for c in r.get("sensitivity", [])) if allowed is not None else False
+        lost += bool(allowed is not None and not already and any(c not in allowed for c in extra))
+    return seen, lost
 
 
 def filter_sensitive(results: list[dict], allowed: list[str]) -> tuple[list[dict], Counter]:
@@ -171,7 +186,8 @@ def call_tool(agent: str, tool: str, args: dict, request_id: str,
         "agent": agent,
         "role": role,
         "tool": tool,
-        "args": dict(audit_args if audit_args is not None else args),   # masked text only
+        # masked text only, then without dates and long numbers: a date of birth passes masking
+        "args": scrub_for_audit(dict(audit_args if audit_args is not None else args)),
     }
     if client is not None:
         event["client"] = client
@@ -225,6 +241,13 @@ def call_tool(agent: str, tool: str, args: dict, request_id: str,
         event["sensitive_categories"] = dict(sorted(found.items()))
         if profile.sensitivity.text_model:         # which model read the text, so a decision can be traced to it
             event["sensitive_text_model"] = profile.sensitivity.text_model
+            event["sensitive_text_model_mode"] = profile.sensitivity.text_model_mode
+            if profile.sensitivity.observing:
+                # Observe only: what the model alone would have marked, and how much of that this role
+                # would have lost. Nothing is marked or withheld on its word. Counts, never values.
+                seen, lost = observe_sensitive(tagged, profile, allowed_sensitive(profile, role) if profile.roles else None)
+                event["model_would_mark"] = dict(sorted(seen.items()))
+                event["model_would_withhold"] = lost
         if profile.roles and found:                # nothing marked: nothing to ask policy about
             kept, withheld = filter_sensitive(tagged, allowed_sensitive(profile, role))
             if withheld:

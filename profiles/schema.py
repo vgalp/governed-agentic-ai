@@ -106,10 +106,17 @@ class OutsideAuth(Strict):
     cache_seconds: int = Field(default=30, ge=0, le=300)
 
 
+class OutsideRateLimit(Strict):
+    """Tool calls and checks one caller (client) may make: `burst` at once, then `per_minute` a minute."""
+    per_minute: int = Field(default=120, ge=1, le=6000)
+    burst: int = Field(default=30, ge=1, le=1000)
+
+
 class Outside(Strict):
     agent: str
     auth: OutsideAuth
     listen: OutsideListen = OutsideListen()
+    rate_limit: OutsideRateLimit = OutsideRateLimit()
     mask_results: Literal["external", "always", "never"] = "external"
 
 
@@ -155,6 +162,8 @@ class Sensitivity(Strict):
     value_sets: str | None = None                 # the office's own lists, a file in the profile folder
     # A trained text classifier's folder name in models/, read with the lists (ADR 038 step 3). Off unless named.
     text_model: str | None = Field(default=None, pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]{0,80}$")
+    # observe (default): the model's reading goes to the audit and changes nothing. enforce: it marks records.
+    text_model_mode: Literal["observe", "enforce"] = "observe"
 
 
 class RateLimit(Strict):

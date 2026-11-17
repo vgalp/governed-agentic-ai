@@ -64,6 +64,7 @@ from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
 from gateway import gateway
 from gateway.transport import open_mcp
 from guardrails.check import check_text
+from ops.ratelimit import RateLimiter
 from profiles.loader import Profile, load_profile
 
 HIDDEN_PARAMS = ("tenant_id", "allowed_classes", "launch_ref")   # set by the gateway, never by a caller
@@ -250,10 +251,35 @@ class Endpoint:
         self._mask_map, self._route, self._model = mask_map, route, model
         self._output_check, self._publish, self._trace = output_check, publish or _publish, trace or _trace
         self._clock = clock
+        o = profile.outside
+        self._limiter = RateLimiter(o.rate_per_minute, o.rate_burst, clock=clock) if o is not None else None
         self._chats: dict[tuple[str, str], ChatRequest] = {}
         self._chats_lock = threading.Lock()
 
     # --- governed chat requests ---------------------------------------------------------------
+
+    def _too_fast(self, who: Identity, what: str) -> dict | None:
+        """The refusal for a caller over its limit (outside.yaml rate_limit), or None. One caller cannot use
+        up the record system's own limits, or the local models, for everyone else."""
+        if self._limiter is None:
+            return None
+        allowed, wait = self._limiter.allow(who.client_id or "unknown")
+        if allowed:
+            return None
+        self._audit("audit.tool_calls", self._event(who, f"out-{uuid.uuid4()}", tool=what, decision="deny",
+                                                    reason="rate limit"))
+        return {"error": "rate_limited", "message": "Too many requests from this client. Try again shortly.",
+                "retry_after_seconds": max(1, round(wait))}
+
+    def warm_up(self) -> None:
+        """Load what the first request would otherwise wait for (the masking analyzer, the guard, the
+        sensitive-category model), so the first caller is not the one who pays, or times out. A part
+        that cannot load stops the start: better than failing each request later."""
+        self.mask_text("warm up")
+        self._check("warm up", self.profile)
+        s = self.profile.sensitivity
+        if s:
+            (s.observer() if s.observing else s.detector()).of_text("warm up")
 
     def _chat(self, who: Identity, request_id: str | None, create: bool = False) -> ChatRequest | None:
         """The chat request with this ID, for this client only. Old ones are forgotten."""
@@ -292,6 +318,8 @@ class Endpoint:
         """A question a person typed, checked before any model sees it. With a chat request ID,
         it starts a governed chat request (see the module docstring)."""
         p = self.profile
+        if (refusal := self._too_fast(who, "check")) is not None:
+            return refusal
         c = self._chat(who, request_id, create=True)
         if c is not None and (c.checked or c.done):
             return {"error": "already_checked", "message": "This request ID was already used."}
@@ -319,6 +347,8 @@ class Endpoint:
 
     def handle(self, who: Identity, tool: str, arguments: dict | None, request_id: str | None = None) -> dict:
         p = self.profile
+        if (refusal := self._too_fast(who, tool)) is not None:
+            return refusal
         c = None
         if request_id is not None:
             c = self._chat(who, request_id)
@@ -643,6 +673,31 @@ def build_app(profile: Profile, introspector: Introspector, catalogue: dict[str,
                      lifespan=lifespan)
 
 
+TLS_CERT, TLS_KEY, TLS_AT_PROXY = "GATEWAY_TLS_CERT", "GATEWAY_TLS_KEY", "GATEWAY_TLS_AT_PROXY"
+
+
+def serving_settings(introspect_url: str, env) -> dict:
+    """uvicorn's TLS arguments, from GATEWAY_TLS_CERT and GATEWAY_TLS_KEY (both or neither).
+
+    In production (GOVERNED_ENV=production) the endpoint refuses to start unless callers reach it over
+    TLS (served here, or GATEWAY_TLS_AT_PROXY=1 to state that a proxy in front terminates it) and the
+    token check goes to an https address that is not this machine."""
+    from urllib.parse import urlparse
+
+    from auth.sign_in import LOCAL_HOSTS, in_production
+    cert, key = env.get(TLS_CERT), env.get(TLS_KEY)
+    if bool(cert) != bool(key):
+        raise SystemExit(f"Set both {TLS_CERT} and {TLS_KEY}, or neither.")
+    if in_production(env):
+        if not cert and env.get(TLS_AT_PROXY) != "1":
+            raise SystemExit(f"Production: set {TLS_CERT} and {TLS_KEY}, or {TLS_AT_PROXY}=1 if a proxy terminates TLS.")
+        u = urlparse(introspect_url)
+        if u.scheme != "https" or u.hostname in LOCAL_HOSTS:
+            raise SystemExit("Production: the token check (outside.yaml auth.url) must be an https address of the "
+                             "organization's identity system, not this machine.")
+    return {"ssl_certfile": cert, "ssl_keyfile": key} if cert else {}
+
+
 def main() -> None:
     import uvicorn
     profile = load_profile()
@@ -652,12 +707,14 @@ def main() -> None:
     secret = os.environ.get(o.secret_env)
     if not secret:
         raise SystemExit(f"Set {o.secret_env} (the shared secret for the token check).")
+    tls = serving_settings(o.introspect_url, os.environ)
     catalogue = asyncio.run(upstream_catalogue(profile))
-    app = build_app(profile, Introspector(o.introspect_url, secret, o.cache_seconds), catalogue,
-                    Endpoint(profile))
-    print(f"Governed MCP endpoint for profile {profile.name}: http://{o.host}:{o.port}/mcp "
+    endpoint = Endpoint(profile)
+    endpoint.warm_up()
+    app = build_app(profile, Introspector(o.introspect_url, secret, o.cache_seconds), catalogue, endpoint)
+    print(f"Governed MCP endpoint for profile {profile.name}: {'https' if tls else 'http'}://{o.host}:{o.port}/mcp "
           f"({len(catalogue)} tools, callers checked at {o.introspect_url})")
-    uvicorn.run(app, host=o.host, port=o.port, log_level="warning")
+    uvicorn.run(app, host=o.host, port=o.port, log_level="warning", **tls)
 
 
 if __name__ == "__main__":

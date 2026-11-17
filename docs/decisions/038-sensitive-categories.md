@@ -166,6 +166,11 @@ categories it tracks. The four clinic profiles do.
   - If the named model cannot be loaded, the request fails. It does not fall back to the lists alone:
     an office that turned the model on must not get less without being told.
   - The record tools keep to labels, codes and lists; the gateway reads the text.
+  - **Observe is the default mode** (`text_model_mode: observe`). The model reads the records, the audit
+    records what it alone would have marked (`model_would_mark`) and how many records the role would
+    have lost (`model_would_withhold`), and nothing is marked or withheld on its word. `enforce` makes
+    it act. This exists because its first enforced run in the gateway withheld what appears to be a
+    patient-details record: evidence from real use should come before trust.
   - It is off in every profile in this repository. It is for demonstration on synthetic records until
     the model has been scored on labels a person reviewed.
 - **Not built:** a frozen test set labelled by people. The mined set is people's text with models'

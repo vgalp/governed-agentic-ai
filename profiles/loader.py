@@ -136,6 +136,8 @@ class OutsideConfig:
     secret_env: str                  # environment variable holding the shared secret for that check
     cache_seconds: int               # how long a verified token is trusted before checking again
     mask_results: str                # external: mask results for clients marked external · always · never
+    rate_per_minute: int = 120       # calls one caller may make a minute, after a burst
+    rate_burst: int = 30
 
 @dataclass(frozen=True)
 class Action:
@@ -599,7 +601,11 @@ def _outside(raw: dict, tools: dict[str, Tool], agents: dict[str, tuple[str, ...
     mask_results = raw.get("mask_results", "external")
     if mask_results not in MASK_RESULTS:
         raise ProfileError(f"{where}: mask_results must be one of {sorted(MASK_RESULTS)}")
-    return OutsideConfig(agent, host, port, kind, url, secret_env, cache, mask_results)
+    limit = raw.get("rate_limit") or {}
+    per_minute, burst = limit.get("per_minute", 120), limit.get("burst", 30)
+    if not (isinstance(per_minute, int) and isinstance(burst, int) and 1 <= per_minute <= 6000 and 1 <= burst <= 1000):
+        raise ProfileError(f"{where}: rate_limit needs per_minute (1 to 6000) and burst (1 to 1000)")
+    return OutsideConfig(agent, host, port, kind, url, secret_env, cache, mask_results, per_minute, burst)
 
 
 def _check_grants(tools: dict[str, Tool], agents: dict[str, tuple[str, ...]], where: str) -> None:
@@ -706,7 +712,8 @@ def _sensitivity(raw: dict | None, path: Path, roles: dict[str, Role], responses
     if missing:
         raise ProfileError(f"{path.name}/responses.yaml: no response for {', '.join(missing)} "
                            "(needed because the profile has roles and tracks sensitive categories)")
-    return sensitive.Settings(categories, never, value_sets, raw.get("text_model"))
+    return sensitive.Settings(categories, never, value_sets, raw.get("text_model"),
+                              raw.get("text_model_mode") or sensitive.OBSERVE)
 
 
 def _actions(raw: dict, where: str, patterns: dict[str, re.Pattern], agents: dict[str, tuple[str, ...]],

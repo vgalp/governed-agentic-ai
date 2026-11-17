@@ -1,0 +1,2627 @@
+[
+ {
+  "id": "mk1-001",
+  "text": "What medications is Mohammed Al-Sayed (born 7/4/71) taking?",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Mohammed Al-Sayed"
+   },
+   {
+    "type": "DATE_OF_BIRTH",
+    "value": "7/4/71"
+   }
+  ],
+  "keep": []
+ },
+ {
+  "id": "mk1-002",
+  "text": "Samuel Mensah, born 12.11.1984, MRN: 7731204: move the follow-up to Thursday.",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Samuel Mensah"
+   },
+   {
+    "type": "DATE_OF_BIRTH",
+    "value": "12.11.1984"
+   },
+   {
+    "type": "RECORD_NUMBER",
+    "value": "7731204"
+   }
+  ],
+  "keep": []
+ },
+ {
+  "id": "mk1-003",
+  "text": "Call O'Connor, Sean back on 555-201-7788 about the metformin refill.",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "O'Connor, Sean"
+   },
+   {
+    "type": "PHONE_NUMBER",
+    "value": "555-201-7788"
+   }
+  ],
+  "keep": [
+   "metformin"
+  ]
+ },
+ {
+  "id": "mk1-004",
+  "text": "Email the visit summary to h.yusuf@example.org for Dolores Achebe.",
+  "identifiers": [
+   {
+    "type": "EMAIL_ADDRESS",
+    "value": "h.yusuf@example.org"
+   },
+   {
+    "type": "PERSON",
+    "value": "Dolores Achebe"
+   }
+  ],
+  "keep": []
+ },
+ {
+  "id": "mk1-005",
+  "text": "Priya Ramdas lives at 41 Larch Street, Dayton; send the amoxicillin reminder letter there.",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Priya Ramdas"
+   },
+   {
+    "type": "LOCATION",
+    "value": "41 Larch Street, Dayton"
+   }
+  ],
+  "keep": [
+   "amoxicillin"
+  ]
+ },
+ {
+  "id": "mk1-006",
+  "text": "Insurance form for Henrik Solberg: SSN 512-90-3346, date of birth 7/4/71.",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Henrik Solberg"
+   },
+   {
+    "type": "US_SSN",
+    "value": "512-90-3346"
+   },
+   {
+    "type": "DATE_OF_BIRTH",
+    "value": "7/4/71"
+   }
+  ],
+  "keep": []
+ },
+ {
+  "id": "mk1-007",
+  "text": "pt Ilse Brandvold dob 15 Sep 1990 c/o dizziness since starting metformin 5 mg twice daily",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Ilse Brandvold"
+   },
+   {
+    "type": "DATE_OF_BIRTH",
+    "value": "15 Sep 1990"
+   }
+  ],
+  "keep": [
+   "metformin"
+  ]
+ },
+ {
+  "id": "mk1-008",
+  "text": "Is warfarin safe with amoxicillin for Aaliyah Brooks? record number 100293847",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Aaliyah Brooks"
+   },
+   {
+    "type": "RECORD_NUMBER",
+    "value": "100293847"
+   }
+  ],
+  "keep": [
+   "warfarin",
+   "amoxicillin"
+  ]
+ },
+ {
+  "id": "mk1-009",
+  "text": "Front desk: Maria Delgado called from 555 440 1296, wants results sent to tomasz.w@mail.example.com.",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Maria Delgado"
+   },
+   {
+    "type": "PHONE_NUMBER",
+    "value": "555 440 1296"
+   },
+   {
+    "type": "EMAIL_ADDRESS",
+    "value": "tomasz.w@mail.example.com"
+   }
+  ],
+  "keep": []
+ },
+ {
+  "id": "mk1-010",
+  "text": "Chart brief for Fatima Oyelaran (record number 100293847, DOB 15 Sep 1990) before the 2:30 visit in room 12.",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Fatima Oyelaran"
+   },
+   {
+    "type": "RECORD_NUMBER",
+    "value": "100293847"
+   },
+   {
+    "type": "DATE_OF_BIRTH",
+    "value": "15 Sep 1990"
+   }
+  ],
+  "keep": []
+ },
+ {
+  "id": "mk1-011",
+  "text": "What medications is Halima Yusuf (born March 3rd, 2001) taking?",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Halima Yusuf"
+   },
+   {
+    "type": "DATE_OF_BIRTH",
+    "value": "March 3rd, 2001"
+   }
+  ],
+  "keep": []
+ },
+ {
+  "id": "mk1-012",
+  "text": "Delroy Hatcher, born March 3rd, 2001, MRN: 7731204: move the follow-up to Thursday.",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Delroy Hatcher"
+   },
+   {
+    "type": "DATE_OF_BIRTH",
+    "value": "March 3rd, 2001"
+   },
+   {
+    "type": "RECORD_NUMBER",
+    "value": "7731204"
+   }
+  ],
+  "keep": []
+ },
+ {
+  "id": "mk1-013",
+  "text": "Call Arjun Mehta back on +1 555 672 9031 about the amoxicillin refill.",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Arjun Mehta"
+   },
+   {
+    "type": "PHONE_NUMBER",
+    "value": "+1 555 672 9031"
+   }
+  ],
+  "keep": [
+   "amoxicillin"
+  ]
+ },
+ {
+  "id": "mk1-014",
+  "text": "Email the visit summary to h.yusuf@example.org for Tomasz Wisniewski.",
+  "identifiers": [
+   {
+    "type": "EMAIL_ADDRESS",
+    "value": "h.yusuf@example.org"
+   },
+   {
+    "type": "PERSON",
+    "value": "Tomasz Wisniewski"
+   }
+  ],
+  "keep": []
+ },
+ {
+  "id": "mk1-015",
+  "text": "Maria Delgado lives at 17 Willow Lane, Springfield; send the metformin reminder letter there.",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Maria Delgado"
+   },
+   {
+    "type": "LOCATION",
+    "value": "17 Willow Lane, Springfield"
+   }
+  ],
+  "keep": [
+   "metformin"
+  ]
+ },
+ {
+  "id": "mk1-016",
+  "text": "Insurance form for Priya Ramdas: SSN 512-90-3346, date of birth 12.11.1984.",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Priya Ramdas"
+   },
+   {
+    "type": "US_SSN",
+    "value": "512-90-3346"
+   },
+   {
+    "type": "DATE_OF_BIRTH",
+    "value": "12.11.1984"
+   }
+  ],
+  "keep": []
+ },
+ {
+  "id": "mk1-017",
+  "text": "pt Yuki Tanaka dob 15 Sep 1990 c/o dizziness since starting amoxicillin 5 mg twice daily",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Yuki Tanaka"
+   },
+   {
+    "type": "DATE_OF_BIRTH",
+    "value": "15 Sep 1990"
+   }
+  ],
+  "keep": [
+   "amoxicillin"
+  ]
+ },
+ {
+  "id": "mk1-018",
+  "text": "Is amoxicillin safe with sertraline for Dr. Fenwick? MRN 00482913",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Dr. Fenwick"
+   },
+   {
+    "type": "RECORD_NUMBER",
+    "value": "00482913"
+   }
+  ],
+  "keep": [
+   "amoxicillin",
+   "sertraline"
+  ]
+ },
+ {
+  "id": "mk1-019",
+  "text": "Front desk: Maria Delgado called from (555) 318-0042, wants results sent to h.yusuf@example.org.",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Maria Delgado"
+   },
+   {
+    "type": "PHONE_NUMBER",
+    "value": "(555) 318-0042"
+   },
+   {
+    "type": "EMAIL_ADDRESS",
+    "value": "h.yusuf@example.org"
+   }
+  ],
+  "keep": []
+ },
+ {
+  "id": "mk1-020",
+  "text": "Chart brief for Kenji Matsuda (MRN: 7731204, DOB 03/22/1958) before the 2:30 visit in room 12.",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Kenji Matsuda"
+   },
+   {
+    "type": "RECORD_NUMBER",
+    "value": "7731204"
+   },
+   {
+    "type": "DATE_OF_BIRTH",
+    "value": "03/22/1958"
+   }
+  ],
+  "keep": []
+ },
+ {
+  "id": "mk1-021",
+  "text": "What medications is Dr. Fenwick (born March 3rd, 2001) taking?",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Dr. Fenwick"
+   },
+   {
+    "type": "DATE_OF_BIRTH",
+    "value": "March 3rd, 2001"
+   }
+  ],
+  "keep": []
+ },
+ {
+  "id": "mk1-022",
+  "text": "Fatima Oyelaran, born 7/4/71, MRN 00482913: move the follow-up to Thursday.",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Fatima Oyelaran"
+   },
+   {
+    "type": "DATE_OF_BIRTH",
+    "value": "7/4/71"
+   },
+   {
+    "type": "RECORD_NUMBER",
+    "value": "00482913"
+   }
+  ],
+  "keep": []
+ },
+ {
+  "id": "mk1-023",
+  "text": "Call Delroy Hatcher back on +1 555 672 9031 about the lisinopril refill.",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Delroy Hatcher"
+   },
+   {
+    "type": "PHONE_NUMBER",
+    "value": "+1 555 672 9031"
+   }
+  ],
+  "keep": [
+   "lisinopril"
+  ]
+ },
+ {
+  "id": "mk1-024",
+  "text": "Email the visit summary to h.yusuf@example.org for Yuki Tanaka.",
+  "identifiers": [
+   {
+    "type": "EMAIL_ADDRESS",
+    "value": "h.yusuf@example.org"
+   },
+   {
+    "type": "PERSON",
+    "value": "Yuki Tanaka"
+   }
+  ],
+  "keep": []
+ },
+ {
+  "id": "mk1-025",
+  "text": "Henrik Solberg lives at 2200 Harbor Road, Apt 4B, Tacoma; send the lisinopril reminder letter there.",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Henrik Solberg"
+   },
+   {
+    "type": "LOCATION",
+    "value": "2200 Harbor Road, Apt 4B, Tacoma"
+   }
+  ],
+  "keep": [
+   "lisinopril"
+  ]
+ },
+ {
+  "id": "mk1-026",
+  "text": "Insurance form for Delroy Hatcher: SSN 231-64-8807, date of birth March 3rd, 2001.",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Delroy Hatcher"
+   },
+   {
+    "type": "US_SSN",
+    "value": "231-64-8807"
+   },
+   {
+    "type": "DATE_OF_BIRTH",
+    "value": "March 3rd, 2001"
+   }
+  ],
+  "keep": []
+ },
+ {
+  "id": "mk1-027",
+  "text": "pt Dr. Fenwick dob 7/4/71 c/o dizziness since starting warfarin 5 mg twice daily",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Dr. Fenwick"
+   },
+   {
+    "type": "DATE_OF_BIRTH",
+    "value": "7/4/71"
+   }
+  ],
+  "keep": [
+   "warfarin"
+  ]
+ },
+ {
+  "id": "mk1-028",
+  "text": "Is methadone safe with metformin for Nguyen Van An? MRN: 7731204",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Nguyen Van An"
+   },
+   {
+    "type": "RECORD_NUMBER",
+    "value": "7731204"
+   }
+  ],
+  "keep": [
+   "methadone",
+   "metformin"
+  ]
+ },
+ {
+  "id": "mk1-029",
+  "text": "Front desk: Arjun Mehta called from (555) 318-0042, wants results sent to tomasz.w@mail.example.com.",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Arjun Mehta"
+   },
+   {
+    "type": "PHONE_NUMBER",
+    "value": "(555) 318-0042"
+   },
+   {
+    "type": "EMAIL_ADDRESS",
+    "value": "tomasz.w@mail.example.com"
+   }
+  ],
+  "keep": []
+ },
+ {
+  "id": "mk1-030",
+  "text": "Chart brief for MARTINEZ, ROSA (record number 100293847, DOB 03/22/1958) before the 2:30 visit in room 12.",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "MARTINEZ, ROSA"
+   },
+   {
+    "type": "RECORD_NUMBER",
+    "value": "100293847"
+   },
+   {
+    "type": "DATE_OF_BIRTH",
+    "value": "03/22/1958"
+   }
+  ],
+  "keep": []
+ },
+ {
+  "id": "mk1-031",
+  "text": "What medications is Halima Yusuf (born 03/22/1958) taking?",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Halima Yusuf"
+   },
+   {
+    "type": "DATE_OF_BIRTH",
+    "value": "03/22/1958"
+   }
+  ],
+  "keep": []
+ },
+ {
+  "id": "mk1-032",
+  "text": "Delroy Hatcher, born 12.11.1984, MRN 00482913: move the follow-up to Thursday.",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Delroy Hatcher"
+   },
+   {
+    "type": "DATE_OF_BIRTH",
+    "value": "12.11.1984"
+   },
+   {
+    "type": "RECORD_NUMBER",
+    "value": "00482913"
+   }
+  ],
+  "keep": []
+ },
+ {
+  "id": "mk1-033",
+  "text": "Call Maria Delgado back on +1 555 672 9031 about the sertraline refill.",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Maria Delgado"
+   },
+   {
+    "type": "PHONE_NUMBER",
+    "value": "+1 555 672 9031"
+   }
+  ],
+  "keep": [
+   "sertraline"
+  ]
+ },
+ {
+  "id": "mk1-034",
+  "text": "Email the visit summary to rosa_m77@example.net for O'Connor, Sean.",
+  "identifiers": [
+   {
+    "type": "EMAIL_ADDRESS",
+    "value": "rosa_m77@example.net"
+   },
+   {
+    "type": "PERSON",
+    "value": "O'Connor, Sean"
+   }
+  ],
+  "keep": []
+ },
+ {
+  "id": "mk1-035",
+  "text": "Nguyen Van An lives at 41 Larch Street, Dayton; send the lisinopril reminder letter there.",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Nguyen Van An"
+   },
+   {
+    "type": "LOCATION",
+    "value": "41 Larch Street, Dayton"
+   }
+  ],
+  "keep": [
+   "lisinopril"
+  ]
+ },
+ {
+  "id": "mk1-036",
+  "text": "Insurance form for Yuki Tanaka: SSN 512-90-3346, date of birth March 3rd, 2001.",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Yuki Tanaka"
+   },
+   {
+    "type": "US_SSN",
+    "value": "512-90-3346"
+   },
+   {
+    "type": "DATE_OF_BIRTH",
+    "value": "March 3rd, 2001"
+   }
+  ],
+  "keep": []
+ },
+ {
+  "id": "mk1-037",
+  "text": "pt Henrik Solberg dob 7/4/71 c/o dizziness since starting methadone 5 mg twice daily",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Henrik Solberg"
+   },
+   {
+    "type": "DATE_OF_BIRTH",
+    "value": "7/4/71"
+   }
+  ],
+  "keep": [
+   "methadone"
+  ]
+ },
+ {
+  "id": "mk1-038",
+  "text": "Is metformin safe with amoxicillin for Dr. Fenwick? MRN: 7731204",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Dr. Fenwick"
+   },
+   {
+    "type": "RECORD_NUMBER",
+    "value": "7731204"
+   }
+  ],
+  "keep": [
+   "metformin",
+   "amoxicillin"
+  ]
+ },
+ {
+  "id": "mk1-039",
+  "text": "Front desk: Mohammed Al-Sayed called from 555 440 1296, wants results sent to rosa_m77@example.net.",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Mohammed Al-Sayed"
+   },
+   {
+    "type": "PHONE_NUMBER",
+    "value": "555 440 1296"
+   },
+   {
+    "type": "EMAIL_ADDRESS",
+    "value": "rosa_m77@example.net"
+   }
+  ],
+  "keep": []
+ },
+ {
+  "id": "mk1-040",
+  "text": "Chart brief for Mohammed Al-Sayed (MRN: 7731204, DOB March 3rd, 2001) before the 2:30 visit in room 12.",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Mohammed Al-Sayed"
+   },
+   {
+    "type": "RECORD_NUMBER",
+    "value": "7731204"
+   },
+   {
+    "type": "DATE_OF_BIRTH",
+    "value": "March 3rd, 2001"
+   }
+  ],
+  "keep": []
+ },
+ {
+  "id": "mk1-041",
+  "text": "What medications is Samuel Mensah (born 15 Sep 1990) taking?",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Samuel Mensah"
+   },
+   {
+    "type": "DATE_OF_BIRTH",
+    "value": "15 Sep 1990"
+   }
+  ],
+  "keep": []
+ },
+ {
+  "id": "mk1-042",
+  "text": "Mohammed Al-Sayed, born March 3rd, 2001, MRN: 7731204: move the follow-up to Thursday.",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Mohammed Al-Sayed"
+   },
+   {
+    "type": "DATE_OF_BIRTH",
+    "value": "March 3rd, 2001"
+   },
+   {
+    "type": "RECORD_NUMBER",
+    "value": "7731204"
+   }
+  ],
+  "keep": []
+ },
+ {
+  "id": "mk1-043",
+  "text": "Call Maria Delgado back on +1 555 672 9031 about the apixaban refill.",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Maria Delgado"
+   },
+   {
+    "type": "PHONE_NUMBER",
+    "value": "+1 555 672 9031"
+   }
+  ],
+  "keep": [
+   "apixaban"
+  ]
+ },
+ {
+  "id": "mk1-044",
+  "text": "Email the visit summary to tomasz.w@mail.example.com for Mohammed Al-Sayed.",
+  "identifiers": [
+   {
+    "type": "EMAIL_ADDRESS",
+    "value": "tomasz.w@mail.example.com"
+   },
+   {
+    "type": "PERSON",
+    "value": "Mohammed Al-Sayed"
+   }
+  ],
+  "keep": []
+ },
+ {
+  "id": "mk1-045",
+  "text": "Yuki Tanaka lives at 2200 Harbor Road, Apt 4B, Tacoma; send the sertraline reminder letter there.",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Yuki Tanaka"
+   },
+   {
+    "type": "LOCATION",
+    "value": "2200 Harbor Road, Apt 4B, Tacoma"
+   }
+  ],
+  "keep": [
+   "sertraline"
+  ]
+ },
+ {
+  "id": "mk1-046",
+  "text": "Insurance form for Priya Ramdas: SSN 512-90-3346, date of birth 12.11.1984.",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Priya Ramdas"
+   },
+   {
+    "type": "US_SSN",
+    "value": "512-90-3346"
+   },
+   {
+    "type": "DATE_OF_BIRTH",
+    "value": "12.11.1984"
+   }
+  ],
+  "keep": []
+ },
+ {
+  "id": "mk1-047",
+  "text": "pt Mohammed Al-Sayed dob 12.11.1984 c/o dizziness since starting methadone 5 mg twice daily",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Mohammed Al-Sayed"
+   },
+   {
+    "type": "DATE_OF_BIRTH",
+    "value": "12.11.1984"
+   }
+  ],
+  "keep": [
+   "methadone"
+  ]
+ },
+ {
+  "id": "mk1-048",
+  "text": "Is lisinopril safe with amoxicillin for Maria Delgado? MRN: 7731204",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Maria Delgado"
+   },
+   {
+    "type": "RECORD_NUMBER",
+    "value": "7731204"
+   }
+  ],
+  "keep": [
+   "lisinopril",
+   "amoxicillin"
+  ]
+ },
+ {
+  "id": "mk1-049",
+  "text": "Front desk: Li Wei called from 555-201-7788, wants results sent to h.yusuf@example.org.",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Li Wei"
+   },
+   {
+    "type": "PHONE_NUMBER",
+    "value": "555-201-7788"
+   },
+   {
+    "type": "EMAIL_ADDRESS",
+    "value": "h.yusuf@example.org"
+   }
+  ],
+  "keep": []
+ },
+ {
+  "id": "mk1-050",
+  "text": "Chart brief for Yuki Tanaka (record number 100293847, DOB 03/22/1958) before the 2:30 visit in room 12.",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Yuki Tanaka"
+   },
+   {
+    "type": "RECORD_NUMBER",
+    "value": "100293847"
+   },
+   {
+    "type": "DATE_OF_BIRTH",
+    "value": "03/22/1958"
+   }
+  ],
+  "keep": []
+ },
+ {
+  "id": "mk1-051",
+  "text": "What medications is Fatima Oyelaran (born January 9, 1947) taking?",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Fatima Oyelaran"
+   },
+   {
+    "type": "DATE_OF_BIRTH",
+    "value": "January 9, 1947"
+   }
+  ],
+  "keep": []
+ },
+ {
+  "id": "mk1-052",
+  "text": "Dr. Fenwick, born January 9, 1947, MRN: 7731204: move the follow-up to Thursday.",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Dr. Fenwick"
+   },
+   {
+    "type": "DATE_OF_BIRTH",
+    "value": "January 9, 1947"
+   },
+   {
+    "type": "RECORD_NUMBER",
+    "value": "7731204"
+   }
+  ],
+  "keep": []
+ },
+ {
+  "id": "mk1-053",
+  "text": "Call Fatima Oyelaran back on (555) 318-0042 about the sertraline refill.",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Fatima Oyelaran"
+   },
+   {
+    "type": "PHONE_NUMBER",
+    "value": "(555) 318-0042"
+   }
+  ],
+  "keep": [
+   "sertraline"
+  ]
+ },
+ {
+  "id": "mk1-054",
+  "text": "Email the visit summary to rosa_m77@example.net for Yuki Tanaka.",
+  "identifiers": [
+   {
+    "type": "EMAIL_ADDRESS",
+    "value": "rosa_m77@example.net"
+   },
+   {
+    "type": "PERSON",
+    "value": "Yuki Tanaka"
+   }
+  ],
+  "keep": []
+ },
+ {
+  "id": "mk1-055",
+  "text": "Dolores Achebe lives at 17 Willow Lane, Springfield; send the warfarin reminder letter there.",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Dolores Achebe"
+   },
+   {
+    "type": "LOCATION",
+    "value": "17 Willow Lane, Springfield"
+   }
+  ],
+  "keep": [
+   "warfarin"
+  ]
+ },
+ {
+  "id": "mk1-056",
+  "text": "Insurance form for Aaliyah Brooks: SSN 478-22-9163, date of birth 15 Sep 1990.",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Aaliyah Brooks"
+   },
+   {
+    "type": "US_SSN",
+    "value": "478-22-9163"
+   },
+   {
+    "type": "DATE_OF_BIRTH",
+    "value": "15 Sep 1990"
+   }
+  ],
+  "keep": []
+ },
+ {
+  "id": "mk1-057",
+  "text": "pt Kenji Matsuda dob 12.11.1984 c/o dizziness since starting metformin 5 mg twice daily",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Kenji Matsuda"
+   },
+   {
+    "type": "DATE_OF_BIRTH",
+    "value": "12.11.1984"
+   }
+  ],
+  "keep": [
+   "metformin"
+  ]
+ },
+ {
+  "id": "mk1-058",
+  "text": "Is methadone safe with apixaban for Delroy Hatcher? MRN 00482913",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Delroy Hatcher"
+   },
+   {
+    "type": "RECORD_NUMBER",
+    "value": "00482913"
+   }
+  ],
+  "keep": [
+   "methadone",
+   "apixaban"
+  ]
+ },
+ {
+  "id": "mk1-059",
+  "text": "Front desk: O'Connor, Sean called from 555-201-7788, wants results sent to tomasz.w@mail.example.com.",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "O'Connor, Sean"
+   },
+   {
+    "type": "PHONE_NUMBER",
+    "value": "555-201-7788"
+   },
+   {
+    "type": "EMAIL_ADDRESS",
+    "value": "tomasz.w@mail.example.com"
+   }
+  ],
+  "keep": []
+ },
+ {
+  "id": "mk1-060",
+  "text": "Chart brief for O'Connor, Sean (MRN: 7731204, DOB March 3rd, 2001) before the 2:30 visit in room 12.",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "O'Connor, Sean"
+   },
+   {
+    "type": "RECORD_NUMBER",
+    "value": "7731204"
+   },
+   {
+    "type": "DATE_OF_BIRTH",
+    "value": "March 3rd, 2001"
+   }
+  ],
+  "keep": []
+ },
+ {
+  "id": "mk1-061",
+  "text": "What medications is Fatima Oyelaran (born 15 Sep 1990) taking?",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Fatima Oyelaran"
+   },
+   {
+    "type": "DATE_OF_BIRTH",
+    "value": "15 Sep 1990"
+   }
+  ],
+  "keep": []
+ },
+ {
+  "id": "mk1-062",
+  "text": "Priya Ramdas, born March 3rd, 2001, MRN 00482913: move the follow-up to Thursday.",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Priya Ramdas"
+   },
+   {
+    "type": "DATE_OF_BIRTH",
+    "value": "March 3rd, 2001"
+   },
+   {
+    "type": "RECORD_NUMBER",
+    "value": "00482913"
+   }
+  ],
+  "keep": []
+ },
+ {
+  "id": "mk1-063",
+  "text": "Call Yuki Tanaka back on 555 440 1296 about the amoxicillin refill.",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Yuki Tanaka"
+   },
+   {
+    "type": "PHONE_NUMBER",
+    "value": "555 440 1296"
+   }
+  ],
+  "keep": [
+   "amoxicillin"
+  ]
+ },
+ {
+  "id": "mk1-064",
+  "text": "Email the visit summary to h.yusuf@example.org for Dr. Fenwick.",
+  "identifiers": [
+   {
+    "type": "EMAIL_ADDRESS",
+    "value": "h.yusuf@example.org"
+   },
+   {
+    "type": "PERSON",
+    "value": "Dr. Fenwick"
+   }
+  ],
+  "keep": []
+ },
+ {
+  "id": "mk1-065",
+  "text": "Aaliyah Brooks lives at 41 Larch Street, Dayton; send the sertraline reminder letter there.",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Aaliyah Brooks"
+   },
+   {
+    "type": "LOCATION",
+    "value": "41 Larch Street, Dayton"
+   }
+  ],
+  "keep": [
+   "sertraline"
+  ]
+ },
+ {
+  "id": "mk1-066",
+  "text": "Insurance form for O'Connor, Sean: SSN 512-90-3346, date of birth 15 Sep 1990.",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "O'Connor, Sean"
+   },
+   {
+    "type": "US_SSN",
+    "value": "512-90-3346"
+   },
+   {
+    "type": "DATE_OF_BIRTH",
+    "value": "15 Sep 1990"
+   }
+  ],
+  "keep": []
+ },
+ {
+  "id": "mk1-067",
+  "text": "pt O'Connor, Sean dob 1990-09-15 c/o dizziness since starting apixaban 5 mg twice daily",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "O'Connor, Sean"
+   },
+   {
+    "type": "DATE_OF_BIRTH",
+    "value": "1990-09-15"
+   }
+  ],
+  "keep": [
+   "apixaban"
+  ]
+ },
+ {
+  "id": "mk1-068",
+  "text": "Is lisinopril safe with metformin for Fatima Oyelaran? MRN: 7731204",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Fatima Oyelaran"
+   },
+   {
+    "type": "RECORD_NUMBER",
+    "value": "7731204"
+   }
+  ],
+  "keep": [
+   "lisinopril",
+   "metformin"
+  ]
+ },
+ {
+  "id": "mk1-069",
+  "text": "Front desk: Henrik Solberg called from 555 440 1296, wants results sent to tomasz.w@mail.example.com.",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Henrik Solberg"
+   },
+   {
+    "type": "PHONE_NUMBER",
+    "value": "555 440 1296"
+   },
+   {
+    "type": "EMAIL_ADDRESS",
+    "value": "tomasz.w@mail.example.com"
+   }
+  ],
+  "keep": []
+ },
+ {
+  "id": "mk1-070",
+  "text": "Chart brief for Henrik Solberg (record number 100293847, DOB January 9, 1947) before the 2:30 visit in room 12.",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Henrik Solberg"
+   },
+   {
+    "type": "RECORD_NUMBER",
+    "value": "100293847"
+   },
+   {
+    "type": "DATE_OF_BIRTH",
+    "value": "January 9, 1947"
+   }
+  ],
+  "keep": []
+ },
+ {
+  "id": "mk1-071",
+  "text": "What medications is Delroy Hatcher (born 15 Sep 1990) taking?",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Delroy Hatcher"
+   },
+   {
+    "type": "DATE_OF_BIRTH",
+    "value": "15 Sep 1990"
+   }
+  ],
+  "keep": []
+ },
+ {
+  "id": "mk1-072",
+  "text": "Tomasz Wisniewski, born 15 Sep 1990, MRN: 7731204: move the follow-up to Thursday.",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Tomasz Wisniewski"
+   },
+   {
+    "type": "DATE_OF_BIRTH",
+    "value": "15 Sep 1990"
+   },
+   {
+    "type": "RECORD_NUMBER",
+    "value": "7731204"
+   }
+  ],
+  "keep": []
+ },
+ {
+  "id": "mk1-073",
+  "text": "Call Mohammed Al-Sayed back on 555 440 1296 about the metformin refill.",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Mohammed Al-Sayed"
+   },
+   {
+    "type": "PHONE_NUMBER",
+    "value": "555 440 1296"
+   }
+  ],
+  "keep": [
+   "metformin"
+  ]
+ },
+ {
+  "id": "mk1-074",
+  "text": "Email the visit summary to tomasz.w@mail.example.com for Delroy Hatcher.",
+  "identifiers": [
+   {
+    "type": "EMAIL_ADDRESS",
+    "value": "tomasz.w@mail.example.com"
+   },
+   {
+    "type": "PERSON",
+    "value": "Delroy Hatcher"
+   }
+  ],
+  "keep": []
+ },
+ {
+  "id": "mk1-075",
+  "text": "Dolores Achebe lives at 17 Willow Lane, Springfield; send the sertraline reminder letter there.",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Dolores Achebe"
+   },
+   {
+    "type": "LOCATION",
+    "value": "17 Willow Lane, Springfield"
+   }
+  ],
+  "keep": [
+   "sertraline"
+  ]
+ },
+ {
+  "id": "mk1-076",
+  "text": "Insurance form for Nguyen Van An: SSN 512-90-3346, date of birth January 9, 1947.",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Nguyen Van An"
+   },
+   {
+    "type": "US_SSN",
+    "value": "512-90-3346"
+   },
+   {
+    "type": "DATE_OF_BIRTH",
+    "value": "January 9, 1947"
+   }
+  ],
+  "keep": []
+ },
+ {
+  "id": "mk1-077",
+  "text": "pt Fatima Oyelaran dob January 9, 1947 c/o dizziness since starting sertraline 5 mg twice daily",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Fatima Oyelaran"
+   },
+   {
+    "type": "DATE_OF_BIRTH",
+    "value": "January 9, 1947"
+   }
+  ],
+  "keep": [
+   "sertraline"
+  ]
+ },
+ {
+  "id": "mk1-078",
+  "text": "Is methadone safe with metformin for Samuel Mensah? MRN 00482913",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Samuel Mensah"
+   },
+   {
+    "type": "RECORD_NUMBER",
+    "value": "00482913"
+   }
+  ],
+  "keep": [
+   "methadone",
+   "metformin"
+  ]
+ },
+ {
+  "id": "mk1-079",
+  "text": "Front desk: Aaliyah Brooks called from +1 555 672 9031, wants results sent to rosa_m77@example.net.",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Aaliyah Brooks"
+   },
+   {
+    "type": "PHONE_NUMBER",
+    "value": "+1 555 672 9031"
+   },
+   {
+    "type": "EMAIL_ADDRESS",
+    "value": "rosa_m77@example.net"
+   }
+  ],
+  "keep": []
+ },
+ {
+  "id": "mk1-080",
+  "text": "Chart brief for Nguyen Van An (MRN 00482913, DOB 7/4/71) before the 2:30 visit in room 12.",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Nguyen Van An"
+   },
+   {
+    "type": "RECORD_NUMBER",
+    "value": "00482913"
+   },
+   {
+    "type": "DATE_OF_BIRTH",
+    "value": "7/4/71"
+   }
+  ],
+  "keep": []
+ },
+ {
+  "id": "mk1-081",
+  "text": "What medications is Delroy Hatcher (born 12.11.1984) taking?",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Delroy Hatcher"
+   },
+   {
+    "type": "DATE_OF_BIRTH",
+    "value": "12.11.1984"
+   }
+  ],
+  "keep": []
+ },
+ {
+  "id": "mk1-082",
+  "text": "Halima Yusuf, born 15 Sep 1990, MRN 00482913: move the follow-up to Thursday.",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Halima Yusuf"
+   },
+   {
+    "type": "DATE_OF_BIRTH",
+    "value": "15 Sep 1990"
+   },
+   {
+    "type": "RECORD_NUMBER",
+    "value": "00482913"
+   }
+  ],
+  "keep": []
+ },
+ {
+  "id": "mk1-083",
+  "text": "Call Yuki Tanaka back on 555 440 1296 about the amoxicillin refill.",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Yuki Tanaka"
+   },
+   {
+    "type": "PHONE_NUMBER",
+    "value": "555 440 1296"
+   }
+  ],
+  "keep": [
+   "amoxicillin"
+  ]
+ },
+ {
+  "id": "mk1-084",
+  "text": "Email the visit summary to rosa_m77@example.net for Aaliyah Brooks.",
+  "identifiers": [
+   {
+    "type": "EMAIL_ADDRESS",
+    "value": "rosa_m77@example.net"
+   },
+   {
+    "type": "PERSON",
+    "value": "Aaliyah Brooks"
+   }
+  ],
+  "keep": []
+ },
+ {
+  "id": "mk1-085",
+  "text": "Tomasz Wisniewski lives at 2200 Harbor Road, Apt 4B, Tacoma; send the apixaban reminder letter there.",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Tomasz Wisniewski"
+   },
+   {
+    "type": "LOCATION",
+    "value": "2200 Harbor Road, Apt 4B, Tacoma"
+   }
+  ],
+  "keep": [
+   "apixaban"
+  ]
+ },
+ {
+  "id": "mk1-086",
+  "text": "Insurance form for Ilse Brandvold: SSN 478-22-9163, date of birth 03/22/1958.",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Ilse Brandvold"
+   },
+   {
+    "type": "US_SSN",
+    "value": "478-22-9163"
+   },
+   {
+    "type": "DATE_OF_BIRTH",
+    "value": "03/22/1958"
+   }
+  ],
+  "keep": []
+ },
+ {
+  "id": "mk1-087",
+  "text": "pt Aaliyah Brooks dob March 3rd, 2001 c/o dizziness since starting methadone 5 mg twice daily",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Aaliyah Brooks"
+   },
+   {
+    "type": "DATE_OF_BIRTH",
+    "value": "March 3rd, 2001"
+   }
+  ],
+  "keep": [
+   "methadone"
+  ]
+ },
+ {
+  "id": "mk1-088",
+  "text": "Is methadone safe with warfarin for Dr. Fenwick? MRN: 7731204",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Dr. Fenwick"
+   },
+   {
+    "type": "RECORD_NUMBER",
+    "value": "7731204"
+   }
+  ],
+  "keep": [
+   "methadone",
+   "warfarin"
+  ]
+ },
+ {
+  "id": "mk1-089",
+  "text": "Front desk: Priya Ramdas called from 555-201-7788, wants results sent to tomasz.w@mail.example.com.",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Priya Ramdas"
+   },
+   {
+    "type": "PHONE_NUMBER",
+    "value": "555-201-7788"
+   },
+   {
+    "type": "EMAIL_ADDRESS",
+    "value": "tomasz.w@mail.example.com"
+   }
+  ],
+  "keep": []
+ },
+ {
+  "id": "mk1-090",
+  "text": "Chart brief for Priya Ramdas (MRN: 7731204, DOB 7/4/71) before the 2:30 visit in room 12.",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Priya Ramdas"
+   },
+   {
+    "type": "RECORD_NUMBER",
+    "value": "7731204"
+   },
+   {
+    "type": "DATE_OF_BIRTH",
+    "value": "7/4/71"
+   }
+  ],
+  "keep": []
+ },
+ {
+  "id": "mk1-091",
+  "text": "What medications is Yuki Tanaka (born 1990-09-15) taking?",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Yuki Tanaka"
+   },
+   {
+    "type": "DATE_OF_BIRTH",
+    "value": "1990-09-15"
+   }
+  ],
+  "keep": []
+ },
+ {
+  "id": "mk1-092",
+  "text": "Samuel Mensah, born 7/4/71, MRN 00482913: move the follow-up to Thursday.",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Samuel Mensah"
+   },
+   {
+    "type": "DATE_OF_BIRTH",
+    "value": "7/4/71"
+   },
+   {
+    "type": "RECORD_NUMBER",
+    "value": "00482913"
+   }
+  ],
+  "keep": []
+ },
+ {
+  "id": "mk1-093",
+  "text": "Call Henrik Solberg back on 555-201-7788 about the amoxicillin refill.",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Henrik Solberg"
+   },
+   {
+    "type": "PHONE_NUMBER",
+    "value": "555-201-7788"
+   }
+  ],
+  "keep": [
+   "amoxicillin"
+  ]
+ },
+ {
+  "id": "mk1-094",
+  "text": "Email the visit summary to rosa_m77@example.net for Halima Yusuf.",
+  "identifiers": [
+   {
+    "type": "EMAIL_ADDRESS",
+    "value": "rosa_m77@example.net"
+   },
+   {
+    "type": "PERSON",
+    "value": "Halima Yusuf"
+   }
+  ],
+  "keep": []
+ },
+ {
+  "id": "mk1-095",
+  "text": "Halima Yusuf lives at 2200 Harbor Road, Apt 4B, Tacoma; send the amoxicillin reminder letter there.",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Halima Yusuf"
+   },
+   {
+    "type": "LOCATION",
+    "value": "2200 Harbor Road, Apt 4B, Tacoma"
+   }
+  ],
+  "keep": [
+   "amoxicillin"
+  ]
+ },
+ {
+  "id": "mk1-096",
+  "text": "Insurance form for Yuki Tanaka: SSN 478-22-9163, date of birth 03/22/1958.",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Yuki Tanaka"
+   },
+   {
+    "type": "US_SSN",
+    "value": "478-22-9163"
+   },
+   {
+    "type": "DATE_OF_BIRTH",
+    "value": "03/22/1958"
+   }
+  ],
+  "keep": []
+ },
+ {
+  "id": "mk1-097",
+  "text": "pt Maria Delgado dob 7/4/71 c/o dizziness since starting apixaban 5 mg twice daily",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Maria Delgado"
+   },
+   {
+    "type": "DATE_OF_BIRTH",
+    "value": "7/4/71"
+   }
+  ],
+  "keep": [
+   "apixaban"
+  ]
+ },
+ {
+  "id": "mk1-098",
+  "text": "Is apixaban safe with metformin for Kenji Matsuda? record number 100293847",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Kenji Matsuda"
+   },
+   {
+    "type": "RECORD_NUMBER",
+    "value": "100293847"
+   }
+  ],
+  "keep": [
+   "apixaban",
+   "metformin"
+  ]
+ },
+ {
+  "id": "mk1-099",
+  "text": "Front desk: Arjun Mehta called from (555) 318-0042, wants results sent to tomasz.w@mail.example.com.",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Arjun Mehta"
+   },
+   {
+    "type": "PHONE_NUMBER",
+    "value": "(555) 318-0042"
+   },
+   {
+    "type": "EMAIL_ADDRESS",
+    "value": "tomasz.w@mail.example.com"
+   }
+  ],
+  "keep": []
+ },
+ {
+  "id": "mk1-100",
+  "text": "Chart brief for Li Wei (record number 100293847, DOB March 3rd, 2001) before the 2:30 visit in room 12.",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Li Wei"
+   },
+   {
+    "type": "RECORD_NUMBER",
+    "value": "100293847"
+   },
+   {
+    "type": "DATE_OF_BIRTH",
+    "value": "March 3rd, 2001"
+   }
+  ],
+  "keep": []
+ },
+ {
+  "id": "mk1-101",
+  "text": "What medications is Priya Ramdas (born 15 Sep 1990) taking?",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Priya Ramdas"
+   },
+   {
+    "type": "DATE_OF_BIRTH",
+    "value": "15 Sep 1990"
+   }
+  ],
+  "keep": []
+ },
+ {
+  "id": "mk1-102",
+  "text": "Dr. Fenwick, born March 3rd, 2001, record number 100293847: move the follow-up to Thursday.",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Dr. Fenwick"
+   },
+   {
+    "type": "DATE_OF_BIRTH",
+    "value": "March 3rd, 2001"
+   },
+   {
+    "type": "RECORD_NUMBER",
+    "value": "100293847"
+   }
+  ],
+  "keep": []
+ },
+ {
+  "id": "mk1-103",
+  "text": "Call Fatima Oyelaran back on 555-201-7788 about the apixaban refill.",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Fatima Oyelaran"
+   },
+   {
+    "type": "PHONE_NUMBER",
+    "value": "555-201-7788"
+   }
+  ],
+  "keep": [
+   "apixaban"
+  ]
+ },
+ {
+  "id": "mk1-104",
+  "text": "Email the visit summary to tomasz.w@mail.example.com for Halima Yusuf.",
+  "identifiers": [
+   {
+    "type": "EMAIL_ADDRESS",
+    "value": "tomasz.w@mail.example.com"
+   },
+   {
+    "type": "PERSON",
+    "value": "Halima Yusuf"
+   }
+  ],
+  "keep": []
+ },
+ {
+  "id": "mk1-105",
+  "text": "Ilse Brandvold lives at 17 Willow Lane, Springfield; send the amoxicillin reminder letter there.",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Ilse Brandvold"
+   },
+   {
+    "type": "LOCATION",
+    "value": "17 Willow Lane, Springfield"
+   }
+  ],
+  "keep": [
+   "amoxicillin"
+  ]
+ },
+ {
+  "id": "mk1-106",
+  "text": "Insurance form for Nguyen Van An: SSN 512-90-3346, date of birth 7/4/71.",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Nguyen Van An"
+   },
+   {
+    "type": "US_SSN",
+    "value": "512-90-3346"
+   },
+   {
+    "type": "DATE_OF_BIRTH",
+    "value": "7/4/71"
+   }
+  ],
+  "keep": []
+ },
+ {
+  "id": "mk1-107",
+  "text": "pt Priya Ramdas dob 03/22/1958 c/o dizziness since starting metformin 5 mg twice daily",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Priya Ramdas"
+   },
+   {
+    "type": "DATE_OF_BIRTH",
+    "value": "03/22/1958"
+   }
+  ],
+  "keep": [
+   "metformin"
+  ]
+ },
+ {
+  "id": "mk1-108",
+  "text": "Is sertraline safe with methadone for Kenji Matsuda? record number 100293847",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Kenji Matsuda"
+   },
+   {
+    "type": "RECORD_NUMBER",
+    "value": "100293847"
+   }
+  ],
+  "keep": [
+   "sertraline",
+   "methadone"
+  ]
+ },
+ {
+  "id": "mk1-109",
+  "text": "Front desk: Mohammed Al-Sayed called from (555) 318-0042, wants results sent to tomasz.w@mail.example.com.",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Mohammed Al-Sayed"
+   },
+   {
+    "type": "PHONE_NUMBER",
+    "value": "(555) 318-0042"
+   },
+   {
+    "type": "EMAIL_ADDRESS",
+    "value": "tomasz.w@mail.example.com"
+   }
+  ],
+  "keep": []
+ },
+ {
+  "id": "mk1-110",
+  "text": "Chart brief for Li Wei (record number 100293847, DOB March 3rd, 2001) before the 2:30 visit in room 12.",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Li Wei"
+   },
+   {
+    "type": "RECORD_NUMBER",
+    "value": "100293847"
+   },
+   {
+    "type": "DATE_OF_BIRTH",
+    "value": "March 3rd, 2001"
+   }
+  ],
+  "keep": []
+ },
+ {
+  "id": "mk1-111",
+  "text": "What medications is Henrik Solberg (born March 3rd, 2001) taking?",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Henrik Solberg"
+   },
+   {
+    "type": "DATE_OF_BIRTH",
+    "value": "March 3rd, 2001"
+   }
+  ],
+  "keep": []
+ },
+ {
+  "id": "mk1-112",
+  "text": "Dr. Fenwick, born January 9, 1947, MRN: 7731204: move the follow-up to Thursday.",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Dr. Fenwick"
+   },
+   {
+    "type": "DATE_OF_BIRTH",
+    "value": "January 9, 1947"
+   },
+   {
+    "type": "RECORD_NUMBER",
+    "value": "7731204"
+   }
+  ],
+  "keep": []
+ },
+ {
+  "id": "mk1-113",
+  "text": "Call Arjun Mehta back on 555 440 1296 about the amoxicillin refill.",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Arjun Mehta"
+   },
+   {
+    "type": "PHONE_NUMBER",
+    "value": "555 440 1296"
+   }
+  ],
+  "keep": [
+   "amoxicillin"
+  ]
+ },
+ {
+  "id": "mk1-114",
+  "text": "Email the visit summary to tomasz.w@mail.example.com for Mohammed Al-Sayed.",
+  "identifiers": [
+   {
+    "type": "EMAIL_ADDRESS",
+    "value": "tomasz.w@mail.example.com"
+   },
+   {
+    "type": "PERSON",
+    "value": "Mohammed Al-Sayed"
+   }
+  ],
+  "keep": []
+ },
+ {
+  "id": "mk1-115",
+  "text": "Tomasz Wisniewski lives at 2200 Harbor Road, Apt 4B, Tacoma; send the amoxicillin reminder letter there.",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Tomasz Wisniewski"
+   },
+   {
+    "type": "LOCATION",
+    "value": "2200 Harbor Road, Apt 4B, Tacoma"
+   }
+  ],
+  "keep": [
+   "amoxicillin"
+  ]
+ },
+ {
+  "id": "mk1-116",
+  "text": "Insurance form for Mohammed Al-Sayed: SSN 478-22-9163, date of birth March 3rd, 2001.",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Mohammed Al-Sayed"
+   },
+   {
+    "type": "US_SSN",
+    "value": "478-22-9163"
+   },
+   {
+    "type": "DATE_OF_BIRTH",
+    "value": "March 3rd, 2001"
+   }
+  ],
+  "keep": []
+ },
+ {
+  "id": "mk1-117",
+  "text": "pt Yuki Tanaka dob 15 Sep 1990 c/o dizziness since starting metformin 5 mg twice daily",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Yuki Tanaka"
+   },
+   {
+    "type": "DATE_OF_BIRTH",
+    "value": "15 Sep 1990"
+   }
+  ],
+  "keep": [
+   "metformin"
+  ]
+ },
+ {
+  "id": "mk1-118",
+  "text": "Is methadone safe with warfarin for Arjun Mehta? record number 100293847",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Arjun Mehta"
+   },
+   {
+    "type": "RECORD_NUMBER",
+    "value": "100293847"
+   }
+  ],
+  "keep": [
+   "methadone",
+   "warfarin"
+  ]
+ },
+ {
+  "id": "mk1-119",
+  "text": "Front desk: Nguyen Van An called from 555-201-7788, wants results sent to h.yusuf@example.org.",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Nguyen Van An"
+   },
+   {
+    "type": "PHONE_NUMBER",
+    "value": "555-201-7788"
+   },
+   {
+    "type": "EMAIL_ADDRESS",
+    "value": "h.yusuf@example.org"
+   }
+  ],
+  "keep": []
+ },
+ {
+  "id": "mk1-120",
+  "text": "Chart brief for Aaliyah Brooks (MRN 00482913, DOB 03/22/1958) before the 2:30 visit in room 12.",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Aaliyah Brooks"
+   },
+   {
+    "type": "RECORD_NUMBER",
+    "value": "00482913"
+   },
+   {
+    "type": "DATE_OF_BIRTH",
+    "value": "03/22/1958"
+   }
+  ],
+  "keep": []
+ },
+ {
+  "id": "mk1-121",
+  "text": "What medications is Li Wei (born March 3rd, 2001) taking?",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Li Wei"
+   },
+   {
+    "type": "DATE_OF_BIRTH",
+    "value": "March 3rd, 2001"
+   }
+  ],
+  "keep": []
+ },
+ {
+  "id": "mk1-122",
+  "text": "Samuel Mensah, born 7/4/71, MRN: 7731204: move the follow-up to Thursday.",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Samuel Mensah"
+   },
+   {
+    "type": "DATE_OF_BIRTH",
+    "value": "7/4/71"
+   },
+   {
+    "type": "RECORD_NUMBER",
+    "value": "7731204"
+   }
+  ],
+  "keep": []
+ },
+ {
+  "id": "mk1-123",
+  "text": "Call Halima Yusuf back on 555-201-7788 about the methadone refill.",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Halima Yusuf"
+   },
+   {
+    "type": "PHONE_NUMBER",
+    "value": "555-201-7788"
+   }
+  ],
+  "keep": [
+   "methadone"
+  ]
+ },
+ {
+  "id": "mk1-124",
+  "text": "Email the visit summary to rosa_m77@example.net for MARTINEZ, ROSA.",
+  "identifiers": [
+   {
+    "type": "EMAIL_ADDRESS",
+    "value": "rosa_m77@example.net"
+   },
+   {
+    "type": "PERSON",
+    "value": "MARTINEZ, ROSA"
+   }
+  ],
+  "keep": []
+ },
+ {
+  "id": "mk1-125",
+  "text": "Aaliyah Brooks lives at 17 Willow Lane, Springfield; send the metformin reminder letter there.",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Aaliyah Brooks"
+   },
+   {
+    "type": "LOCATION",
+    "value": "17 Willow Lane, Springfield"
+   }
+  ],
+  "keep": [
+   "metformin"
+  ]
+ },
+ {
+  "id": "mk1-126",
+  "text": "Insurance form for O'Connor, Sean: SSN 478-22-9163, date of birth 03/22/1958.",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "O'Connor, Sean"
+   },
+   {
+    "type": "US_SSN",
+    "value": "478-22-9163"
+   },
+   {
+    "type": "DATE_OF_BIRTH",
+    "value": "03/22/1958"
+   }
+  ],
+  "keep": []
+ },
+ {
+  "id": "mk1-127",
+  "text": "pt Aaliyah Brooks dob 7/4/71 c/o dizziness since starting amoxicillin 5 mg twice daily",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Aaliyah Brooks"
+   },
+   {
+    "type": "DATE_OF_BIRTH",
+    "value": "7/4/71"
+   }
+  ],
+  "keep": [
+   "amoxicillin"
+  ]
+ },
+ {
+  "id": "mk1-128",
+  "text": "Is amoxicillin safe with apixaban for Maria Delgado? record number 100293847",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Maria Delgado"
+   },
+   {
+    "type": "RECORD_NUMBER",
+    "value": "100293847"
+   }
+  ],
+  "keep": [
+   "amoxicillin",
+   "apixaban"
+  ]
+ },
+ {
+  "id": "mk1-129",
+  "text": "Front desk: Nguyen Van An called from 555-201-7788, wants results sent to h.yusuf@example.org.",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Nguyen Van An"
+   },
+   {
+    "type": "PHONE_NUMBER",
+    "value": "555-201-7788"
+   },
+   {
+    "type": "EMAIL_ADDRESS",
+    "value": "h.yusuf@example.org"
+   }
+  ],
+  "keep": []
+ },
+ {
+  "id": "mk1-130",
+  "text": "Chart brief for Aaliyah Brooks (MRN 00482913, DOB 03/22/1958) before the 2:30 visit in room 12.",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Aaliyah Brooks"
+   },
+   {
+    "type": "RECORD_NUMBER",
+    "value": "00482913"
+   },
+   {
+    "type": "DATE_OF_BIRTH",
+    "value": "03/22/1958"
+   }
+  ],
+  "keep": []
+ },
+ {
+  "id": "mk1-131",
+  "text": "What medications is Nguyen Van An (born 03/22/1958) taking?",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Nguyen Van An"
+   },
+   {
+    "type": "DATE_OF_BIRTH",
+    "value": "03/22/1958"
+   }
+  ],
+  "keep": []
+ },
+ {
+  "id": "mk1-132",
+  "text": "Henrik Solberg, born 1990-09-15, MRN 00482913: move the follow-up to Thursday.",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Henrik Solberg"
+   },
+   {
+    "type": "DATE_OF_BIRTH",
+    "value": "1990-09-15"
+   },
+   {
+    "type": "RECORD_NUMBER",
+    "value": "00482913"
+   }
+  ],
+  "keep": []
+ },
+ {
+  "id": "mk1-133",
+  "text": "Call Priya Ramdas back on +1 555 672 9031 about the apixaban refill.",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Priya Ramdas"
+   },
+   {
+    "type": "PHONE_NUMBER",
+    "value": "+1 555 672 9031"
+   }
+  ],
+  "keep": [
+   "apixaban"
+  ]
+ },
+ {
+  "id": "mk1-134",
+  "text": "Email the visit summary to rosa_m77@example.net for MARTINEZ, ROSA.",
+  "identifiers": [
+   {
+    "type": "EMAIL_ADDRESS",
+    "value": "rosa_m77@example.net"
+   },
+   {
+    "type": "PERSON",
+    "value": "MARTINEZ, ROSA"
+   }
+  ],
+  "keep": []
+ },
+ {
+  "id": "mk1-135",
+  "text": "Dolores Achebe lives at 2200 Harbor Road, Apt 4B, Tacoma; send the sertraline reminder letter there.",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Dolores Achebe"
+   },
+   {
+    "type": "LOCATION",
+    "value": "2200 Harbor Road, Apt 4B, Tacoma"
+   }
+  ],
+  "keep": [
+   "sertraline"
+  ]
+ },
+ {
+  "id": "mk1-136",
+  "text": "Insurance form for Delroy Hatcher: SSN 231-64-8807, date of birth March 3rd, 2001.",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Delroy Hatcher"
+   },
+   {
+    "type": "US_SSN",
+    "value": "231-64-8807"
+   },
+   {
+    "type": "DATE_OF_BIRTH",
+    "value": "March 3rd, 2001"
+   }
+  ],
+  "keep": []
+ },
+ {
+  "id": "mk1-137",
+  "text": "pt Halima Yusuf dob January 9, 1947 c/o dizziness since starting methadone 5 mg twice daily",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Halima Yusuf"
+   },
+   {
+    "type": "DATE_OF_BIRTH",
+    "value": "January 9, 1947"
+   }
+  ],
+  "keep": [
+   "methadone"
+  ]
+ },
+ {
+  "id": "mk1-138",
+  "text": "Is apixaban safe with sertraline for O'Connor, Sean? MRN: 7731204",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "O'Connor, Sean"
+   },
+   {
+    "type": "RECORD_NUMBER",
+    "value": "7731204"
+   }
+  ],
+  "keep": [
+   "apixaban",
+   "sertraline"
+  ]
+ },
+ {
+  "id": "mk1-139",
+  "text": "Front desk: Arjun Mehta called from 555 440 1296, wants results sent to rosa_m77@example.net.",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Arjun Mehta"
+   },
+   {
+    "type": "PHONE_NUMBER",
+    "value": "555 440 1296"
+   },
+   {
+    "type": "EMAIL_ADDRESS",
+    "value": "rosa_m77@example.net"
+   }
+  ],
+  "keep": []
+ },
+ {
+  "id": "mk1-140",
+  "text": "Chart brief for Delroy Hatcher (record number 100293847, DOB 15 Sep 1990) before the 2:30 visit in room 12.",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Delroy Hatcher"
+   },
+   {
+    "type": "RECORD_NUMBER",
+    "value": "100293847"
+   },
+   {
+    "type": "DATE_OF_BIRTH",
+    "value": "15 Sep 1990"
+   }
+  ],
+  "keep": []
+ },
+ {
+  "id": "mk1-141",
+  "text": "What medications is Tomasz Wisniewski (born 03/22/1958) taking?",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Tomasz Wisniewski"
+   },
+   {
+    "type": "DATE_OF_BIRTH",
+    "value": "03/22/1958"
+   }
+  ],
+  "keep": []
+ },
+ {
+  "id": "mk1-142",
+  "text": "Delroy Hatcher, born 7/4/71, MRN 00482913: move the follow-up to Thursday.",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Delroy Hatcher"
+   },
+   {
+    "type": "DATE_OF_BIRTH",
+    "value": "7/4/71"
+   },
+   {
+    "type": "RECORD_NUMBER",
+    "value": "00482913"
+   }
+  ],
+  "keep": []
+ },
+ {
+  "id": "mk1-143",
+  "text": "Call O'Connor, Sean back on (555) 318-0042 about the lisinopril refill.",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "O'Connor, Sean"
+   },
+   {
+    "type": "PHONE_NUMBER",
+    "value": "(555) 318-0042"
+   }
+  ],
+  "keep": [
+   "lisinopril"
+  ]
+ },
+ {
+  "id": "mk1-144",
+  "text": "Email the visit summary to tomasz.w@mail.example.com for Kenji Matsuda.",
+  "identifiers": [
+   {
+    "type": "EMAIL_ADDRESS",
+    "value": "tomasz.w@mail.example.com"
+   },
+   {
+    "type": "PERSON",
+    "value": "Kenji Matsuda"
+   }
+  ],
+  "keep": []
+ },
+ {
+  "id": "mk1-145",
+  "text": "MARTINEZ, ROSA lives at 41 Larch Street, Dayton; send the lisinopril reminder letter there.",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "MARTINEZ, ROSA"
+   },
+   {
+    "type": "LOCATION",
+    "value": "41 Larch Street, Dayton"
+   }
+  ],
+  "keep": [
+   "lisinopril"
+  ]
+ },
+ {
+  "id": "mk1-146",
+  "text": "Insurance form for Dr. Fenwick: SSN 231-64-8807, date of birth 03/22/1958.",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Dr. Fenwick"
+   },
+   {
+    "type": "US_SSN",
+    "value": "231-64-8807"
+   },
+   {
+    "type": "DATE_OF_BIRTH",
+    "value": "03/22/1958"
+   }
+  ],
+  "keep": []
+ },
+ {
+  "id": "mk1-147",
+  "text": "pt Delroy Hatcher dob January 9, 1947 c/o dizziness since starting lisinopril 5 mg twice daily",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Delroy Hatcher"
+   },
+   {
+    "type": "DATE_OF_BIRTH",
+    "value": "January 9, 1947"
+   }
+  ],
+  "keep": [
+   "lisinopril"
+  ]
+ },
+ {
+  "id": "mk1-148",
+  "text": "Is lisinopril safe with apixaban for Ilse Brandvold? MRN 00482913",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Ilse Brandvold"
+   },
+   {
+    "type": "RECORD_NUMBER",
+    "value": "00482913"
+   }
+  ],
+  "keep": [
+   "lisinopril",
+   "apixaban"
+  ]
+ },
+ {
+  "id": "mk1-149",
+  "text": "Front desk: Kenji Matsuda called from +1 555 672 9031, wants results sent to tomasz.w@mail.example.com.",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Kenji Matsuda"
+   },
+   {
+    "type": "PHONE_NUMBER",
+    "value": "+1 555 672 9031"
+   },
+   {
+    "type": "EMAIL_ADDRESS",
+    "value": "tomasz.w@mail.example.com"
+   }
+  ],
+  "keep": []
+ },
+ {
+  "id": "mk1-150",
+  "text": "Chart brief for Dr. Fenwick (MRN 00482913, DOB January 9, 1947) before the 2:30 visit in room 12.",
+  "identifiers": [
+   {
+    "type": "PERSON",
+    "value": "Dr. Fenwick"
+   },
+   {
+    "type": "RECORD_NUMBER",
+    "value": "00482913"
+   },
+   {
+    "type": "DATE_OF_BIRTH",
+    "value": "January 9, 1947"
+   }
+  ],
+  "keep": []
+ }
+]

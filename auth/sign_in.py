@@ -28,8 +28,16 @@ import requests
 
 DEMO, OIDC = "demo", "oidc"
 ENV_MODE = "GOVERNED_SIGN_IN"
+ENV_DEPLOYMENT, PRODUCTION = "GOVERNED_ENV", "production"
 ALGORITHMS = ("RS256", "RS384", "RS512", "PS256", "PS384", "PS512", "ES256", "ES384", "ES512")
 LOCAL_HOSTS = {"127.0.0.1", "localhost", "::1"}
+
+
+def in_production(env=None) -> bool:
+    """GOVERNED_ENV=production: the deployment holds real data. Development conveniences that trust the
+    caller (demo sign-in, the identity stand-in, a token check over plain http) refuse to start."""
+    env = os.environ if env is None else env
+    return (env.get(ENV_DEPLOYMENT) or "").strip().lower() == PRODUCTION
 
 
 class SignInRequired(Exception):
@@ -164,6 +172,9 @@ class SignIn:
         mode = (env.get(ENV_MODE) or s.get("mode") or DEMO).strip().lower()
         if mode not in (DEMO, OIDC):
             raise SignInError(f"{ENV_MODE} must be {DEMO} or {OIDC}, not {mode!r}")
+        if mode == DEMO and in_production(env):
+            raise SignInError(f"{ENV_DEPLOYMENT}={PRODUCTION}: demo sign-in trusts whatever role a request claims and "
+                              "cannot be used. Set the profile's sign_in to oidc.")
         self.mode = mode
         self.settings = s
         self.roles: dict[str, str] = dict(s.get("roles") or {})

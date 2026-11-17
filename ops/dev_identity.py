@@ -150,6 +150,9 @@ def main(argv: list[str] | None = None) -> int:
     s = sub.add_parser("serve", help=f"answer token checks on {HOST}")
     s.add_argument("--port", type=int, default=PORT, help=f"default {PORT}; must match outside.yaml auth.url")
     args = ap.parse_args(argv)
+    if (os.environ.get("GOVERNED_ENV") or "").strip().lower() == "production":
+        print("GOVERNED_ENV=production: this development stand-in does not run. Use the organization's identity system.")
+        return 2
     try:
         if args.command == "add":
             token = add_client(args.file, args.name, args.role, args.location)

@@ -86,6 +86,8 @@ Everything is in the profile folder (`profiles/clinic-oracle/`, `clinic-epic/`, 
 | `roles.yaml` | Per role: tools, kinds of record data, sensitive categories |
 | `profile.yaml` `sensitivity` | Which sensitive categories are tracked, and your own lists if you have them |
 | `profile.yaml` `sensitivity.text_model` | Optional: a trained classifier (a folder in `models/`) that also reads record text for wording the lists cannot know. Off unless named; see ADR 038 for what it has and has not been tested on |
+| `profile.yaml` `sensitivity.text_model_mode` | `observe` (default): the audit records what the model would mark and withhold, and nothing changes. `enforce`: it marks records as the lists do |
+| `outside.yaml` `rate_limit` | Calls one caller may make: `per_minute` and `burst` |
 | `fhir.yaml` | The record system: address, sign-in, limits, which resources become which records |
 | `rules.yaml`, `responses.yaml` | What is stopped, and the fixed replies |
 
@@ -120,15 +122,28 @@ storage the gateway can append to and nobody can rewrite.
 
 ## Before real use
 
+Built since the first trial, and tested only with stand-ins so far:
+
+- **TLS on the gateway.** Set `GATEWAY_TLS_CERT` and `GATEWAY_TLS_KEY` and it serves https.
+- **A production setting.** With `GOVERNED_ENV=production` the gateway refuses to start without TLS (its
+  own, or `GATEWAY_TLS_AT_PROXY=1` to state that a proxy terminates it) or with a token check that is
+  not an https address of your identity system. Demo sign-in and the development identity stand-in
+  refuse to run.
+- **A rate limit per caller** (`rate_limit` in outside.yaml; 120 a minute after a burst of 30 by default).
+  A refused call is audited.
+- **Nothing left to load on the first request.** The masking analyzer, the guard and any sensitive-category
+  model load at start. If one cannot load, the gateway does not start.
+- **The audit holds no dates or long numbers.** After masking, every date and every run of six or more
+  digits in a logged question is replaced. `python -m eval.run_masking` measures what still gets through.
+- **Observe mode for a sensitive-category model** (`text_model_mode: observe`, the default). The audit
+  records what the model would have marked and withheld; nothing is withheld on its word.
+
 Not built, or not done:
 
 - **A container image for the gateway alone.** The repository's image is for the full pipeline.
-- **TLS on the gateway.** It listens on plain HTTP on 127.0.0.1. Put it behind a reverse proxy that
-  terminates TLS, or it must not be reachable from another machine.
 - **Signed tokens (JWT).** Callers are identified by a token check only. Microsoft Entra ID does not
   offer one, so it needs an adapter or JWT validation in the gateway.
 - **More than one gateway process.** The file audit trail is one writer per folder.
-- **A rate limit per caller** on the gateway.
 - **Your own value sets** for the sensitive categories. The lists in `privacy/sensitivity.yaml` are a
   development set and recognise named and coded information, not wording that only implies it.
 - **A security review and a penetration test**, and the record vendor's and your own approval of the
